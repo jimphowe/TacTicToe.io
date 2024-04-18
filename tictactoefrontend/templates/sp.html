@@ -14,15 +14,6 @@
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
 </head>
 <body>
-    <table>
-        {% for row in game_state.board %}
-        <tr>
-            {% for cell in row %}
-            <td>{{ cell }}</td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
     <canvas id="myCanvas"></canvas>
     {% url 'home' as home_url %}
     <button id="homeButton" onclick="location.href='{{ home_url }}'">Home</button>
@@ -35,31 +26,96 @@
         renderer.setClearColor(0x808080);
         document.body.appendChild(renderer.domElement);
 
+        function handlePieceClick(position) {
+            // Example: Log position or use it to update game state
+            console.log('Piece at position', position, 'was clicked');
+            // Further action like making a game move or updating display
+        }
+
+        window.addEventListener('click', onMouseClick, false);
+
         // Adding lights
         var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
         scene.add(ambientLight);
         var directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(0, 1, 0);
+        directionalLight.position.set(1, 1, 1);
+        directionalLight.castShadow = true;
         scene.add(directionalLight);
+        var pointLight = new THREE.PointLight(0xffffff, 0.5);
+        pointLight.position.set(-2, -2, -2);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
 
         // Cube geometry setup
-        var geometry = new THREE.BoxGeometry(6, 6, 6); // overall size of the grid
-        var edges = new THREE.EdgesGeometry(geometry);
-        var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}));
-        scene.add(line);
+        // var geometry = new THREE.BoxGeometry(6, 6, 6); // overall size of the grid
+        // var edges = new THREE.EdgesGeometry(geometry);
+        // var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}));
+        // scene.add(line);
+
+        // Define tube material
+        var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+
+        // Define the cube edges with TubeGeometry
+        var edgePaths = [
+            new THREE.Vector3(-3, -3, -3),
+            new THREE.Vector3(3, -3, -3),
+            new THREE.Vector3(3, 3, -3),
+            new THREE.Vector3(-3, 3, -3),
+            new THREE.Vector3(-3, -3, 3),
+            new THREE.Vector3(3, -3, 3),
+            new THREE.Vector3(3, 3, 3),
+            new THREE.Vector3(-3, 3, 3),
+        ];
+
+        // Create edges using TubeGeometry
+        edgePaths.forEach((start, index) => {
+            edgePaths.forEach((end, subIndex) => {
+                if (start.distanceTo(end) === 6) { // Check if the points are direct neighbors in a cube
+                    var path = new THREE.LineCurve3(start, end);
+                    var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
+                    var mesh = new THREE.Mesh(geometry, tubeMaterial);
+                    scene.add(mesh);
+                }
+            });
+        });
+
+        function addTube(start, end) {
+            var path = new THREE.LineCurve3(new THREE.Vector3(...start), new THREE.Vector3(...end));
+            var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
+            var mesh = new THREE.Mesh(geometry, tubeMaterial);
+            scene.add(mesh);
+        }
+
+        var cubeSize = 6;
+        var halfCubeSize = 3;
+        var divisionSize = cubeSize / 3;
+        for (let offset = -halfCubeSize; offset <= halfCubeSize; offset += divisionSize) {
+            // Horizontal lines across the cube at each z level
+            for (let z = -halfCubeSize; z <= halfCubeSize; z += divisionSize) {
+                addTube([-halfCubeSize, offset, z], [halfCubeSize, offset, z]);  // Parallel to x-axis
+            }
+            // Vertical lines across the cube at each y level
+            for (let y = -halfCubeSize; y <= halfCubeSize; y += divisionSize) {
+                addTube([offset, y, -halfCubeSize], [offset, y, halfCubeSize]);  // Parallel to z-axis
+            }
+            // Depth lines through the cube at each x level
+            for (let x = -halfCubeSize; x <= halfCubeSize; x += divisionSize) {
+                addTube([x, -halfCubeSize, offset], [x, halfCubeSize, offset]);  // Parallel to y-axis
+            }
+        }
 
 
         // Ball setup
-        var sphereGeometry = new THREE.SphereGeometry(0.4, 32, 32);
-        var redMaterial = new THREE.MeshLambertMaterial({color: 0xff0000});
-        var whiteMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
-        var blackMaterial = new THREE.MeshLambertMaterial({color: 0x000000});
+        var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+        var redMaterial = new THREE.MeshPhongMaterial({color: 0xff0000});
+        var whiteMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
+        var blackMaterial = new THREE.MeshPhongMaterial({color: 0x000000});
 
+        var clickableSpheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
-        console.log(gameState)
-        gameState.forEach((layer, i) => {
-            layer.forEach((row, j) => {
-                row.forEach((cell, k) => {
+        gameState.forEach((layer, x) => {
+            layer.forEach((row, z) => {
+                row.forEach((cell, y) => {
                     var material;
                     switch (cell) {
                         case 'BLACK':
@@ -76,22 +132,43 @@
                     }
                     if (material) {
                         var sphere = new THREE.Mesh(sphereGeometry, material);
-                        sphere.position.set(i*2-2, j*2-2, k*2-2);
-                        scene.add(sphere);
+                        sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
+                        if (y == 0) {
+                            sphere.userData = {
+                                clickable: true,
+                                position: {x: x, y: y, z: z}
+                            };
+                            clickableSpheres.push(sphere);
+                        }
+                        scene.add(sphere); 
                     }
                 });
             });
         });
-        // Generating balls in all 27 positions
-        // for (let x = -2; x <= 2; x+=2) {
-        //     for (let y = -2; y <= 2; y+=2) {
-        //         for (let z = -2; z <= 2; z+=2) {
-        //             var sphere = new THREE.Mesh(sphereGeometry, x === 0 && y === 0 && z === 0 ? redMaterial : (x % 2 === 0 ? blackMaterial : blackMaterial));
-        //             sphere.position.set(x, y, z);
-        //             scene.add(sphere);
-        //         }
-        //     }
-        // }
+
+        // Initialize Raycaster
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+
+        // Handle Clicks
+        function onMouseClick(event) {
+            // Update the mouse variable with coordinates from the event
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update raycaster with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+
+            // Calculate objects intersecting the picking ray
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
+            if (intersects.length > 0) {
+                // Handle the first intersected object
+                var object = intersects[0].object;
+                if (object.userData && object.userData.clickable) {
+                    handlePieceClick(object.userData.position);
+                }
+            }
+        }
 
         // Camera position
         camera.position.set(7, 4, 3);
