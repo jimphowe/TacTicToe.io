@@ -75,6 +75,71 @@
             }
         }, false);
 
+        window.addEventListener('keydown', function(event) {
+            console.log(event.key);
+            switch (event.key) {
+                case 'ArrowUp':
+                    rotateCube('up');
+                    break;
+                case 'ArrowDown':
+                    rotateCube('down');
+                    break;
+                case 'ArrowLeft':
+                    rotateCube('left');
+                    break;
+                case 'ArrowRight':
+                    rotateCube('right');
+                    break;
+            }
+        });
+
+        var rotationMatrix = new THREE.Matrix4();  // Identity matrix initially
+
+        function rotateCube(direction) {
+            var angle = Math.PI / 2; // 90 degrees rotation in radians
+
+            // Update rotation logic to use correct axes and directions
+            switch (direction) {
+                case 'up':
+                    // Rotate around the x-axis negatively (to rotate upwards)
+                    updateRotation(new THREE.Vector3(0, 0, 1), angle);
+                    break;
+                case 'down':
+                    // Rotate around the x-axis positively (to rotate downwards)
+                    updateRotation(new THREE.Vector3(0, 0, 1), -angle);
+                    break;
+                case 'left':
+                    // Rotate around the y-axis positively (to rotate left)
+                    updateRotation(new THREE.Vector3(0, 1, 0), -angle);
+                    break;
+                case 'right':
+                    // Rotate around the y-axis negatively (to rotate right)
+                    updateRotation(new THREE.Vector3(0, 1, 0), angle);
+                    break;
+            }
+        }
+
+        function updateRotation(axis, angle) {
+            var rotation = new THREE.Matrix4().makeRotationAxis(axis.normalize(), angle);
+            spheres.forEach(sphere => {
+                sphere.position.applyMatrix4(rotation);
+            });
+
+            // Re-render the scene
+            renderer.render(scene, camera);
+        }
+
+        function getOriginalPosition(clickedPosition) {
+            var inverseMatrix = new THREE.Matrix4().copy(rotationMatrix).invert();
+            var positionVector = new THREE.Vector3(clickedPosition.x, clickedPosition.y, clickedPosition.z);
+            positionVector.applyMatrix4(inverseMatrix);
+            return {
+                x: positionVector.x,
+                y: positionVector.y,
+                z: positionVector.z
+            };
+        }
+
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -92,6 +157,8 @@
 
         function handlePieceClick(position) {
             console.log('Piece at position', position, 'was clicked');
+            var originalPosition = getOriginalPosition(position);
+            console.log('Original Position:', originalPosition);
             // AJAX request to the server with the clicked position
             fetch('/move', {
                 method: 'POST',
@@ -191,6 +258,7 @@
         });
 
         var clickableSpheres = [];
+        var spheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
         gameState.forEach((layer, x) => {
             layer.forEach((row, z) => {
@@ -218,6 +286,7 @@
                         };
                         clickableSpheres.push(sphere);
                     }
+                    spheres.push(sphere);
                     scene.add(sphere); 
                 });
             });
