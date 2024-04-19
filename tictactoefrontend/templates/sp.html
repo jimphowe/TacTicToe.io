@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tic-Tac-Toe</title>
+    <title>Tac-Tic-Toe</title>
     {% load static %}
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
     <style>
@@ -26,10 +26,90 @@
         renderer.setClearColor(0x808080);
         document.body.appendChild(renderer.domElement);
 
+        var highlightMaterial = new THREE.MeshPhongMaterial({
+            color: 0xffff00,  // Yellow, or any other color that stands out
+            emissive: 0x333300,  // Slightly glowing effect
+            side: THREE.DoubleSide  // Ensure the inside of the geometry also gets the material
+        });
+
+        var lastIntersected = null;  // Store the last intersected object
+
+        function onMouseMove(event) {
+            // Update the mouse variable with coordinates from the event
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update raycaster with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+
+            // Calculate objects intersecting the picking ray
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
+
+            if (intersects.length > 0) {
+                if (lastIntersected !== intersects[0].object) {
+                    // Reset the last intersected object if it exists
+                    if (lastIntersected) {
+                        lastIntersected.material = lastIntersected.currentMaterial;
+                    }
+                    // Store the new intersected object and change its material
+                    lastIntersected = intersects[0].object;
+                    lastIntersected.currentMaterial = lastIntersected.material;
+                    lastIntersected.material = highlightMaterial;
+                }
+            } else {
+                // No intersections, reset the last intersected object if it exists
+                if (lastIntersected) {
+                    lastIntersected.material = lastIntersected.currentMaterial;
+                    lastIntersected = null;
+                }
+            }
+        }
+
+        // Attach the mouse move event listener
+        window.addEventListener('mousemove', onMouseMove, false);
+
+        window.addEventListener('mouseout', function() {
+            if (lastIntersected) {
+                lastIntersected.material = lastIntersected.currentMaterial;
+                lastIntersected = null;
+            }
+        }, false);
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
         function handlePieceClick(position) {
-            // Example: Log position or use it to update game state
             console.log('Piece at position', position, 'was clicked');
-            // Further action like making a game move or updating display
+            // AJAX request to the server with the clicked position
+            fetch('/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')  // Ensure CSRF token is sent with request
+                },
+                body: JSON.stringify({
+                    position: position,
+                    player: "RED"
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Move processed:', data);
+                // Optionally update the game state here based on server response
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         window.addEventListener('click', onMouseClick, false);
@@ -45,12 +125,6 @@
         pointLight.position.set(-2, -2, -2);
         pointLight.castShadow = true;
         scene.add(pointLight);
-
-        // Cube geometry setup
-        // var geometry = new THREE.BoxGeometry(6, 6, 6); // overall size of the grid
-        // var edges = new THREE.EdgesGeometry(geometry);
-        // var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}));
-        // scene.add(line);
 
         // Define tube material
         var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
@@ -104,12 +178,17 @@
             }
         }
 
-
         // Ball setup
         var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
         var redMaterial = new THREE.MeshPhongMaterial({color: 0xff0000});
         var whiteMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
         var blackMaterial = new THREE.MeshPhongMaterial({color: 0x000000});
+        var emptyMaterial = new THREE.MeshPhongMaterial({
+            color: 0x000000,  // Can be any color, won't matter as it's invisible
+            transparent: true,
+            opacity: 0.0,  // Completely transparent
+            depthWrite: false  // Avoid rendering issues
+        });
 
         var clickableSpheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
@@ -128,20 +207,18 @@
                             material = redMaterial;
                             break;
                         default:
-                            material = null
+                            material = emptyMaterial
                     }
-                    if (material) {
-                        var sphere = new THREE.Mesh(sphereGeometry, material);
-                        sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
-                        if (y == 0) {
-                            sphere.userData = {
-                                clickable: true,
-                                position: {x: x, y: y, z: z}
-                            };
-                            clickableSpheres.push(sphere);
-                        }
-                        scene.add(sphere); 
+                    var sphere = new THREE.Mesh(sphereGeometry, material);
+                    sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
+                    if (y == 0) {
+                        sphere.userData = {
+                            clickable: true,
+                            position: {x: x, y: y, z: z}
+                        };
+                        clickableSpheres.push(sphere);
                     }
+                    scene.add(sphere); 
                 });
             });
         });
