@@ -27,37 +27,31 @@
         document.body.appendChild(renderer.domElement);
 
         var highlightMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffff00,  // Yellow, or any other color that stands out
-            emissive: 0x333300,  // Slightly glowing effect
-            side: THREE.DoubleSide  // Ensure the inside of the geometry also gets the material
+            color: 0xffff00,
+            emissive: 0x333300,
+            side: THREE.DoubleSide
         });
 
-        var lastIntersected = null;  // Store the last intersected object
+        var lastIntersected = null;
 
         function onMouseMove(event) {
-            // Update the mouse variable with coordinates from the event
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-            // Update raycaster with the camera and mouse position
             raycaster.setFromCamera(mouse, camera);
 
-            // Calculate objects intersecting the picking ray
             var intersects = raycaster.intersectObjects(clickableSpheres, true);
 
             if (intersects.length > 0) {
                 if (lastIntersected !== intersects[0].object) {
-                    // Reset the last intersected object if it exists
                     if (lastIntersected) {
                         lastIntersected.material = lastIntersected.currentMaterial;
                     }
-                    // Store the new intersected object and change its material
                     lastIntersected = intersects[0].object;
                     lastIntersected.currentMaterial = lastIntersected.material;
                     lastIntersected.material = highlightMaterial;
                 }
             } else {
-                // No intersections, reset the last intersected object if it exists
                 if (lastIntersected) {
                     lastIntersected.material = lastIntersected.currentMaterial;
                     lastIntersected = null;
@@ -65,9 +59,7 @@
             }
         }
 
-        // Attach the mouse move event listener
         window.addEventListener('mousemove', onMouseMove, false);
-
         window.addEventListener('mouseout', function() {
             if (lastIntersected) {
                 lastIntersected.material = lastIntersected.currentMaterial;
@@ -76,7 +68,6 @@
         }, false);
 
         window.addEventListener('keydown', function(event) {
-            console.log(event.key);
             switch (event.key) {
                 case 'ArrowUp':
                     rotateCube('up');
@@ -93,33 +84,92 @@
             }
         });
 
-        var rotationMatrix = new THREE.Matrix4();  // Identity matrix initially
-
         function rotateCube(direction) {
-            var angle = Math.PI / 2; // 90 degrees rotation in radians
+            // Update pieces locations in cube
+            updatePieceLocations(direction);
+            // Update mapping so we know what the front was originally
+            updateDirectionMapping(direction);
+            // Update pieces actual locations in space
+            rotatePieces(direction);
+        }
 
-            // Update rotation logic to use correct axes and directions
+        directionMapping = { 'front': 'front', 'back': 'back', 'left': 'left', 'right': 'right', 'top': 'top', 'bottom': 'bottom'}
+        function updateDirectionMapping(direction) {
+            frontVal = directionMapping['front']
             switch (direction) {
                 case 'up':
-                    // Rotate around the x-axis negatively (to rotate upwards)
-                    updateRotation(new THREE.Vector3(0, 0, 1), angle);
+                    directionMapping['front'] = directionMapping['bottom'];
+                    directionMapping['bottom'] = directionMapping['back'];
+                    directionMapping['back'] = directionMapping['top'];
+                    directionMapping['top'] = frontVal;
                     break;
                 case 'down':
-                    // Rotate around the x-axis positively (to rotate downwards)
-                    updateRotation(new THREE.Vector3(0, 0, 1), -angle);
+                    directionMapping['front'] = directionMapping['top'];
+                    directionMapping['top'] = directionMapping['back'];
+                    directionMapping['back'] = directionMapping['bottom'];
+                    directionMapping['bottom'] = frontVal;
                     break;
                 case 'left':
-                    // Rotate around the y-axis positively (to rotate left)
-                    updateRotation(new THREE.Vector3(0, 1, 0), -angle);
+                    directionMapping['front'] = directionMapping['right'];
+                    directionMapping['right'] = directionMapping['back'];
+                    directionMapping['back'] = directionMapping['left'];
+                    directionMapping['left'] = frontVal;
                     break;
                 case 'right':
-                    // Rotate around the y-axis negatively (to rotate right)
-                    updateRotation(new THREE.Vector3(0, 1, 0), angle);
+                    directionMapping['front'] = directionMapping['left'];
+                    directionMapping['left'] = directionMapping['back'];
+                    directionMapping['back'] = directionMapping['right'];
+                    directionMapping['right'] = frontVal;
                     break;
             }
         }
 
-        function updateRotation(axis, angle) {
+        function updatePieceLocations(direction) {
+            clickableSpheres = []
+            spheres.forEach(sphere => {
+                var x = sphere.userData.position.x;
+                var y = sphere.userData.position.y;
+                var z = sphere.userData.position.z;
+                switch (direction) {
+                    case 'up':
+                        sphere.userData.position = { x: x, y: -z + 2, z: y };
+                        break;
+                    case 'down':
+                        sphere.userData.position = { x: x, y: z, z: -y + 2 };
+                        break;
+                    case 'left':
+                        sphere.userData.position = { x: y, y: -x + 2, z: z };
+                        break;
+                    case 'right':
+                        sphere.userData.position = { x: -y + 2, y: x, z: z };
+                        break;
+                }
+                if (sphere.userData.position.y === 0) {
+                    clickableSpheres.push(sphere);
+                }
+            });
+        }
+
+        function rotatePieces(direction) {
+            var angle = Math.PI / 2;
+
+            switch (direction) {
+                case 'up':
+                    axis = new THREE.Vector3(0, 0, 1);
+                    break;
+                case 'down':
+                    axis = new THREE.Vector3(0, 0, 1);
+                    angle *= -1;
+                    break;
+                case 'left':
+                    axis = new THREE.Vector3(0, 1, 0);
+                    angle *= -1;
+                    break;
+                case 'right':
+                    axis = new THREE.Vector3(0, 1, 0);
+                    break;
+            }
+
             var rotation = new THREE.Matrix4().makeRotationAxis(axis.normalize(), angle);
             spheres.forEach(sphere => {
                 sphere.position.applyMatrix4(rotation);
@@ -127,17 +177,6 @@
 
             // Re-render the scene
             renderer.render(scene, camera);
-        }
-
-        function getOriginalPosition(clickedPosition) {
-            var inverseMatrix = new THREE.Matrix4().copy(rotationMatrix).invert();
-            var positionVector = new THREE.Vector3(clickedPosition.x, clickedPosition.y, clickedPosition.z);
-            positionVector.applyMatrix4(inverseMatrix);
-            return {
-                x: positionVector.x,
-                y: positionVector.y,
-                z: positionVector.z
-            };
         }
 
         function getCookie(name) {
@@ -155,10 +194,10 @@
             return cookieValue;
         }
 
-        function handlePieceClick(position) {
-            console.log('Piece at position', position, 'was clicked');
-            var originalPosition = getOriginalPosition(position);
-            console.log('Original Position:', originalPosition);
+        function handlePieceClick(piece) {
+            //console.log('Piece at position', piece.userData.position, 'was clicked');
+            console.log('Original Position:', piece.userData.originalPosition);
+            console.log('Original Direction:', directionMapping['front']);
             // AJAX request to the server with the clicked position
             fetch('/move', {
                 method: 'POST',
@@ -167,7 +206,8 @@
                     'X-CSRFToken': getCookie('csrftoken')  // Ensure CSRF token is sent with request
                 },
                 body: JSON.stringify({
-                    position: position,
+                    position: piece.userData.originalPosition,
+                    direction: directionMapping['front'],
                     player: "RED"
                 })
             })
@@ -193,10 +233,8 @@
         pointLight.castShadow = true;
         scene.add(pointLight);
 
-        // Define tube material
+        // Set Up Cube
         var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-
-        // Define the cube edges with TubeGeometry
         var edgePaths = [
             new THREE.Vector3(-3, -3, -3),
             new THREE.Vector3(3, -3, -3),
@@ -208,10 +246,9 @@
             new THREE.Vector3(-3, 3, 3),
         ];
 
-        // Create edges using TubeGeometry
         edgePaths.forEach((start, index) => {
             edgePaths.forEach((end, subIndex) => {
-                if (start.distanceTo(end) === 6) { // Check if the points are direct neighbors in a cube
+                if (start.distanceTo(end) === 6) {
                     var path = new THREE.LineCurve3(start, end);
                     var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
                     var mesh = new THREE.Mesh(geometry, tubeMaterial);
@@ -228,24 +265,21 @@
         }
 
         var cubeSize = 6;
-        var halfCubeSize = 3;
+        var halfCubeSize = cubeSize / 2;
         var divisionSize = cubeSize / 3;
         for (let offset = -halfCubeSize; offset <= halfCubeSize; offset += divisionSize) {
-            // Horizontal lines across the cube at each z level
             for (let z = -halfCubeSize; z <= halfCubeSize; z += divisionSize) {
-                addTube([-halfCubeSize, offset, z], [halfCubeSize, offset, z]);  // Parallel to x-axis
+                addTube([-halfCubeSize, offset, z], [halfCubeSize, offset, z]);
             }
-            // Vertical lines across the cube at each y level
             for (let y = -halfCubeSize; y <= halfCubeSize; y += divisionSize) {
-                addTube([offset, y, -halfCubeSize], [offset, y, halfCubeSize]);  // Parallel to z-axis
+                addTube([offset, y, -halfCubeSize], [offset, y, halfCubeSize]);
             }
-            // Depth lines through the cube at each x level
             for (let x = -halfCubeSize; x <= halfCubeSize; x += divisionSize) {
-                addTube([x, -halfCubeSize, offset], [x, halfCubeSize, offset]);  // Parallel to y-axis
+                addTube([x, -halfCubeSize, offset], [x, halfCubeSize, offset]);
             }
         }
 
-        // Ball setup
+        // Set Up Balls
         var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
         var redMaterial = new THREE.MeshPhongMaterial({color: 0xff0000});
         var whiteMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
@@ -279,11 +313,12 @@
                     }
                     var sphere = new THREE.Mesh(sphereGeometry, material);
                     sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
+                    sphere.userData = {
+                        position: {x: x, y: y, z: z},
+                        originalPosition: {x: x, y: y, z: z},
+                        clickable: true
+                    };
                     if (y == 0) {
-                        sphere.userData = {
-                            clickable: true,
-                            position: {x: x, y: y, z: z}
-                        };
                         clickableSpheres.push(sphere);
                     }
                     spheres.push(sphere);
@@ -298,20 +333,15 @@
 
         // Handle Clicks
         function onMouseClick(event) {
-            // Update the mouse variable with coordinates from the event
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            // Update raycaster with the camera and mouse position
             raycaster.setFromCamera(mouse, camera);
 
-            // Calculate objects intersecting the picking ray
             var intersects = raycaster.intersectObjects(clickableSpheres, true);
             if (intersects.length > 0) {
-                // Handle the first intersected object
                 var object = intersects[0].object;
                 if (object.userData && object.userData.clickable) {
-                    handlePieceClick(object.userData.position);
+                    handlePieceClick(object);
                 }
             }
         }
