@@ -70,16 +70,16 @@
         window.addEventListener('keydown', function(event) {
             switch (event.key) {
                 case 'ArrowUp':
-                    rotateCube('up');
+                    rotateCube('UP');
                     break;
                 case 'ArrowDown':
-                    rotateCube('down');
+                    rotateCube('DOWN');
                     break;
                 case 'ArrowLeft':
-                    rotateCube('left');
+                    rotateCube('LEFT');
                     break;
                 case 'ArrowRight':
-                    rotateCube('right');
+                    rotateCube('RIGHT');
                     break;
             }
         });
@@ -93,33 +93,33 @@
             rotatePieces(direction);
         }
 
-        directionMapping = { 'front': 'front', 'back': 'back', 'left': 'left', 'right': 'right', 'top': 'top', 'bottom': 'bottom'}
+        directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
         function updateDirectionMapping(direction) {
-            frontVal = directionMapping['front']
+            frontVal = directionMapping['FRONT']
             switch (direction) {
-                case 'up':
-                    directionMapping['front'] = directionMapping['bottom'];
-                    directionMapping['bottom'] = directionMapping['back'];
-                    directionMapping['back'] = directionMapping['top'];
-                    directionMapping['top'] = frontVal;
+                case 'UP':
+                    directionMapping['FRONT'] = directionMapping['BOTTOM'];
+                    directionMapping['BOTTOM'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['TOP'];
+                    directionMapping['TOP'] = frontVal;
                     break;
-                case 'down':
-                    directionMapping['front'] = directionMapping['top'];
-                    directionMapping['top'] = directionMapping['back'];
-                    directionMapping['back'] = directionMapping['bottom'];
-                    directionMapping['bottom'] = frontVal;
+                case 'DOWN':
+                    directionMapping['FRONT'] = directionMapping['TOP'];
+                    directionMapping['TOP'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['BOTTOM'];
+                    directionMapping['BOTTOM'] = frontVal;
                     break;
-                case 'left':
-                    directionMapping['front'] = directionMapping['right'];
-                    directionMapping['right'] = directionMapping['back'];
-                    directionMapping['back'] = directionMapping['left'];
-                    directionMapping['left'] = frontVal;
+                case 'LEFT':
+                    directionMapping['FRONT'] = directionMapping['RIGHT'];
+                    directionMapping['RIGHT'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['LEFT'];
+                    directionMapping['LEFT'] = frontVal;
                     break;
-                case 'right':
-                    directionMapping['front'] = directionMapping['left'];
-                    directionMapping['left'] = directionMapping['back'];
-                    directionMapping['back'] = directionMapping['right'];
-                    directionMapping['right'] = frontVal;
+                case 'RIGHT':
+                    directionMapping['FRONT'] = directionMapping['LEFT'];
+                    directionMapping['LEFT'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['RIGHT'];
+                    directionMapping['RIGHT'] = frontVal;
                     break;
             }
         }
@@ -131,16 +131,16 @@
                 var y = sphere.userData.position.y;
                 var z = sphere.userData.position.z;
                 switch (direction) {
-                    case 'up':
+                    case 'UP':
                         sphere.userData.position = { x: x, y: -z + 2, z: y };
                         break;
-                    case 'down':
+                    case 'DOWN':
                         sphere.userData.position = { x: x, y: z, z: -y + 2 };
                         break;
-                    case 'left':
+                    case 'LEFT':
                         sphere.userData.position = { x: y, y: -x + 2, z: z };
                         break;
-                    case 'right':
+                    case 'RIGHT':
                         sphere.userData.position = { x: -y + 2, y: x, z: z };
                         break;
                 }
@@ -154,18 +154,18 @@
             var angle = Math.PI / 2;
 
             switch (direction) {
-                case 'up':
+                case 'UP':
                     axis = new THREE.Vector3(0, 0, 1);
                     break;
-                case 'down':
+                case 'DOWN':
                     axis = new THREE.Vector3(0, 0, 1);
                     angle *= -1;
                     break;
-                case 'left':
+                case 'LEFT':
                     axis = new THREE.Vector3(0, 1, 0);
                     angle *= -1;
                     break;
-                case 'right':
+                case 'RIGHT':
                     axis = new THREE.Vector3(0, 1, 0);
                     break;
             }
@@ -197,7 +197,7 @@
         function handlePieceClick(piece) {
             //console.log('Piece at position', piece.userData.position, 'was clicked');
             console.log('Original Position:', piece.userData.originalPosition);
-            console.log('Original Direction:', directionMapping['front']);
+            console.log('Original Direction:', directionMapping['BACK']);
             // AJAX request to the server with the clicked position
             fetch('/move', {
                 method: 'POST',
@@ -207,8 +207,9 @@
                 },
                 body: JSON.stringify({
                     position: piece.userData.originalPosition,
-                    direction: directionMapping['front'],
-                    player: "RED"
+                    direction: directionMapping['BACK'],
+                    player: "RED",
+                    difficulty: '{{ difficulty|safe }}'
                 })
             })
             .then(response => response.json())

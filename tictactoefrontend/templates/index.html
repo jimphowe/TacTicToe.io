@@ -16,10 +16,8 @@
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
-    {% url 'multiplayer' as multiplayer_url %}
-    <button id="mpButton" onclick="location.href='{{ multiplayer_url }}'">MultiPlayer</button>
-    {% url 'singleplayer' as singleplayer_url %}
-    <button id="spButton" onclick="location.href='{{ singleplayer_url }}'">SinglePlayer</button>
+    <button id="mpButton" onclick="location.href='/multiplayer'">MultiPlayer</button>
+    <button id="spButton" onclick="location.href='/singleplayer/setup'">SinglePlayer</button>
     <script>
         // Scene setup
         var scene = new THREE.Scene();
