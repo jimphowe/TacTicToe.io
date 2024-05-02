@@ -264,10 +264,22 @@
             renderer.render(scene, camera);
         }
 
+        function sideToDirection(side) {
+            switch(side) {
+                case 'TOP':
+                    return 'UP'
+                case 'BOTTOM':
+                    return 'DOWN'
+                default:
+                    return side
+            }
+        }
+
         function handlePieceClick(piece) {
             //console.log('Piece at position', piece.userData.position, 'was clicked');
             //console.log('Original Position:', piece.userData.originalPosition);
-            //console.log('Original Direction:', directionMapping['BACK']);
+            console.log('Original Direction:', directionMapping['BACK']);
+            console.log('Corrected:', sideToDirection(directionMapping['BACK']))
             // AJAX request to the server with the clicked position
             fetch('/move', {
                 method: 'POST',
@@ -277,7 +289,7 @@
                 },
                 body: JSON.stringify({
                     position: piece.userData.originalPosition,
-                    direction: directionMapping['BACK'],
+                    direction: sideToDirection(directionMapping['BACK']),
                     player: "RED",
                     difficulty: '{{ difficulty|safe }}'
                 })

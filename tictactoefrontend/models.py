@@ -319,7 +319,7 @@ class Board:
     
     # Returns true if the given player has won (all locations in a run of three are equal to the player)
     def hasWon(self,player: Piece):
-        for run in self.winningRuns:
+        for run in self.getWinningRuns():
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return True
         return False
@@ -343,23 +343,10 @@ class EasyAgent:
 class GamePlayer:
     def __init__(self, difficulty):
        self.board = Board()
+       self.computer = EasyAgent(Piece.WHITE)
 
-    # def playGame(self):
-       
-    #    move_num = 1
-    #    while 1 == 1:
-    #       # Player 1 moves
-    #       (x1,y1,z1,dir1) = self.player1.getMove(self.board,move_num)
-    #       self.board.move(x1,y1,z1,dir1,self.player1.player)
-    #       # print(self.board.getGameState())
-    #       if self.board.hasWon(self.player1.player):
-    #          return 'player 1 won'
-
-    #       # Player 2 moves
-    #       (x2,y2,z2,dir2) = self.player2.getMove(self.board,move_num)
-    #       self.board.move(x2,y2,z2,dir2,self.player2.player)
-          
-    #       # print(self.board.getGameState())
-    #       if self.board.hasWon(self.player2.player):
-    #          return 'player 2 won'
-    #       move_num += 1
+    def move(self,x,y,z,dir,player):
+        self.board.move(x,y,z,dir,player)
+        (_x,_y,_z,_dir) = self.computer.getMove(self.board)
+        self.board.move(_x,_y,_z,_dir,Piece.WHITE)
+        x = 1
