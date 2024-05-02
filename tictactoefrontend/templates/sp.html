@@ -296,8 +296,8 @@
         var spheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
         gameState.forEach((layer, x) => {
-            layer.forEach((row, z) => {
-                row.forEach((cell, y) => {
+            layer.forEach((row, y) => {
+                row.forEach((cell, z) => {
                     var material;
                     switch (cell) {
                         case 'BLACK':
