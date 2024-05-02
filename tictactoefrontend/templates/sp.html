@@ -146,6 +146,10 @@
                 }
                 if (sphere.userData.position.y === 0) {
                     clickableSpheres.push(sphere);
+                    sphere.userData.clickable = true;
+                }
+                else {
+                    sphere.userData.clickable = false;
                 }
             });
         }
@@ -237,6 +241,23 @@
                         }
                     });
                 });
+            });
+
+            console.log(directionMapping);
+            targetDirectionMapping = directionMapping;
+            directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+            while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
+                console.log("rotating up");
+                rotateCube('UP');
+            }
+            while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
+                console.log("rotating left");
+                rotateCube('LEFT');
+            }
+
+            spheres.forEach((sphere) => {
+                //console.log(sphere.userData.position);
+                sphere.userData.clickable = (sphere.userData.position.y === 0);
             });
 
             // Re-render the scene

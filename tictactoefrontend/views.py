@@ -40,7 +40,7 @@ def handle_move(request):
     direction = data.get('direction')
     player = data.get('player')
     difficulty = data.get('difficulty')
-    print('Received move with values:', data)
+    #print('Received move with values:', data)
     
     game_state = request.session.get('game_state')
     if not game_state:
@@ -51,8 +51,8 @@ def handle_move(request):
 
     board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
     new_game_state = board.getState()
-    print("BOARD AFTER MOVE:\n")
-    print(board.getStatePretty())
+    #print("BOARD AFTER MOVE:\n")
+    #print(board.getStatePretty())
     request.session['game_state'] = new_game_state
     request.session.save()
     return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state})
