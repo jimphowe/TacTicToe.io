@@ -6,7 +6,7 @@ class Piece(Enum):
     EMPTY = 'EMPTY'
     BLACK = 'BLACK'
     WHITE = 'WHITE'
-    RED = ' RED '
+    RED = 'RED'
 
 class Board:
     def __init__(self):

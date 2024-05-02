@@ -194,10 +194,59 @@
             return cookieValue;
         }
 
+        function updateGameState(gameState) {
+            console.log(gameState);
+            // Remove all existing spheres from the scene
+            spheres.forEach(sphere => {
+                scene.remove(sphere);
+            });
+            spheres = [];  // Clear the spheres array
+            clickableSpheres = [];  // Clear clickable spheres array
+
+            // Iterate through the updated game state and create new spheres
+            gameState.forEach((layer, x) => {
+                layer.forEach((row, y) => {
+                    row.forEach((cell, z) => {
+                        var material;
+                        switch (cell) {
+                            case 'BLACK':
+                                material = blackMaterial;
+                                break;
+                            case 'WHITE':
+                                material = whiteMaterial;
+                                break;
+                            case 'RED':
+                                material = redMaterial;
+                                break;
+                            default:
+                                material = emptyMaterial; // Handle empty or undefined cells
+                        }
+                        var sphere = new THREE.Mesh(sphereGeometry, material);
+                        sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
+                        sphere.userData = {
+                            position: { x: x, y: y, z: z },
+                            originalPosition: { x: x, y: y, z: z },
+                            clickable: (y === 0) // Assuming y=0 makes the sphere clickable
+                        };
+
+                        spheres.push(sphere);
+                        scene.add(sphere);
+
+                        if (sphere.userData.clickable) {
+                            clickableSpheres.push(sphere);
+                        }
+                    });
+                });
+            });
+
+            // Re-render the scene
+            renderer.render(scene, camera);
+        }
+
         function handlePieceClick(piece) {
             //console.log('Piece at position', piece.userData.position, 'was clicked');
-            console.log('Original Position:', piece.userData.originalPosition);
-            console.log('Original Direction:', directionMapping['BACK']);
+            //console.log('Original Position:', piece.userData.originalPosition);
+            //console.log('Original Direction:', directionMapping['BACK']);
             // AJAX request to the server with the clicked position
             fetch('/move', {
                 method: 'POST',
@@ -214,8 +263,8 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Move processed:', data);
-                // Optionally update the game state here based on server response
+                //console.log('Move processed:', data);
+                updateGameState(data.game_state);
             })
             .catch(error => console.error('Error:', error));
         }
