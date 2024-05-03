@@ -370,7 +370,7 @@ class EasyAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board):
+    def getMove(self, board: Board, move_num):
         winningMove = board.getWinInOne(self.player)
         if winningMove:
           return winningMove
@@ -383,7 +383,7 @@ class MediumAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board):
+    def getMove(self, board: Board, move_num):
         winningMove = board.getWinInOne(self.player)
         if winningMove:
           return winningMove
@@ -434,8 +434,15 @@ class HardAgent:
     
 class GamePlayer:
     def __init__(self, difficulty):
-       self.board = Board()
-       self.computer = HardAgent(Piece.WHITE)
+        self.board = Board()
+        print(difficulty)
+        match(difficulty):
+            case 'easy':
+                self.computer = EasyAgent(Piece.WHITE)
+            case 'medium':
+                self.computer = MediumAgent(Piece.WHITE)
+            case 'hard':
+                self.computer = HardAgent(Piece.WHITE)
 
     def move(self,x,y,z,dir,player):
         self.board.move(x,y,z,dir,player)
