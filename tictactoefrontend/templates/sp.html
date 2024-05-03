@@ -199,7 +199,6 @@
         }
 
         function updateGameState(gameState) {
-            console.log(gameState);
             // Remove all existing spheres from the scene
             spheres.forEach(sphere => {
                 scene.remove(sphere);
@@ -247,16 +246,14 @@
             targetDirectionMapping = directionMapping;
             directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
             while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
-                console.log("rotating up");
                 rotateCube('UP');
+                rotateCube('LEFT');
             }
             while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
-                console.log("rotating left");
                 rotateCube('LEFT');
             }
 
             spheres.forEach((sphere) => {
-                //console.log(sphere.userData.position);
                 sphere.userData.clickable = (sphere.userData.position.y === 0);
             });
 

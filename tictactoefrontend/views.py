@@ -50,6 +50,7 @@ def handle_move(request):
     board = game.board
     board.setState(game_state)
 
+    #import ipdb; ipdb.set_trace()
     game.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
     new_game_state = board.getState()
     request.session['game_state'] = new_game_state

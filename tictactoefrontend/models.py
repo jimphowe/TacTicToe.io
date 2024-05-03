@@ -446,6 +446,7 @@ class GamePlayer:
                 self.computer = HardAgent(Piece.WHITE)
 
     def move(self,x,y,z,dir,player):
+        #import ipdb; ipdb.set_trace()
         self.board.move(x,y,z,dir,player)
         (_x,_y,_z,_dir) = self.computer.getMove(self.board, 5)
         self.board.move(_x,_y,_z,_dir,Piece.WHITE)
