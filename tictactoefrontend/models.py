@@ -271,24 +271,25 @@ class Board:
 
     # Returns a string representation of the gameboard, for debugging purposes
     def getStatePretty(self):
+        displayStr = { Piece.RED : ' RED ', Piece.BLACK : 'BLACK', Piece.WHITE : 'WHITE', Piece.EMPTY : 'EMPTY'}
         gameState = "+----------------------\n"
-        gameState += "| \ " + self.pieces[0][2][0].value + "  " + self.pieces[1][2][0].value + "  " + self.pieces[2][2][0].value + " \\\n"
+        gameState += "| \ " + displayStr[self.pieces[0][2][0]] + "  " + displayStr[self.pieces[1][2][0]] + "  " + displayStr[self.pieces[2][2][0]] + " \\\n"
         gameState += "|   \                     \\\n"
-        gameState += "|     \ " + self.pieces[0][1][0].value + "  " + self.pieces[1][1][0].value + "  " + self.pieces[2][1][0].value + " \\\n"
+        gameState += "|     \ " + displayStr[self.pieces[0][1][0]] + "  " + displayStr[self.pieces[1][1][0]] + "  " + displayStr[self.pieces[2][1][0]] + " \\\n"
         gameState += "|       \                     \\\n"
-        gameState += "|         \ " + self.pieces[0][0][0].value + "  " + self.pieces[1][0][0].value + "  " + self.pieces[2][0][0].value + " \\\n"
+        gameState += "|         \ " + displayStr[self.pieces[0][0][0]] + "  " + displayStr[self.pieces[1][0][0]] + "  " + displayStr[self.pieces[2][0][0]] + " \\\n"
         gameState += "|          ---------------------|\n"
-        gameState += "|   " + self.pieces[0][2][1].value + " |" + self.pieces[1][2][1].value + "  " + self.pieces[2][2][1].value + "         |\n"
+        gameState += "|   " + displayStr[self.pieces[0][2][1]] + " |" + displayStr[self.pieces[1][2][1]] + "  " + displayStr[self.pieces[2][2][1]] + "         |\n"
         gameState += "|         |                     |\n"
-        gameState += "|       " + self.pieces[0][1][1].value + "  " + self.pieces[1][1][1].value + "  " + self.pieces[2][1][1].value + "     |\n"
+        gameState += "|       " + displayStr[self.pieces[0][1][1]] + "  " + displayStr[self.pieces[1][1][1]] + "  " + displayStr[self.pieces[2][1][1]] + "     |\n"
         gameState += "|         |                     |\n"
-        gameState += "|         | " + self.pieces[0][0][1].value + "  " + self.pieces[1][0][1].value + "  " + self.pieces[2][0][1].value + " |\n"
+        gameState += "|         | " + displayStr[self.pieces[0][0][1]] + "  " + displayStr[self.pieces[1][0][1]] + "  " + displayStr[self.pieces[2][0][1]] + " |\n"
         gameState += "|         |                     |\n"
-        gameState += " \ " + self.pieces[0][2][2].value + "  " + self.pieces[1][2][2].value + "  " + self.pieces[2][2][2].value + "          |\n"
+        gameState += " \ " + displayStr[self.pieces[0][2][2]] + "  " + displayStr[self.pieces[1][2][2]] + "  " + displayStr[self.pieces[2][2][2]] + "          |\n"
         gameState += "   \      |                     |\n"
-        gameState += "     \ " + self.pieces[0][1][2].value + "  " + self.pieces[1][1][2].value + "  " + self.pieces[2][1][2].value + "      |\n"
+        gameState += "     \ " + displayStr[self.pieces[0][1][2]] + "  " + displayStr[self.pieces[1][1][2]] + "  " + displayStr[self.pieces[2][1][2]] + "      |\n"
         gameState += "       \  |                     |\n"
-        gameState += "         \| " + self.pieces[0][0][2].value + "  " + self.pieces[1][0][2].value + "  " + self.pieces[2][0][2].value + " |\n"
+        gameState += "         \| " + displayStr[self.pieces[0][0][2]] + "  " + displayStr[self.pieces[1][0][2]] + "  " + displayStr[self.pieces[2][0][2]] + " |\n"
         gameState += "           ---------------------+\n\n"
         return gameState
 
