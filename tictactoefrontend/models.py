@@ -1,5 +1,4 @@
 import random
-from django.db import models
 from enum import Enum
 
 class Piece(Enum):
@@ -306,6 +305,10 @@ class Board:
             z = random.randint(0,2)
             dir = random.choice(directions)
         return (x,y,z,dir)
+    
+    # Returns the other player color. Red -> White. White -> Red
+    def otherPlayer(self,player: Piece):
+        return Piece.RED if player == Piece.WHITE else Piece.WHITE
 
     # Loops through possible moves and returns if a move wins the game, else returns None
     def getWinInOne(self,player: Piece):
@@ -315,6 +318,40 @@ class Board:
             self.undo()
             return (x,y,z,dir)
           self.undo()
+        return None
+    
+    # Loops through possible moves and returns a move which prevents the opponent from winning 
+    # If there are multiple, picks one at random. If none exist returns None
+    def getDefendingMove(self,player: Piece):
+        potential_moves = []
+        for (x,y,z,dir) in self.getPossibleMoves():
+          self.move(x,y,z,dir,player)
+          if self.getWinInOne(self.otherPlayer(player)) == None:
+            potential_moves.append((x,y,z,dir))
+          self.undo()
+        if potential_moves:
+          return random.choice(potential_moves)
+        return None
+    
+    # Loops through possible moves and for each one examines all possible opponent moves.
+    # If there are any moves which allow the given player to win after any opponent move, 
+    # return one at random. Otherwise, return None
+    def getWinInTwo(self,player: Piece):
+        potential_moves = []
+        for (x,y,z,dir) in self.getPossibleMoves():
+          self.move(x,y,z,dir,player)
+          if self.getWinInOne(self.otherPlayer(player)) == None:
+            winner = True
+            for (x2,y2,z2,dir2) in self.getPossibleMoves():
+              self.move(x2,y2,z2,dir2,self.otherPlayer(player))
+              if self.getWinInOne(player) == None:
+                winner = False
+              self.undo()
+            if winner:
+              potential_moves.append((x,y,z,dir))
+          self.undo()
+        if potential_moves:
+          return random.choice(potential_moves)
         return None
     
     # Returns true if the given player has won (all locations in a run of three are equal to the player)
@@ -339,14 +376,68 @@ class EasyAgent:
           return winningMove
         else:
           return board.getRandomMove(self.player)
+        
+# Returns a winning move if one exists, otherwise a move preventing the opponent from 
+# winning if one exists, otherwise a random move
+class MediumAgent:
+    def __init__(self,player):
+        self.player = player
+
+    def getMove(self, board: Board):
+        winningMove = board.getWinInOne(self.player)
+        if winningMove:
+          return winningMove
+        else:
+          defendingMove = board.getDefendingMove(self.player)
+          if defendingMove:
+            return defendingMove
+          else:
+            return board.getRandomMove(self.player)
+          
+# Returns a winning move if one exists, otherwise a move which wins in two turns if one exists, 
+# otherwise a move preventing the opponent from winning, otherwise a random move
+class HardAgent:
+    def __init__(self,player):
+        self.player = player
+
+    def getMove(self, board: Board, move_num):
+        if move_num < 3:
+          defendingMove = board.getDefendingMove(self.player)
+          if defendingMove:
+            return defendingMove
+          else:
+            return board.getRandomMove(self.player)
+        elif move_num < 2:
+          winInTwo = board.getWinInTwo(self.player)
+          if winInTwo:
+            return winInTwo
+          else:
+            defendingMove = board.getDefendingMove(self.player)
+            if defendingMove:
+              return defendingMove
+            else:
+              return board.getRandomMove(self.player)
+        else:
+          winningMove = board.getWinInOne(self.player)
+          if move_num > 2 and winningMove:
+            return winningMove
+          else:
+            winInTwo = board.getWinInTwo(self.player)
+            if winInTwo:
+              return winInTwo
+            else:
+              defendingMove = board.getDefendingMove(self.player)
+              if defendingMove:
+                return defendingMove
+              else:
+                return board.getRandomMove(self.player)
     
 class GamePlayer:
     def __init__(self, difficulty):
        self.board = Board()
-       self.computer = EasyAgent(Piece.WHITE)
+       self.computer = HardAgent(Piece.WHITE)
 
     def move(self,x,y,z,dir,player):
         self.board.move(x,y,z,dir,player)
-        (_x,_y,_z,_dir) = self.computer.getMove(self.board)
+        (_x,_y,_z,_dir) = self.computer.getMove(self.board, 5)
         self.board.move(_x,_y,_z,_dir,Piece.WHITE)
-        x = 1
