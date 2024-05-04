@@ -3,7 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.template import loader
-from tictactoefrontend.models import GamePlayer
+from tictactoefrontend.models import GamePlayer, Piece
 
 def home(request):
     template = loader.get_template('index.html')
@@ -55,4 +55,9 @@ def handle_move(request):
     new_game_state = board.getState()
     request.session['game_state'] = new_game_state
     request.session.save()
-    return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state})
+    winner = None
+    if board.hasWon(Piece.RED):
+        winner = 'RED'
+    elif board.hasWon(Piece.WHITE):
+        winner = 'WHITE'
+    return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})

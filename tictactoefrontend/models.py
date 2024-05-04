@@ -355,6 +355,16 @@ class Board:
           return random.choice(potential_moves)
         return None
     
+    def numPieces(self,player: Piece):
+        count = 0
+        for layer in self.pieces:
+            for row in layer:
+                for piece in row:
+                    if piece == player:
+                        count += 1
+        return count
+       
+    
     # Returns true if the given player has won (all locations in a run of three are equal to the player)
     def hasWon(self,player: Piece):
         for run in self.getWinningRuns():
@@ -402,13 +412,13 @@ class HardAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num):
-        if move_num < 3:
+        if move_num < 2:
           defendingMove = board.getDefendingMove(self.player)
           if defendingMove:
             return defendingMove
           else:
             return board.getRandomMove(self.player)
-        elif move_num < 2:
+        elif move_num < 3:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
             return winInTwo
@@ -436,17 +446,18 @@ class HardAgent:
 class GamePlayer:
     def __init__(self, difficulty):
         self.board = Board()
-        print(difficulty)
+        self.computerColor = Piece.WHITE
         match(difficulty):
             case 'easy':
-                self.computer = EasyAgent(Piece.WHITE)
+                self.computer = EasyAgent(self.computerColor)
             case 'medium':
-                self.computer = MediumAgent(Piece.WHITE)
+                self.computer = MediumAgent(self.computerColor)
             case 'hard':
-                self.computer = HardAgent(Piece.WHITE)
+                self.computer = HardAgent(self.computerColor)
 
     def move(self,x,y,z,dir,player):
         #import ipdb; ipdb.set_trace()
         self.board.move(x,y,z,dir,player)
-        (_x,_y,_z,_dir) = self.computer.getMove(self.board, 5)
-        self.board.move(_x,_y,_z,_dir,Piece.WHITE)
+        if not self.board.hasWon(player):
+            (_x,_y,_z,_dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
+            self.board.move(_x,_y,_z,_dir,self.computerColor)
