@@ -245,12 +245,24 @@
             console.log(directionMapping);
             targetDirectionMapping = directionMapping;
             directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+            let count = 0;
             while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
-                rotateCube('UP');
-                rotateCube('LEFT');
+                if (count % 2 == 0) {
+                    if (count % 4 == 0) {
+                        rotateCube('LEFT');
+                    }
+                    else {
+                        rotateCube('RIGHT');
+                    }
+                }
+                else {
+                    rotateCube('UP');
+                }
+                count += 1;
             }
             while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
-                rotateCube('LEFT');
+                console.log("ROTATING RIGHT");
+                rotateCube('RIGHT');
             }
 
             spheres.forEach((sphere) => {
