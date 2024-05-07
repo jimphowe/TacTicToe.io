@@ -60,7 +60,7 @@
         }
 
         window.addEventListener('mousemove', onMouseMove, false);
-        window.addEventListener('mouseout', onMouseOut, false);
+        
 
         function onMouseOut(event) {
             if (lastIntersected) {
@@ -69,24 +69,46 @@
             }
         }
 
-        window.addEventListener('keydown', onKeyDown, false);
+        window.addEventListener('mouseout', onMouseOut, false);
 
         function onKeyDown(event) {
             switch (event.key) {
                 case 'ArrowUp':
+                case 'w':
                     rotateCube('UP');
                     break;
                 case 'ArrowDown':
+                case 's':
                     rotateCube('DOWN');
                     break;
                 case 'ArrowLeft':
+                case 'a':
                     rotateCube('LEFT');
                     break;
                 case 'ArrowRight':
+                case 'd':
                     rotateCube('RIGHT');
                     break;
             }
         }
+
+        window.addEventListener('keydown', onKeyDown, false);
+
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
+            if (intersects.length > 0) {
+                var object = intersects[0].object;
+                if (object.userData && object.userData.clickable) {
+                    handlePieceClick(object);
+                }
+            }
+        }
+
+        window.addEventListener('click', onMouseClick, false);
 
         function rotateCube(direction) {
             // Update pieces locations in cube
@@ -347,7 +369,8 @@
                     position: piece.userData.originalPosition,
                     direction: sideToDirection(directionMapping['BACK']),
                     player: "RED",
-                    difficulty: '{{ difficulty|safe }}'
+                    difficulty: '{{ difficulty|safe }}',
+                    firstPlayer: '{{ firstPlayer|safe }}'
                 })
             })
             .then(response => response.json())
@@ -358,8 +381,6 @@
             })
             .catch(error => console.error('Error:', error));
         }
-
-        window.addEventListener('click', onMouseClick, false);
 
         // Adding lights
         var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
@@ -470,21 +491,6 @@
         // Initialize Raycaster
         var raycaster = new THREE.Raycaster();
         var mouse = new THREE.Vector2();
-
-        // Handle Clicks
-        function onMouseClick(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-
-            var intersects = raycaster.intersectObjects(clickableSpheres, true);
-            if (intersects.length > 0) {
-                var object = intersects[0].object;
-                if (object.userData && object.userData.clickable) {
-                    handlePieceClick(object);
-                }
-            }
-        }
 
         // Camera position
         camera.position.set(7, 4, 3);
