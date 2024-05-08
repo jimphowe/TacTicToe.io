@@ -273,11 +273,11 @@ class Board:
     def getStatePretty(self):
         displayStr = { Piece.RED : ' RED ', Piece.BLACK : 'BLACK', Piece.WHITE : 'WHITE', Piece.EMPTY : 'EMPTY'}
         gameState = "+----------------------\n"
-        gameState += "| \ " + displayStr[self.pieces[0][2][0]] + "  " + displayStr[self.pieces[1][2][0]] + "  " + displayStr[self.pieces[2][2][0]] + " \\\n"
-        gameState += "|   \                     \\\n"
-        gameState += "|     \ " + displayStr[self.pieces[0][1][0]] + "  " + displayStr[self.pieces[1][1][0]] + "  " + displayStr[self.pieces[2][1][0]] + " \\\n"
-        gameState += "|       \                     \\\n"
-        gameState += "|         \ " + displayStr[self.pieces[0][0][0]] + "  " + displayStr[self.pieces[1][0][0]] + "  " + displayStr[self.pieces[2][0][0]] + " \\\n"
+        gameState += "| \\ " + displayStr[self.pieces[0][2][0]] + "  " + displayStr[self.pieces[1][2][0]] + "  " + displayStr[self.pieces[2][2][0]] + " \\\n"
+        gameState += "|   \\                     \\\n"
+        gameState += "|     \\ " + displayStr[self.pieces[0][1][0]] + "  " + displayStr[self.pieces[1][1][0]] + "  " + displayStr[self.pieces[2][1][0]] + " \\\n"
+        gameState += "|       \\                     \\\n"
+        gameState += "|         \\ " + displayStr[self.pieces[0][0][0]] + "  " + displayStr[self.pieces[1][0][0]] + "  " + displayStr[self.pieces[2][0][0]] + " \\\n"
         gameState += "|          ---------------------|\n"
         gameState += "|   " + displayStr[self.pieces[0][2][1]] + " |" + displayStr[self.pieces[1][2][1]] + "  " + displayStr[self.pieces[2][2][1]] + "         |\n"
         gameState += "|         |                     |\n"
@@ -285,11 +285,11 @@ class Board:
         gameState += "|         |                     |\n"
         gameState += "|         | " + displayStr[self.pieces[0][0][1]] + "  " + displayStr[self.pieces[1][0][1]] + "  " + displayStr[self.pieces[2][0][1]] + " |\n"
         gameState += "|         |                     |\n"
-        gameState += " \ " + displayStr[self.pieces[0][2][2]] + "  " + displayStr[self.pieces[1][2][2]] + "  " + displayStr[self.pieces[2][2][2]] + "          |\n"
-        gameState += "   \      |                     |\n"
-        gameState += "     \ " + displayStr[self.pieces[0][1][2]] + "  " + displayStr[self.pieces[1][1][2]] + "  " + displayStr[self.pieces[2][1][2]] + "      |\n"
-        gameState += "       \  |                     |\n"
-        gameState += "         \| " + displayStr[self.pieces[0][0][2]] + "  " + displayStr[self.pieces[1][0][2]] + "  " + displayStr[self.pieces[2][0][2]] + " |\n"
+        gameState += " \\ " + displayStr[self.pieces[0][2][2]] + "  " + displayStr[self.pieces[1][2][2]] + "  " + displayStr[self.pieces[2][2][2]] + "          |\n"
+        gameState += "   \\      |                     |\n"
+        gameState += "     \\ " + displayStr[self.pieces[0][1][2]] + "  " + displayStr[self.pieces[1][1][2]] + "  " + displayStr[self.pieces[2][1][2]] + "      |\n"
+        gameState += "       \\  |                     |\n"
+        gameState += "         \\| " + displayStr[self.pieces[0][0][2]] + "  " + displayStr[self.pieces[1][0][2]] + "  " + displayStr[self.pieces[2][0][2]] + " |\n"
         gameState += "           ---------------------+\n\n"
         return gameState
 
@@ -372,10 +372,6 @@ class Board:
                 return True
         return False
     
-    # Returns true if either player has won
-    def gameOver(self):
-        return self.hasWon(Piece.RED) or self.hasWon(Piece.WHITE)
-    
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
     def __init__(self,player):
@@ -455,9 +451,13 @@ class GamePlayer:
             case 'hard':
                 self.computer = HardAgent(self.computerColor)
 
+    def isOver(self):
+        return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.WHITE)
+
+    def makeComputerMove(self):
+        (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
+        self.board.move(x,y,z,dir,self.computerColor)
+
     def move(self,x,y,z,dir,player):
-        #import ipdb; ipdb.set_trace()
         self.board.move(x,y,z,dir,player)
-        if not self.board.hasWon(player):
-            (_x,_y,_z,_dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
-            self.board.move(_x,_y,_z,_dir,self.computerColor)
+            

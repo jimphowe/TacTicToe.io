@@ -10,13 +10,14 @@
         body { margin: 0; }
         canvas { display: block; }
         #homeButton { position: absolute; left: 20px; top: 20px; padding: 10px 20px; font-size: 16px; }
+        #restartButton { position: absolute; left: 20px; top: 80px; padding: 10px 20px; font-size: 16px; }
     </style>
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
-    {% url 'home' as home_url %}
-    <button id="homeButton" onclick="location.href='{{ home_url }}'">Home</button>
+    <button id="homeButton" onclick="location.href='/'">Home</button>
+    <button id="restartButton" onclick="window.location.reload()">Restart</button>
     <script>
         // Scene setup
         var scene = new THREE.Scene();
@@ -354,10 +355,6 @@
         }
 
         function handlePieceClick(piece) {
-            //console.log('Piece at position', piece.userData.position, 'was clicked');
-            //console.log('Original Position:', piece.userData.originalPosition);
-            console.log('Original Direction:', directionMapping['BACK']);
-            console.log('Corrected:', sideToDirection(directionMapping['BACK']))
             // AJAX request to the server with the clicked position
             fetch('/move', {
                 method: 'POST',
@@ -369,8 +366,7 @@
                     position: piece.userData.originalPosition,
                     direction: sideToDirection(directionMapping['BACK']),
                     player: "RED",
-                    difficulty: '{{ difficulty|safe }}',
-                    firstPlayer: '{{ firstPlayer|safe }}'
+                    difficulty: '{{ difficulty|safe }}'
                 })
             })
             .then(response => response.json())

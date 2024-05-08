@@ -19,7 +19,10 @@ def sp_setup_view(request):
 
 def sp_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
+    firstPlayer = request.GET.get('firstPlayer', 'human')
     game = GamePlayer(difficulty)
+    if firstPlayer == 'computer':
+        game.makeComputerMove()
 
     request.session['game_state'] = game.board.getState()
     
@@ -52,6 +55,8 @@ def handle_move(request):
 
     #import ipdb; ipdb.set_trace()
     game.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+    if not game.isOver():
+        game.makeComputerMove()
     new_game_state = board.getState()
     request.session['game_state'] = new_game_state
     request.session.save()
