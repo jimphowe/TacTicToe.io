@@ -16,13 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from tictactoefrontend.views import home, mp_view, sp_view, sp_setup_view, handle_move
+from tictactoefrontend.views import home, multiplayer_view, singleplayer_view, singleplayer_setup_view, handle_move
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home, name='home'),
-    path('multiplayer', mp_view, name='multiplayer'),
-    path('singleplayer/setup/', sp_setup_view, name='sp_setup_view'),
-    path('singleplayer/play/', sp_view, name='sp_view'),
+    path('multiplayer', multiplayer_view, name='multiplayer_view'),
+    path('singleplayer/setup/', singleplayer_setup_view, name='singleplayer_setup_view'),
+    path('singleplayer/play/', singleplayer_view, name='singleplayer_view'),
     path('move', handle_move, name='handle_move')
 ]

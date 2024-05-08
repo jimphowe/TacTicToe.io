@@ -9,15 +9,15 @@ def home(request):
     template = loader.get_template('index.html')
     return HttpResponse(template.render({}, request))
 
-def mp_view(request):
-    template = loader.get_template('mp.html')
+def multiplayer_view(request):
+    template = loader.get_template('multiplayer.html')
     return HttpResponse(template.render({}, request))
 
-def sp_setup_view(request):
-    template = loader.get_template('sp_setup.html')
+def singleplayer_setup_view(request):
+    template = loader.get_template('singleplayer_setup.html')
     return HttpResponse(template.render({}, request))
 
-def sp_view(request):
+def singleplayer_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
     firstPlayer = request.GET.get('firstPlayer', 'human')
     game = GamePlayer(difficulty)
@@ -31,7 +31,7 @@ def sp_view(request):
         'difficulty': difficulty
     }
 
-    template = loader.get_template('sp.html')
+    template = loader.get_template('singleplayer.html')
     return HttpResponse(template.render(context, request))
 
 @csrf_exempt
