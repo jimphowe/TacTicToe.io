@@ -18,6 +18,16 @@
     <canvas id="myCanvas"></canvas>
     <button id="mpButton" onclick="location.href='/multiplayer'">MultiPlayer</button>
     <button id="spButton" onclick="location.href='/singleplayer/setup'">SinglePlayer</button>
+    {% if user.is_authenticated %}
+        <span class="button" style="top: 140px;">Hello, {{ user.username }}</span>
+        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="button" style="top: 200px;">Logout</button>
+        </form>        
+    {% else %}
+        <button class="button" style="top: 140px;" onclick="location.href='/login'">Login</button>
+        <button class="button" style="top: 200px;" onclick="location.href='/signup'">Sign Up</button>
+    {% endif %}
     <script>
         // Scene setup
         var scene = new THREE.Scene();

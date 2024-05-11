@@ -16,11 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from tictactoefrontend.views import home, multiplayer_view, singleplayer_view, singleplayer_setup_view, handle_move
+from django.contrib.auth.views import LoginView, LogoutView
+from tictactoefrontend.views import home, signup, multiplayer_view, singleplayer_view, singleplayer_setup_view, handle_move
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home, name='home'),
+    path('signup/', signup, name='signup'),
+    path('login/', LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
     path('multiplayer', multiplayer_view, name='multiplayer_view'),
     path('singleplayer/setup/', singleplayer_setup_view, name='singleplayer_setup_view'),
     path('singleplayer/play/', singleplayer_view, name='singleplayer_view'),

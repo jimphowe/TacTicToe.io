@@ -3,7 +3,10 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.template import loader
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, authenticate
 from tictactoefrontend.models import GamePlayer, Piece
+from tictactoefrontend.forms import SignUpForm
 
 def home(request):
     template = loader.get_template('index.html')
@@ -66,3 +69,21 @@ def handle_move(request):
     elif board.hasWon(Piece.WHITE):
         winner = 'WHITE'
     return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})
+
+def signup(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            user.refresh_from_db()  # load the profile instance created by the signal
+            user.profile.email = form.cleaned_data.get('email')
+            user.save()
+            raw_password = form.cleaned_data.get('password1')
+            user = authenticate(username=user.username, password=raw_password)
+            login(request, user)
+            return redirect('home')
+        else:
+            print(form.errors)
+    else:
+        form = SignUpForm()
+    return render(request, 'signup.html', {'form': form})
