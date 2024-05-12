@@ -481,3 +481,22 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance)
     else:
         instance.profile.save()
+
+
+class Game(models.Model):
+    # Player fields
+    player_one = models.ForeignKey(User, related_name='games_as_player_one', on_delete=models.CASCADE)
+    player_two = models.ForeignKey(User, related_name='games_as_player_two', on_delete=models.CASCADE)
+    
+    # Game state and status
+    game_state = models.JSONField(default=list)  # Storing the 3D grid as a list of lists of lists
+    turn = models.ForeignKey(User, on_delete=models.CASCADE)
+    completed = models.BooleanField(default=False)
+    winner = models.ForeignKey(User, related_name='winner', on_delete=models.CASCADE)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.player_one.username} vs {self.player_two.username} on {self.created_at.strftime('%Y-%m-%d')}"
