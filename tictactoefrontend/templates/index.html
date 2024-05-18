@@ -16,7 +16,7 @@
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
-    <button id="mpButton" onclick="location.href='/multiplayer'">MultiPlayer</button>
+    <button id="mpButton" onclick="location.href='/multiplayer/setup'">MultiPlayer</button>
     <button id="spButton" onclick="location.href='/singleplayer/setup'">SinglePlayer</button>
     {% if user.is_authenticated %}
         <span class="button" style="top: 140px;">Hello, {{ user.username }}</span>

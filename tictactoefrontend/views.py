@@ -12,6 +12,10 @@ def home(request):
     template = loader.get_template('index.html')
     return HttpResponse(template.render({}, request))
 
+def multiplayer_setup_view(request):
+    template = loader.get_template('multiplayer_setup.html')
+    return HttpResponse(template.render({}, request))
+
 def multiplayer_view(request):
     template = loader.get_template('multiplayer.html')
     return HttpResponse(template.render({}, request))
@@ -87,3 +91,20 @@ def signup(request):
     else:
         form = SignUpForm()
     return render(request, 'signup.html', {'form': form})
+
+from django.contrib.auth.decorators import login_required
+from .models import User, Game
+
+@login_required
+def find_opponent(request):
+    current_user = request.user
+    opponent = User.objects.filter(is_online=True).exclude(id=current_user.id).order_by('?').first()
+    if opponent:
+        game = Game.objects.create(player_one=current_user, player_two=opponent, turn=current_user)
+        return JsonResponse({'status': 'success', 'game_id': game.id})
+    else:
+        # Optionally, add the current user to a waiting list
+        # Placeholder function to add user to queue
+        #add_to_waiting_queue(current_user)
+        return JsonResponse({'status': 'waiting'})
+
