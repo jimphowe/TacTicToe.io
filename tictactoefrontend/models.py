@@ -492,11 +492,23 @@ class Game(models.Model):
     game_state = models.JSONField(default=list)  # Storing the 3D grid as a list of lists of lists
     turn = models.ForeignKey(User, on_delete=models.CASCADE)
     completed = models.BooleanField(default=False)
-    winner = models.ForeignKey(User, related_name='winner', on_delete=models.CASCADE)
+    winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
+
+    def start_new_game(player_one, player_two):
+        board = Board()  # Initialize a new Board
+        game = Game(
+            player_one=player_one,
+            player_two=player_two,
+            game_state=board.getState(),  # Serialize the initial state of the board
+            turn=random.choice([player_one, player_two]),
+            completed=False
+        )
+        game.save()
+        return game
 
     def __str__(self):
         return f"{self.player_one.username} vs {self.player_two.username} on {self.created_at.strftime('%Y-%m-%d')}"

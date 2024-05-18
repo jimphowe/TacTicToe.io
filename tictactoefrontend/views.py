@@ -93,18 +93,49 @@ def signup(request):
     return render(request, 'signup.html', {'form': form})
 
 from django.contrib.auth.decorators import login_required
-from .models import User, Game
+from .models import Game
 
 @login_required
 def find_opponent(request):
     current_user = request.user
-    opponent = User.objects.filter(is_online=True).exclude(id=current_user.id).order_by('?').first()
+    waiting_users = cache.get('waiting_users', [])
+
+    # Try to find an opponent in the cache
+    opponent = None
+    for user in waiting_users:
+        if user != current_user:
+            opponent = user
+            break
+
     if opponent:
-        game = Game.objects.create(player_one=current_user, player_two=opponent, turn=current_user)
+        waiting_users.remove(opponent)
+        cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
+        game = Game.start_new_game(current_user, opponent)
         return JsonResponse({'status': 'success', 'game_id': game.id})
     else:
-        # Optionally, add the current user to a waiting list
-        # Placeholder function to add user to queue
-        #add_to_waiting_queue(current_user)
+        add_to_waiting_queue(current_user)
         return JsonResponse({'status': 'waiting'})
+    
+from django.core.cache import cache
 
+def add_to_waiting_queue(user):
+    # This will add the user to a list of waiting users in the cache
+    waiting_users = cache.get('waiting_users', [])
+    if user.id not in [u.id for u in waiting_users]:
+        waiting_users.append(user)
+        cache.set('waiting_users', waiting_users, timeout=300)  # Timeout in seconds (e.g., 5 minutes)
+
+from django.shortcuts import render, get_object_or_404
+from .models import Game
+
+def multiplayer_game_view(request, game_id):
+    game = get_object_or_404(Game, pk=game_id)
+    context = {
+        'game': game,
+        'game_state': game.game_state,
+        'player_one': game.player_one,
+        'player_two': game.player_two,
+        'is_player_one': game.player_one == request.user,
+        'is_player_turn': game.turn == request.user
+    }
+    return render(request, 'game.html', context)

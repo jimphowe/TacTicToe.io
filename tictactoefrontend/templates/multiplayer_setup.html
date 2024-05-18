@@ -4,10 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup MultiPlayer Game</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <form action="{% url 'multiplayer_view' %}" method="get">
-        <button type="submit">Play</button>
-    </form>
+    <button id="playButton">Play</button>
+
+    <script>
+        $(document).ready(function() {
+            $('#playButton').click(function() {
+                $.ajax({
+                    url: '{% url "find_opponent" %}',  // Ensure the URL matches the one defined in urls.py for the find_opponent view
+                    type: 'GET',  // Or POST if your view expects a POST request
+                    success: function(response) {
+                        if(response.status === 'success') {
+                            window.location.href = '/game/' + response.game_id;  // Redirect to the game room
+                        } else if(response.status === 'waiting') {
+                            alert('Waiting for an opponent. You will be notified once matched.');
+                        }
+                    },
+                    error: function() {
+                        alert('Error finding an opponent. Please try again.');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

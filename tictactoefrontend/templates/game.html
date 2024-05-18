@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tac-Tic-Toe</title>
+    {% load static %}
+    <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #homeButton { position: absolute; left: 20px; top: 20px; padding: 10px 20px; font-size: 16px; }
+        #restartButton { position: absolute; left: 20px; top: 80px; padding: 10px 20px; font-size: 16px; }
+    </style>
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+</head>
+<body>
+    <canvas id="myCanvas"></canvas>
+    <button id="homeButton" onclick="location.href='/'">Home</button>
+    <button id="restartButton" onclick="window.location.reload()">Restart</button>
+    <script>
+        // Scene setup
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x808080);
+        document.body.appendChild(renderer.domElement);
+
+        var highlightMaterial = new THREE.MeshPhongMaterial({
+            color: 0xffff00,
+            emissive: 0x333300,
+            side: THREE.DoubleSide
+        });
+
+        var lastIntersected = null;
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
+
+            if (intersects.length > 0) {
+                if (lastIntersected !== intersects[0].object) {
+                    if (lastIntersected) {
+                        lastIntersected.material = lastIntersected.currentMaterial;
+                    }
+                    lastIntersected = intersects[0].object;
+                    lastIntersected.currentMaterial = lastIntersected.material;
+                    lastIntersected.material = highlightMaterial;
+                }
+            } else {
+                if (lastIntersected) {
+                    lastIntersected.material = lastIntersected.currentMaterial;
+                    lastIntersected = null;
+                }
+            }
+        }
+
+        window.addEventListener('mousemove', onMouseMove, false);
+        
+
+        function onMouseOut(event) {
+            if (lastIntersected) {
+                lastIntersected.material = lastIntersected.currentMaterial;
+                lastIntersected = null;
+            }
+        }
+
+        window.addEventListener('mouseout', onMouseOut, false);
+
+        function onKeyDown(event) {
+            switch (event.key) {
+                case 'ArrowUp':
+                case 'w':
+                    rotateCube('UP');
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    rotateCube('DOWN');
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                    rotateCube('LEFT');
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    rotateCube('RIGHT');
+                    break;
+            }
+        }
+
+        window.addEventListener('keydown', onKeyDown, false);
+
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
+            if (intersects.length > 0) {
+                var object = intersects[0].object;
+                if (object.userData && object.userData.clickable) {
+                    handlePieceClick(object);
+                }
+            }
+        }
+
+        window.addEventListener('click', onMouseClick, false);
+
+        function rotateCube(direction) {
+            // Update pieces locations in cube
+            updatePieceLocations(direction);
+            // Update mapping so we know what the front was originally
+            updateDirectionMapping(direction);
+            // Update pieces actual locations in space
+            rotatePieces(direction);
+        }
+
+        directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+        function updateDirectionMapping(direction) {
+            frontVal = directionMapping['FRONT']
+            switch (direction) {
+                case 'UP':
+                    directionMapping['FRONT'] = directionMapping['BOTTOM'];
+                    directionMapping['BOTTOM'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['TOP'];
+                    directionMapping['TOP'] = frontVal;
+                    break;
+                case 'DOWN':
+                    directionMapping['FRONT'] = directionMapping['TOP'];
+                    directionMapping['TOP'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['BOTTOM'];
+                    directionMapping['BOTTOM'] = frontVal;
+                    break;
+                case 'LEFT':
+                    directionMapping['FRONT'] = directionMapping['RIGHT'];
+                    directionMapping['RIGHT'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['LEFT'];
+                    directionMapping['LEFT'] = frontVal;
+                    break;
+                case 'RIGHT':
+                    directionMapping['FRONT'] = directionMapping['LEFT'];
+                    directionMapping['LEFT'] = directionMapping['BACK'];
+                    directionMapping['BACK'] = directionMapping['RIGHT'];
+                    directionMapping['RIGHT'] = frontVal;
+                    break;
+            }
+        }
+
+        function updatePieceLocations(direction) {
+            clickableSpheres = []
+            spheres.forEach(sphere => {
+                var x = sphere.userData.position.x;
+                var y = sphere.userData.position.y;
+                var z = sphere.userData.position.z;
+                switch (direction) {
+                    case 'UP':
+                        sphere.userData.position = { x: x, y: -z + 2, z: y };
+                        break;
+                    case 'DOWN':
+                        sphere.userData.position = { x: x, y: z, z: -y + 2 };
+                        break;
+                    case 'LEFT':
+                        sphere.userData.position = { x: y, y: -x + 2, z: z };
+                        break;
+                    case 'RIGHT':
+                        sphere.userData.position = { x: -y + 2, y: x, z: z };
+                        break;
+                }
+                if (sphere.userData.position.y === 0) {
+                    clickableSpheres.push(sphere);
+                    sphere.userData.clickable = true;
+                }
+                else {
+                    sphere.userData.clickable = false;
+                }
+            });
+        }
+
+        function rotatePieces(direction) {
+            var angle = Math.PI / 2;
+
+            switch (direction) {
+                case 'UP':
+                    axis = new THREE.Vector3(0, 0, 1);
+                    break;
+                case 'DOWN':
+                    axis = new THREE.Vector3(0, 0, 1);
+                    angle *= -1;
+                    break;
+                case 'LEFT':
+                    axis = new THREE.Vector3(0, 1, 0);
+                    angle *= -1;
+                    break;
+                case 'RIGHT':
+                    axis = new THREE.Vector3(0, 1, 0);
+                    break;
+            }
+
+            var rotation = new THREE.Matrix4().makeRotationAxis(axis.normalize(), angle);
+            spheres.forEach(sphere => {
+                sphere.position.applyMatrix4(rotation);
+            });
+
+            // Re-render the scene
+            renderer.render(scene, camera);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function updateGameState(gameState) {
+            // Remove all existing spheres from the scene
+            spheres.forEach(sphere => {
+                scene.remove(sphere);
+            });
+            spheres = [];  // Clear the spheres array
+            clickableSpheres = [];  // Clear clickable spheres array
+
+            // Iterate through the updated game state and create new spheres
+            gameState.forEach((layer, x) => {
+                layer.forEach((row, y) => {
+                    row.forEach((cell, z) => {
+                        var material;
+                        switch (cell) {
+                            case 'BLACK':
+                                material = blackMaterial;
+                                break;
+                            case 'WHITE':
+                                material = whiteMaterial;
+                                break;
+                            case 'RED':
+                                material = redMaterial;
+                                break;
+                            default:
+                                material = emptyMaterial; // Handle empty or undefined cells
+                        }
+                        var sphere = new THREE.Mesh(sphereGeometry, material);
+                        sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
+                        sphere.userData = {
+                            position: { x: x, y: y, z: z },
+                            originalPosition: { x: x, y: y, z: z },
+                            clickable: (y === 0) // Assuming y=0 makes the sphere clickable
+                        };
+
+                        spheres.push(sphere);
+                        scene.add(sphere);
+
+                        if (sphere.userData.clickable) {
+                            clickableSpheres.push(sphere);
+                        }
+                    });
+                });
+            });
+
+            console.log(directionMapping);
+            targetDirectionMapping = directionMapping;
+            directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+            let count = 0;
+            while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
+                if (count % 2 == 0) {
+                    if (count % 4 == 0) {
+                        rotateCube('LEFT');
+                    }
+                    else {
+                        rotateCube('RIGHT');
+                    }
+                }
+                else {
+                    rotateCube('UP');
+                }
+                count += 1;
+            }
+            while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
+                console.log("ROTATING RIGHT");
+                rotateCube('RIGHT');
+            }
+
+            spheres.forEach((sphere) => {
+                sphere.userData.clickable = (sphere.userData.position.y === 0);
+            });
+
+            // Re-render the scene
+            renderer.render(scene, camera);
+        }
+
+        function sideToDirection(side) {
+            switch(side) {
+                case 'TOP':
+                    return 'UP'
+                case 'BOTTOM':
+                    return 'DOWN'
+                default:
+                    return side
+            }
+        }
+
+        function handleGameOver(winner) {
+            console.log(winner);
+            if (winner == null) {
+                return;
+            }
+            // Disable further moves and rotations
+            window.removeEventListener('click', onMouseClick);
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseout', onMouseOut);
+
+            let message = 'Game Over! ' + winner + ' wins!';
+
+            // Display game over message
+            const gameOverDiv = document.createElement('div');
+            gameOverDiv.style.position = 'absolute';
+            gameOverDiv.style.top = '50%';
+            gameOverDiv.style.left = '50%';
+            gameOverDiv.style.transform = 'translate(-50%, -50%)';
+            gameOverDiv.style.fontSize = '24px';
+            gameOverDiv.style.color = 'white';
+            gameOverDiv.style.textAlign = 'center';
+            gameOverDiv.style.padding = '20px';
+            gameOverDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            gameOverDiv.style.borderRadius = '10px';
+            gameOverDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            gameOverDiv.innerHTML = message;
+
+            // Add a button to restart the game
+            const restartButton = document.createElement('button');
+            restartButton.innerHTML = 'Restart Game';
+            restartButton.style.marginTop = '20px';
+            restartButton.style.padding = '10px 20px';
+            restartButton.style.fontSize = '16px';
+            restartButton.style.cursor = 'pointer';
+            restartButton.onclick = function() {
+                // Reload the page to restart the game
+                location.reload();
+            };
+
+            gameOverDiv.appendChild(restartButton);
+            document.body.appendChild(gameOverDiv);
+        }
+
+        function handlePieceClick(piece) {
+            // AJAX request to the server with the clicked position
+            fetch('/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')  // Ensure CSRF token is sent with request
+                },
+                body: JSON.stringify({
+                    position: piece.userData.originalPosition,
+                    direction: sideToDirection(directionMapping['BACK']),
+                    player: "RED"
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                //console.log('Move processed:', data);
+                updateGameState(data.game_state);
+                handleGameOver(data.winner);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Adding lights
+        var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        scene.add(ambientLight);
+        var directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(1, 1, 1);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        var pointLight = new THREE.PointLight(0xffffff, 0.5);
+        pointLight.position.set(-2, -2, -2);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        // Set Up Cube
+        var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        var edgePaths = [
+            new THREE.Vector3(-3, -3, -3),
+            new THREE.Vector3(3, -3, -3),
+            new THREE.Vector3(3, 3, -3),
+            new THREE.Vector3(-3, 3, -3),
+            new THREE.Vector3(-3, -3, 3),
+            new THREE.Vector3(3, -3, 3),
+            new THREE.Vector3(3, 3, 3),
+            new THREE.Vector3(-3, 3, 3),
+        ];
+
+        edgePaths.forEach((start, index) => {
+            edgePaths.forEach((end, subIndex) => {
+                if (start.distanceTo(end) === 6) {
+                    var path = new THREE.LineCurve3(start, end);
+                    var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
+                    var mesh = new THREE.Mesh(geometry, tubeMaterial);
+                    scene.add(mesh);
+                }
+            });
+        });
+
+        function addTube(start, end) {
+            var path = new THREE.LineCurve3(new THREE.Vector3(...start), new THREE.Vector3(...end));
+            var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
+            var mesh = new THREE.Mesh(geometry, tubeMaterial);
+            scene.add(mesh);
+        }
+
+        var cubeSize = 6;
+        var halfCubeSize = cubeSize / 2;
+        var divisionSize = cubeSize / 3;
+        for (let offset = -halfCubeSize; offset <= halfCubeSize; offset += divisionSize) {
+            for (let z = -halfCubeSize; z <= halfCubeSize; z += divisionSize) {
+                addTube([-halfCubeSize, offset, z], [halfCubeSize, offset, z]);
+            }
+            for (let y = -halfCubeSize; y <= halfCubeSize; y += divisionSize) {
+                addTube([offset, y, -halfCubeSize], [offset, y, halfCubeSize]);
+            }
+            for (let x = -halfCubeSize; x <= halfCubeSize; x += divisionSize) {
+                addTube([x, -halfCubeSize, offset], [x, halfCubeSize, offset]);
+            }
+        }
+
+        // Set Up Balls
+        var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+        var redMaterial = new THREE.MeshPhongMaterial({color: 0xff0000});
+        var whiteMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
+        var blackMaterial = new THREE.MeshPhongMaterial({color: 0x000000});
+        var emptyMaterial = new THREE.MeshPhongMaterial({
+            color: 0x000000,  // Can be any color, won't matter as it's invisible
+            transparent: true,
+            opacity: 0.0,  // Completely transparent
+            depthWrite: false  // Avoid rendering issues
+        });
+
+        var clickableSpheres = [];
+        var spheres = [];
+        var gameState = JSON.parse('{{ game_state|safe }}');
+        gameState.forEach((layer, x) => {
+            layer.forEach((row, y) => {
+                row.forEach((cell, z) => {
+                    var material;
+                    switch (cell) {
+                        case 'BLACK':
+                            material = blackMaterial;
+                            break;
+                        case 'WHITE':
+                            material = whiteMaterial;
+                            break;
+                        case 'RED':
+                            material = redMaterial;
+                            break;
+                        default:
+                            material = emptyMaterial
+                    }
+                    var sphere = new THREE.Mesh(sphereGeometry, material);
+                    sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
+                    sphere.userData = {
+                        position: {x: x, y: y, z: z},
+                        originalPosition: {x: x, y: y, z: z},
+                        clickable: true
+                    };
+                    if (y == 0) {
+                        clickableSpheres.push(sphere);
+                    }
+                    spheres.push(sphere);
+                    scene.add(sphere); 
+                });
+            });
+        });
+
+        // Initialize Raycaster
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+
+        // Camera position
+        camera.position.set(7, 4, 3);
+        camera.lookAt(scene.position);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
