@@ -482,6 +482,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     else:
         instance.profile.save()
 
+import json
 
 class Game(models.Model):
     # Player fields
@@ -503,7 +504,7 @@ class Game(models.Model):
         game = Game(
             player_one=player_one,
             player_two=player_two,
-            game_state=board.getState(),  # Serialize the initial state of the board
+            game_state=json.dumps(board.getState()),  # Serialize the initial state of the board
             turn=random.choice([player_one, player_two]),
             completed=False
         )

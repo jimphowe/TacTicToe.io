@@ -131,11 +131,11 @@ from .models import Game
 def multiplayer_game_view(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
     context = {
-        'game': game,
         'game_state': game.game_state,
         'player_one': game.player_one,
         'player_two': game.player_two,
         'is_player_one': game.player_one == request.user,
         'is_player_turn': game.turn == request.user
     }
+    print(game.game_state)
     return render(request, 'game.html', context)
