@@ -355,27 +355,27 @@
         }
 
         function handlePieceClick(piece) {
-            // AJAX request to the server with the clicked position
-            fetch('/move', {
+            fetch('/multiplayer_move', {  // Ensure this URL correctly points to your view handling moves
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')  // Ensure CSRF token is sent with request
+                    'X-CSRFToken': getCookie('csrftoken')  // Ensuring CSRF token is included for Django
                 },
                 body: JSON.stringify({
-                    position: piece.userData.originalPosition,
-                    direction: sideToDirection(directionMapping['BACK']),
-                    player: "RED"
+                    game_id: '{{ game_id }}',  // Pass the current game ID
+                    position: piece.userData.position,
+                    direction: sideToDirection(directionMapping['BACK'])
                 })
             })
             .then(response => response.json())
             .then(data => {
-                //console.log('Move processed:', data);
-                updateGameState(data.game_state);
-                handleGameOver(data.winner);
+                console.log("Recieved click with data: " + data);
+                updateGameState(data.game_state);  // Update the local state with the new state from the server
+                handleGameOver(data.winner);  // Check if the game has a winner 
             })
             .catch(error => console.error('Error:', error));
         }
+
 
         // Adding lights
         var ambientLight = new THREE.AmbientLight(0x404040); // soft white light

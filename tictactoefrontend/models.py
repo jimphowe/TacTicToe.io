@@ -505,7 +505,7 @@ class Game(models.Model):
             player_one=player_one,
             player_two=player_two,
             game_state=json.dumps(board.getState()),  # Serialize the initial state of the board
-            turn=random.choice([player_one, player_two]),
+            turn=player_one,#TODO update to random maybe? random.choice([player_one, player_two]),
             completed=False
         )
         game.save()

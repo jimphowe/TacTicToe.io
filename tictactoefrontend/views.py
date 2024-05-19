@@ -58,6 +58,8 @@ def handle_move(request):
     
     game = GamePlayer(difficulty)
     board = game.board
+    
+    import ipdb; ipdb.set_trace()
     board.setState(game_state)
 
     #import ipdb; ipdb.set_trace()
@@ -73,6 +75,54 @@ def handle_move(request):
     elif board.hasWon(Piece.WHITE):
         winner = 'WHITE'
     return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})
+
+from .models import Board
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def handle_multiplayer_move(request):
+    # Parse the request data
+    data = json.loads(request.body)
+    game_id = data.get('game_id')
+    position = data.get('position')
+    direction = data.get('direction')
+
+    p1_color = Piece.RED
+    p2_color = Piece.WHITE
+
+    # Fetch the game from the database
+    game = get_object_or_404(Game, pk=game_id)
+
+    # Assume that the current user making the move is the one who sent the request
+    # You should add additional checks to ensure the correct player is making the move based on your game logic
+    #import ipdb; ipdb.set_trace()
+    if request.user.id != game.turn.id:
+        return JsonResponse({'status': 'error', 'message': 'Not your turn', 'game_state': game.game_state,
+        'winner': None}, status=403)
+    
+    #import ipdb; ipdb.set_trace()
+
+    board = Board()
+    board.setState(json.loads(game.game_state))
+    player = p1_color if request.user.id == game.player_one.id else p2_color
+    board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+
+    game.game_state = board.getState()
+    game.turn = game.player_two if game.turn == game.player_one else game.player_one
+
+    winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
+    # Check if there's a winner
+    if winner:
+        game.completed = True
+        game.winner = winner
+    
+    game.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'game_state': game.game_state,
+        'winner': winner
+    })
 
 def signup(request):
     if request.method == 'POST':
@@ -131,6 +181,7 @@ from .models import Game
 def multiplayer_game_view(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
     context = {
+        'game_id': game.id,
         'game_state': game.game_state,
         'player_one': game.player_one,
         'player_two': game.player_two,
