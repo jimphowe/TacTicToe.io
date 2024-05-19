@@ -2,10 +2,10 @@ import random
 from enum import Enum
 
 class Piece(Enum):
-    EMPTY = 'EMPTY'
-    BLACK = 'BLACK'
-    WHITE = 'WHITE'
-    RED = 'RED'
+    EMPTY = "EMPTY"
+    BLACK = "BLACK"
+    WHITE = "WHITE"
+    RED = "RED"
 
 class Board:
     def __init__(self):
