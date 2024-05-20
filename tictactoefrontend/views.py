@@ -52,21 +52,20 @@ def handle_move(request):
     difficulty = data.get('difficulty')
     print('Received move with values:', data)
     
-    game_state = json.dumps(request.session.get('game_state'))
+    game_state = request.session.get('game_state')
     if not game_state:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
     
     game = GamePlayer(difficulty)
     board = game.board
     
-    import ipdb; ipdb.set_trace()
     board.setState(game_state)
 
     #import ipdb; ipdb.set_trace()
     game.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
     if not game.isOver():
         game.makeComputerMove()
-    new_game_state = json.dumps(board.getState())
+    new_game_state = board.getState()
     request.session['game_state'] = new_game_state
     request.session.save()
     winner = None
@@ -97,8 +96,8 @@ def handle_multiplayer_move(request):
     # You should add additional checks to ensure the correct player is making the move based on your game logic
     #import ipdb; ipdb.set_trace()
     if request.user.id != game.turn.id:
-        return JsonResponse({'status': 'error', 'message': 'Not your turn', 'game_state': game.game_state,
-        'winner': None}, status=403)
+        return JsonResponse({'status': 'success', 'message': 'Not your turn', 'game_state': game.game_state,
+        'winner': None}, status=200)
     
     #import ipdb; ipdb.set_trace()
 
@@ -107,7 +106,7 @@ def handle_multiplayer_move(request):
     player = p1_color if request.user.id == game.player_one.id else p2_color
     board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
 
-    game.game_state = json.dumps(board.getState())
+    game.game_state = board.getState()
     game.turn = game.player_two if game.turn == game.player_one else game.player_one
 
     winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
