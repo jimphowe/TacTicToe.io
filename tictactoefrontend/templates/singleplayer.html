@@ -234,18 +234,19 @@
             clickableSpheres = [];  // Clear clickable spheres array
 
             // Iterate through the updated game state and create new spheres
+            console.log(gameState);
             gameState.forEach((layer, x) => {
                 layer.forEach((row, y) => {
                     row.forEach((cell, z) => {
                         var material;
                         switch (cell) {
-                            case 'BLACK':
+                            case "BLACK":
                                 material = blackMaterial;
                                 break;
-                            case 'WHITE':
+                            case "WHITE":
                                 material = whiteMaterial;
                                 break;
-                            case 'RED':
+                            case "RED":
                                 material = redMaterial;
                                 break;
                             default:
@@ -371,7 +372,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                //console.log('Move processed:', data);
                 updateGameState(data.game_state);
                 handleGameOver(data.winner);
             })

@@ -271,7 +271,7 @@ class Board:
 
     # Returns a string representation of the gameboard, for debugging purposes
     def getStatePretty(self):
-        displayStr = { Piece.RED : ' RED ', Piece.BLACK : 'BLACK', Piece.WHITE : 'WHITE', Piece.EMPTY : 'EMPTY'}
+        displayStr = { Piece.RED : " RED ", Piece.BLACK : "BLACK", Piece.WHITE : "WHITE", Piece.EMPTY : "EMPTY"}
         gameState = "+----------------------\n"
         gameState += "| \\ " + displayStr[self.pieces[0][2][0]] + "  " + displayStr[self.pieces[1][2][0]] + "  " + displayStr[self.pieces[2][2][0]] + " \\\n"
         gameState += "|   \\                     \\\n"

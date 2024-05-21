@@ -52,21 +52,20 @@ def handle_move(request):
     difficulty = data.get('difficulty')
     print('Received move with values:', data)
     
-    game_state = json.dumps(request.session.get('game_state'))
+    game_state = request.session.get('game_state')
     if not game_state:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
     
     game = GamePlayer(difficulty)
     board = game.board
     
-    import ipdb; ipdb.set_trace()
     board.setState(game_state)
 
     #import ipdb; ipdb.set_trace()
     game.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
     if not game.isOver():
         game.makeComputerMove()
-    new_game_state = json.dumps(board.getState())
+    new_game_state = board.getState()
     request.session['game_state'] = new_game_state
     request.session.save()
     winner = None
