@@ -374,7 +374,7 @@
                     game_state: data.game_state,
                     winner: data.winner
                 }));
-                updateGameState(data.game_state);  // Update the local state with the new state from the server
+                updateGameState(JSON.parse(data.game_state));  // Update the local state with the new state from the server
                 handleGameOver(data.winner);  // Check if the game has a winner 
             })
             .catch(error => console.error('Error:', error));
@@ -386,7 +386,7 @@
 
         gameSocket.onmessage = function(e) {
             var data = JSON.parse(e.data);
-            updateGameState(data.game_state);
+            updateGameState(JSON.parse(data.game_state));
             if (data.winner) {
                 handleGameOver(data.winner);
             }
