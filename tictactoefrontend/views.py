@@ -78,7 +78,7 @@ def handle_move(request):
 from .models import Board
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["POST"]) 
 def handle_multiplayer_move(request):
     # Parse the request data
     data = json.loads(request.body)
@@ -110,6 +110,7 @@ def handle_multiplayer_move(request):
     game.turn = game.player_two if game.turn == game.player_one else game.player_one
 
     winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
+    winner_str = p1_color.value if board.hasWon(p1_color) else p2_color.value if board.hasWon(p2_color) else None
     # Check if there's a winner
     if winner:
         game.completed = True
@@ -120,7 +121,7 @@ def handle_multiplayer_move(request):
     return JsonResponse({
         'status': 'success',
         'game_state': game.game_state,
-        'winner': winner
+        'winner': winner_str
     })
 
 def signup(request):
