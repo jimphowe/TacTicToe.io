@@ -369,7 +369,8 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log("Recieved click with data: " + data);
+                console.log("Recieved click with data: ");
+                console.log(data);
                 gameSocket.send(JSON.stringify({
                     game_state: data.game_state,
                     winner: data.winner
