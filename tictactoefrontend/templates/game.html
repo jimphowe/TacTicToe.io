@@ -363,7 +363,7 @@
                 },
                 body: JSON.stringify({
                     game_id: '{{ game_id }}',  // Pass the current game ID
-                    position: piece.userData.position,
+                    position: piece.userData.originalPosition,
                     direction: sideToDirection(directionMapping['BACK'])
                 })
             })
