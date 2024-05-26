@@ -144,6 +144,8 @@ def signup(request):
 
 from django.contrib.auth.decorators import login_required
 from .models import Game
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 @login_required
 def find_opponent(request):
@@ -161,6 +163,14 @@ def find_opponent(request):
         waiting_users.remove(opponent)
         cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
         game = Game.start_new_game(current_user, opponent)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'setup_room', 
+            {
+                'type': 'send_game_ready',
+                'game_id': game.id
+            }
+        )
         return JsonResponse({'status': 'success', 'game_id': game.id})
     else:
         add_to_waiting_queue(current_user)
