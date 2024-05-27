@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tac-Tic-Toe</title>
     {% load static %}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
     <style>
         body { margin: 0; }
@@ -13,6 +14,10 @@
         #restartButton { position: absolute; left: 20px; top: 80px; padding: 10px 20px; font-size: 16px; }
     </style>
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+    <script>
+        var findOpponentUrl = "{% url 'find_opponent' %}";
+    </script>
+    <script src="{% static 'js/find_opponent.js' %}"></script>
 </head>
 <body>
     <canvas id="myCanvas"></canvas>
@@ -340,18 +345,45 @@
 
             // Add a button to restart the game
             const restartButton = document.createElement('button');
-            restartButton.innerHTML = 'Restart Game';
+            restartButton.innerHTML = 'New Game';
             restartButton.style.marginTop = '20px';
             restartButton.style.padding = '10px 20px';
             restartButton.style.fontSize = '16px';
             restartButton.style.cursor = 'pointer';
             restartButton.onclick = function() {
-                // Reload the page to restart the game
-                location.reload();
+                startWebSocket();
+                findOpponent().done(function(response) {
+                    if (response.status === 'success') {
+                        window.location.href = '/game/' + response.game_id;
+                    } else if (response.status === 'waiting') {
+                        alert('Waiting for an opponent. You will be notified once matched.');
+                    }
+                }).fail(function() {
+                    alert('Error finding an opponent. Please try again.');
+                });
             };
 
             gameOverDiv.appendChild(restartButton);
             document.body.appendChild(gameOverDiv);
+        }
+
+        var setupSocket;
+
+        function startWebSocket() {
+            setupSocket = new WebSocket(
+                'ws://' + window.location.host + '/ws/setup/'
+            );
+
+            setupSocket.onmessage = function(e) {
+                var data = JSON.parse(e.data);
+                if (data.status === 'success') {
+                    window.location.href = '/game/' + data.game_id;
+                }
+            };
+
+            setupSocket.onclose = function(e) {
+                console.error('Setup socket closed unexpectedly');
+            };
         }
 
         function handlePieceClick(piece) {

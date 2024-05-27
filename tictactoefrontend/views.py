@@ -198,5 +198,5 @@ def multiplayer_game_view(request, game_id):
         'is_player_one': game.player_one == request.user,
         'is_player_turn': game.turn == request.user
     }
-    print(game.game_state)
+    #print(game.game_state)
     return render(request, 'game.html', context)
