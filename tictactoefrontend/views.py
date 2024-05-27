@@ -24,7 +24,7 @@ def singleplayer_setup_view(request):
     template = loader.get_template('singleplayer_setup.html')
     return HttpResponse(template.render({}, request))
 
-def singleplayer_view(request):
+def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
     firstPlayer = request.GET.get('firstPlayer', 'human')
     game = GamePlayer(difficulty)
@@ -38,12 +38,12 @@ def singleplayer_view(request):
         'difficulty': difficulty
     }
 
-    template = loader.get_template('singleplayer.html')
+    template = loader.get_template('singleplayer_game.html')
     return HttpResponse(template.render(context, request))
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def handle_move(request):
+def handle_singleplayer_move(request):
     # Parse the position from the POST data
     data = json.loads(request.body)
     position = data.get('position')
@@ -74,6 +74,22 @@ def handle_move(request):
     elif board.hasWon(Piece.WHITE):
         winner = 'WHITE'
     return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})
+
+from django.shortcuts import render, get_object_or_404
+from .models import Game
+
+def multiplayer_game_view(request, game_id):
+    game = get_object_or_404(Game, pk=game_id)
+    context = {
+        'game_id': game.id,
+        'game_state': game.game_state,
+        'player_one': game.player_one,
+        'player_two': game.player_two,
+        'is_player_one': game.player_one == request.user,
+        'is_player_turn': game.turn == request.user
+    }
+    #print(game.game_state)
+    return render(request, 'multiplayer_game.html', context)
 
 from .models import Board
 
@@ -184,19 +200,3 @@ def add_to_waiting_queue(user):
     if user.id not in [u.id for u in waiting_users]:
         waiting_users.append(user)
         cache.set('waiting_users', waiting_users, timeout=300)  # Timeout in seconds (e.g., 5 minutes)
-
-from django.shortcuts import render, get_object_or_404
-from .models import Game
-
-def multiplayer_game_view(request, game_id):
-    game = get_object_or_404(Game, pk=game_id)
-    context = {
-        'game_id': game.id,
-        'game_state': game.game_state,
-        'player_one': game.player_one,
-        'player_two': game.player_two,
-        'is_player_one': game.player_one == request.user,
-        'is_player_turn': game.turn == request.user
-    }
-    #print(game.game_state)
-    return render(request, 'game.html', context)
