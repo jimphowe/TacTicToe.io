@@ -18,6 +18,7 @@
     <canvas id="myCanvas"></canvas>
     <button id="mpButton" onclick="location.href='/multiplayer/setup'">MultiPlayer</button>
     <button id="spButton" onclick="location.href='/singleplayer/setup'">SinglePlayer</button>
+    <button class="button" style="top: 260px;" onclick="location.href='/leaderboard'">Leaderboard</button>
     {% if user.is_authenticated %}
         <span class="button" style="top: 140px;">Hello, {{ user.username }}</span>
         <form action="{% url 'logout' %}" method="post" style="display: inline;">

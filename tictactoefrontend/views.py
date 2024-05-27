@@ -200,3 +200,13 @@ def add_to_waiting_queue(user):
     if user.id not in [u.id for u in waiting_users]:
         waiting_users.append(user)
         cache.set('waiting_users', waiting_users, timeout=300)  # Timeout in seconds (e.g., 5 minutes)
+
+from .models import UserProfile
+def leaderboard_view(request):
+    # Query top 50 users sorted by Elo rating
+    top_users = UserProfile.objects.order_by('-elo_rating')[:50]
+    
+    context = {
+        'top_users': top_users
+    }
+    return render(request, 'leaderboard.html', context)

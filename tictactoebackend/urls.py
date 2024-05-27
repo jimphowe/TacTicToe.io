@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tictactoefrontend.views import home, signup, find_opponent, multiplayer_setup_view, multiplayer_game_view, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_multiplayer_move
+from tictactoefrontend.views import home, signup, find_opponent, multiplayer_setup_view, multiplayer_game_view, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_multiplayer_move, leaderboard_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -31,5 +31,6 @@ urlpatterns = [
     path('multiplayer/move', handle_multiplayer_move, name='handle_multiplayer_move'),
     path('singleplayer/setup/', singleplayer_setup_view, name='singleplayer_setup_view'),
     path('singleplayer/play/', singleplayer_game_view, name='singleplayer_view'),    
-    path('singleplayer/move', handle_singleplayer_move, name='handle_singleplayer_move')
+    path('singleplayer/move', handle_singleplayer_move, name='handle_singleplayer_move'),
+    path('leaderboard/', leaderboard_view, name='leaderboard'),
 ]
