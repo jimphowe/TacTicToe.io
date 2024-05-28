@@ -10,7 +10,7 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, white)
-        self.setupBoard(11)
+        self.setupBoard(10)
         #self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -334,6 +334,52 @@ class Board:
           return random.choice(potential_moves)
         return None
     
+    def getGoodDefendingMove(self, player: Piece):
+        potential_moves = []
+        max_two_in_a_rows = 0
+        
+        for (x, y, z, dir) in self.getPossibleMoves():
+            self.move(x, y, z, dir, player)
+            if self.getWinInOne(self.otherPlayer(player)) == None:
+                current_two_in_a_rows = self.getTwoInARows(player)
+                if current_two_in_a_rows > max_two_in_a_rows:
+                    max_two_in_a_rows = current_two_in_a_rows
+                    potential_moves = [(x, y, z, dir)]
+                elif current_two_in_a_rows == max_two_in_a_rows:
+                    potential_moves.append((x, y, z, dir))
+            self.undo()
+
+        if potential_moves:
+            return random.choice(potential_moves)
+        return None
+    
+    def getBestDefendingMove(self, player: Piece):
+        potential_moves = []
+        max_two_in_a_rows = 0
+        
+        for (x, y, z, dir) in self.getPossibleMoves():
+            self.move(x, y, z, dir, player)
+            if self.getWinInOne(self.otherPlayer(player)) == None:
+                current_two_in_a_rows = self.getTwoInARows(player)
+                if current_two_in_a_rows > max_two_in_a_rows:
+                    max_two_in_a_rows = current_two_in_a_rows
+                    potential_moves = [(x, y, z, dir)]
+                elif current_two_in_a_rows == max_two_in_a_rows:
+                    potential_moves.append((x, y, z, dir))
+            self.undo()
+
+        for (x, y, z, dir) in potential_moves:
+           self.move(x, y, z, dir, player)
+           non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
+                                       if self.pieces[i][j][k] != Piece.EMPTY)
+           self.undo()
+           if non_empty_neighbors == 6:
+              return (x, y, z, dir)
+
+        if potential_moves:
+            return random.choice(potential_moves)
+        return None
+
     # Loops through possible moves and for each one examines all possible opponent moves.
     # If there are any moves which allow the given player to win after any opponent move, 
     # return one at random. Otherwise, return None
@@ -382,12 +428,16 @@ class Board:
                (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
         
         best_moves = []
+        best_so_far = 4
         for (x, y, z, dir) in self.getPossibleMoves():
             if (x, y, z) in corners:
                 self.move(x,y,z,dir,player)
                 non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
                                        if self.pieces[i][j][k] != Piece.EMPTY)
-                if non_empty_neighbors in [4,6]:
+                if (non_empty_neighbors > best_so_far) and (non_empty_neighbors % 2 == 0):
+                    best_so_far = non_empty_neighbors
+                    best_moves = [(x, y, z, dir)]
+                elif non_empty_neighbors == best_so_far:
                     best_moves.append((x, y, z, dir))
                 self.undo()
 
@@ -398,24 +448,28 @@ class Board:
 
     def neighbor_positions(self, x, y, z):
         neighbors = []
-        
-        # All positions along the x-axis for the same y and z
         for i in range(3):
             if i != x:
                 neighbors.append((i, y, z))
-        
-        # All positions along the y-axis for the same x and z
         for j in range(3):
             if j != y:
                 neighbors.append((x, j, z))
-        
-        # All positions along the z-axis for the same x and y
         for k in range(3):
             if k != z:
                 neighbors.append((x, y, k))
-
         return neighbors
     
+    def getTwoInARows(self, player: Piece):
+        count = 0
+        for run in self.getWinningRuns():
+            player_count = sum(1 for x, y, z in run if self.pieces[x][y][z] == player)
+            if player_count == 2:
+                if (1, 1, 1) in run:
+                    count += 0.5
+                else:
+                    count += 1
+        return count
+
     def numPieces(self,player: Piece):
         count = 0
         for layer in self.pieces:
@@ -424,7 +478,6 @@ class Board:
                     if piece == player:
                         count += 1
         return count
-       
     
     # Returns true if the given player has won (all locations in a run of three are equal to the player)
     def hasWon(self,player: Piece):
@@ -474,31 +527,25 @@ class HardAgent:
         if move_num == 0:
            return board.getBestStartMove(self.player)
         elif move_num == 1:
-          defendingMove = board.getDefendingMove(self.player)
-          if defendingMove:
-            return defendingMove
-          else:
-            return board.getRandomMove(self.player)
-        elif move_num == 2:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getDefendingMove(self.player)
+            defendingMove = board.getBestDefendingMove(self.player)
             if defendingMove:
               return defendingMove
             else:
               return board.getRandomMove(self.player)
         else:
           winningMove = board.getWinInOne(self.player)
-          if move_num > 2 and winningMove:
+          if winningMove:
             return winningMove
           else:
             winInTwo = board.getWinInTwo(self.player)
             if winInTwo:
               return winInTwo
             else:
-              defendingMove = board.getDefendingMove(self.player)
+              defendingMove = board.getBestDefendingMove(self.player)
               if defendingMove:
                 return defendingMove
               else:
