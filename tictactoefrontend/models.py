@@ -355,6 +355,67 @@ class Board:
           return random.choice(potential_moves)
         return None
     
+    # Returns a random move which is either a corner or middle (not along the edge)
+    def getGoodStartMove(self,player: Piece):
+        # Define corners and middle positions
+        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+                  (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
+        middles = [(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)]
+        
+        # Collect valid moves from corners and middles
+        potential_moves = []
+        for (x, y, z, dir) in self.getPossibleMoves():
+            if (x, y, z) in corners or (x, y, z) in middles:
+                potential_moves.append((x, y, z, dir))
+
+        # Randomly select one of the valid moves if any
+        if potential_moves:
+            return random.choice(potential_moves)
+        return None
+
+    # If there is a corner move which would 'lock' the piece in place (two pieces on every side), make it
+    # Otherwise, if there is a corner move which would leave 5 of 7 spaces of the 3 edges going through the corner, make it
+    # Otherwise, if there is a middle move which would 'lock' the piece in place (two pieces behind it, none directly next to it), make it
+    # Otherwise, return getGoodStartMove
+    def getBestStartMove(self,player: Piece):
+        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+               (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
+        
+        best_moves = []
+        for (x, y, z, dir) in self.getPossibleMoves():
+            if (x, y, z) in corners:
+                self.move(x,y,z,dir,player)
+                non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
+                                       if self.pieces[i][j][k] != Piece.EMPTY)
+                if non_empty_neighbors in [4,6]:
+                    best_moves.append((x, y, z, dir))
+                self.undo()
+
+        # Randomly select one of the best moves if any
+        if best_moves:
+            return random.choice(best_moves)
+        return self.getGoodStartMove(player)
+
+    def neighbor_positions(self, x, y, z):
+        neighbors = []
+        
+        # All positions along the x-axis for the same y and z
+        for i in range(3):
+            if i != x:
+                neighbors.append((i, y, z))
+        
+        # All positions along the y-axis for the same x and z
+        for j in range(3):
+            if j != y:
+                neighbors.append((x, j, z))
+        
+        # All positions along the z-axis for the same x and y
+        for k in range(3):
+            if k != z:
+                neighbors.append((x, y, k))
+
+        return neighbors
+    
     def numPieces(self,player: Piece):
         count = 0
         for layer in self.pieces:
@@ -391,6 +452,8 @@ class MediumAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num):
+        if move_num == 0:
+           return board.getGoodStartMove(self.player)
         winningMove = board.getWinInOne(self.player)
         if winningMove:
           return winningMove
@@ -407,14 +470,16 @@ class HardAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num):
-        if move_num < 2:
+    def getMove(self, board: Board, move_num):  
+        if move_num == 0:
+           return board.getBestStartMove(self.player)
+        elif move_num == 1:
           defendingMove = board.getDefendingMove(self.player)
           if defendingMove:
             return defendingMove
           else:
             return board.getRandomMove(self.player)
-        elif move_num < 3:
+        elif move_num == 2:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
             return winInTwo
