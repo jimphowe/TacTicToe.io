@@ -11,7 +11,7 @@ class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, white)
         self.setupBoard(10)
-        #self.winningRuns = self.getWinningRuns()
+        self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
     def setupBoard(self,pieces):
@@ -353,7 +353,7 @@ class Board:
             return random.choice(potential_moves)
         return None
     
-    def getBestDefendingMove(self, player: Piece):
+    def oldGetBestDefendingMove(self, player: Piece):
         potential_moves = []
         max_two_in_a_rows = 0
         
@@ -379,11 +379,55 @@ class Board:
         if potential_moves:
             return random.choice(potential_moves)
         return None
+    
+    def getBestDefendingMove(self, player: Piece):
+        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+                  (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
+        middles = [(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)]
+        potential_moves = []
+        
+        for (x, y, z, dir) in self.getPossibleMoves():
+            points = 0
+            self.move(x, y, z, dir, player)
+            if self.getWinInOne(self.otherPlayer(player)) == None:
+                points += 100
+            current_two_in_a_rows = self.getTwoInARows(player)
+            points += current_two_in_a_rows * 5
+            non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
+                                       if self.pieces[i][j][k] != Piece.EMPTY)
+            if non_empty_neighbors == 6:
+               points += 3
+            if (x,y,z) in corners:
+               points += 2
+            if (x,y,z) in middles:
+               points += 1
+            potential_moves.append(((x, y, z, dir), points))
+            self.undo()
+
+        potential_moves.sort(key=lambda move: move[1], reverse=True)
+
+        # Check top 5 moves for getWinInTwo condition
+        top_moves = potential_moves[:5]
+        print(potential_moves[:5])
+        for move, _ in top_moves:
+            x, y, z, dir = move
+            self.move(x, y, z, dir, player)
+            if self.getWinInTwo(self.otherPlayer(player)) is None:
+                self.undo()
+                return move
+            self.undo()
+
+        if potential_moves:
+            return potential_moves[0][0]
+        return None
 
     # Loops through possible moves and for each one examines all possible opponent moves.
     # If there are any moves which allow the given player to win after any opponent move, 
     # return one at random. Otherwise, return None
     def getWinInTwo(self,player: Piece):
+        winningMove = self.getWinInOne(player)
+        if winningMove:
+          return winningMove
         potential_moves = []
         for (x,y,z,dir) in self.getPossibleMoves():
           self.move(x,y,z,dir,player)
@@ -461,7 +505,7 @@ class Board:
     
     def getTwoInARows(self, player: Piece):
         count = 0
-        for run in self.getWinningRuns():
+        for run in self.winningRuns:
             player_count = sum(1 for x, y, z in run if self.pieces[x][y][z] == player)
             if player_count == 2:
                 if (1, 1, 1) in run:
@@ -481,7 +525,7 @@ class Board:
     
     # Returns true if the given player has won (all locations in a run of three are equal to the player)
     def hasWon(self,player: Piece):
-        for run in self.getWinningRuns():
+        for run in self.winningRuns:
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return True
         return False
@@ -517,8 +561,6 @@ class MediumAgent:
           else:
             return board.getRandomMove(self.player)
           
-# Returns a winning move if one exists, otherwise a move which wins in two turns if one exists, 
-# otherwise a move preventing the opponent from winning, otherwise a random move
 class HardAgent:
     def __init__(self,player):
         self.player = player
@@ -526,6 +568,38 @@ class HardAgent:
     def getMove(self, board: Board, move_num):  
         if move_num == 0:
            return board.getBestStartMove(self.player)
+        elif move_num == 1:
+          winInTwo = board.getWinInTwo(self.player)
+          if winInTwo:
+            return winInTwo
+          else:
+            defendingMove = board.getGoodDefendingMove(self.player)
+            if defendingMove:
+              return defendingMove
+            else:
+              return board.getRandomMove(self.player)
+        else:
+          winningMove = board.getWinInOne(self.player)
+          if winningMove:
+            return winningMove
+          else:
+            winInTwo = board.getWinInTwo(self.player)
+            if winInTwo:
+              return winInTwo
+            else:
+              defendingMove = board.getGoodDefendingMove(self.player)
+              if defendingMove:
+                return defendingMove
+              else:
+                return board.getRandomMove(self.player)
+
+class ExpertAgent:
+    def __init__(self,player):
+        self.player = player
+
+    def getMove(self, board: Board, move_num):  
+        if move_num == 0:
+           return board.getBestDefendingMove(self.player)
         elif move_num == 1:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
@@ -562,6 +636,8 @@ class GamePlayer:
                 self.computer = MediumAgent(self.computerColor)
             case 'hard':
                 self.computer = HardAgent(self.computerColor)
+            case 'expert':
+                self.computer = ExpertAgent(self.computerColor)
 
     def isOver(self):
         return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.WHITE)
