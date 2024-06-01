@@ -92,6 +92,7 @@ def multiplayer_game_view(request, game_id):
     return render(request, 'multiplayer_game.html', context)
 
 from .models import Board
+from datetime import datetime
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
@@ -130,7 +131,9 @@ def handle_multiplayer_move(request):
     # Check if there's a winner
     if winner:
         game.completed = True
+        game.completed_at = datetime.now()
         game.winner = winner
+        update_elo_ratings(game.player_one, game.player_two, winner)
     
     game.save()
 
@@ -139,6 +142,38 @@ def handle_multiplayer_move(request):
         'game_state': game.game_state,
         'winner': winner_str
     })
+
+def update_elo_ratings(player_one, player_two, winner):
+    p1_profile = player_one.profile
+    p2_profile = player_two.profile
+    average_elo = (p2_profile.elo_rating + p1_profile.elo_rating) / 2
+    k_factor = calculate_k_factor(average_elo)
+
+    # Calculate expected scores
+    expected_p1 = 1 / (1 + 10 ** ((p2_profile.elo_rating - p1_profile.elo_rating) / 400))
+    expected_p2 = 1 - expected_p1
+
+    # Update ratings based on who won
+    if winner == player_one:
+        p1_profile.elo_rating += k_factor * (1 - expected_p1)
+        p2_profile.elo_rating -= k_factor * expected_p2
+    else:
+        p1_profile.elo_rating -= k_factor * expected_p1
+        p2_profile.elo_rating += k_factor * (1 - expected_p2)
+
+    # Save the updated profiles
+    p1_profile.save()
+    p2_profile.save()
+
+def calculate_k_factor(average_elo):
+    if average_elo <= 1500:
+        return 40
+    elif average_elo <= 1800:
+        return 30
+    elif average_elo <= 2100:
+        return 20
+    else:
+        return 15
 
 def signup(request):
     if request.method == 'POST':

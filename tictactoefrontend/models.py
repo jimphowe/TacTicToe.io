@@ -657,7 +657,7 @@ from django.dispatch import receiver
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    elo_rating = models.IntegerField(default=1000)
+    elo_rating = models.IntegerField(default=1500)
     is_paid_account = models.BooleanField(default=False)
 
     def __str__(self):
