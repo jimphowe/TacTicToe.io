@@ -127,20 +127,35 @@ def handle_multiplayer_move(request):
     game.turn = game.player_two if game.turn == game.player_one else game.player_one
 
     winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
-    winner_str = p1_color.value if board.hasWon(p1_color) else p2_color.value if board.hasWon(p2_color) else None
+    winner_id = None if winner == None else winner.id
+    winner_name = None if winner == None else winner.username
+    elo_change = None
     # Check if there's a winner
     if winner:
         game.completed = True
         game.completed_at = datetime.now()
         game.winner = winner
-        update_elo_ratings(game.player_one, game.player_two, winner)
+        elo_change = update_elo_ratings(game.player_one, game.player_two, winner)
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'game_{game.id}',  # Use the same group name as in your consumer
+        {
+            'type': 'send_game_update',
+            'game_state': game.game_state,
+            'winner': winner_id,
+            'winner_name': winner_name,
+            'elo_change': elo_change
+        }
+    )
     
     game.save()
 
     return JsonResponse({
         'status': 'success',
         'game_state': game.game_state,
-        'winner': winner_str
+        'winner': winner_id,
+        'elo_change': elo_change
     })
 
 def update_elo_ratings(player_one, player_two, winner):
@@ -153,17 +168,19 @@ def update_elo_ratings(player_one, player_two, winner):
     expected_p1 = 1 / (1 + 10 ** ((p2_profile.elo_rating - p1_profile.elo_rating) / 400))
     expected_p2 = 1 - expected_p1
 
-    # Update ratings based on who won
-    if winner == player_one:
-        p1_profile.elo_rating += k_factor * (1 - expected_p1)
-        p2_profile.elo_rating -= k_factor * expected_p2
-    else:
-        p1_profile.elo_rating -= k_factor * expected_p1
-        p2_profile.elo_rating += k_factor * (1 - expected_p2)
+    # Calculate Elo changes
+    elo_change_p1 = round(k_factor * (1 - expected_p1) if winner == player_one else -k_factor * expected_p1, 0)
+    elo_change_p2 = round(k_factor * (1 - expected_p2) if winner == player_two else -k_factor * expected_p2, 0)
+
+    # Update ratings
+    p1_profile.elo_rating += elo_change_p1
+    p2_profile.elo_rating += elo_change_p2
 
     # Save the updated profiles
     p1_profile.save()
     p2_profile.save()
+
+    return elo_change_p1 if winner == player_one else elo_change_p2
 
 def calculate_k_factor(average_elo):
     if average_elo <= 1500:

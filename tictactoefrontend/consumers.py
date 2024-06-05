@@ -27,6 +27,9 @@ class GameConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         game_state = data['game_state']
         winner = data['winner']
+        user = self.scope["user"]
+        winner_name = None if winner == None else user.username
+        elo_change = data['elo_change']
 
         # Send the new game state to all players in the game group
         await self.channel_layer.group_send(
@@ -34,16 +37,29 @@ class GameConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'send_game_update',
                 'game_state': game_state,
-                'winner': winner
+                'winner': winner,
+                'winner_name': winner_name,
+                'elo_change': elo_change
             }
         )
 
     async def send_game_update(self, event):
         #import ipdb; ipdb.set_trace()
         # Send message to WebSocket
+        elo_change = None
+        winner = event['winner']
+        user = self.scope["user"]
+        winner_name = event['winner_name']
+        if winner:
+            #import ipdb; ipdb.set_trace()
+            is_winner = str(user.id) == str(winner)
+            elo_change = event['elo_change'] if is_winner else -1 * int(event['elo_change'])
+
         await self.send(text_data=json.dumps({
             'game_state': event['game_state'],
-            'winner': event['winner']
+            'winner': winner,
+            'winner_name': winner_name,
+            'elo_change': elo_change
         }))
 
 

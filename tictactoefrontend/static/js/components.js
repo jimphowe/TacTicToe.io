@@ -1,14 +1,25 @@
-function createGameOverUI(winner, buttonAction) {
+function createGameOverUI(winner, eloChange, buttonAction) {
+    console.log("GAME OVER")
     console.log(winner);
+    console.log(eloChange);
     if (winner == null) {
         return;
     }
-    // Disable further moves and rotations
+    
     window.removeEventListener('click', onMouseClick);
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseout', onMouseOut);
 
     let message = 'Game Over! ' + winner + ' wins!';
+
+    // Calculate Elo change display
+    let eloChangeMessage = "";
+
+    if (eloChange !== undefined) {
+        const eloChangeText = `Elo: ${eloChange > 0 ? '+' + eloChange : '-' + eloChange}`;
+        const eloChangeColor = eloChange > 0 ? 'green' : 'red';
+        eloChangeMessage = `<br><span style='color: ${eloChangeColor};'>${eloChangeText}</span>`;
+    }
 
     // Display game over message
     const gameOverDiv = document.createElement('div');
@@ -23,7 +34,7 @@ function createGameOverUI(winner, buttonAction) {
     gameOverDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
     gameOverDiv.style.borderRadius = '10px';
     gameOverDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-    gameOverDiv.innerHTML = message;
+    gameOverDiv.innerHTML = message + eloChangeMessage;
 
     // Add a button to restart the game
     const restartButton = document.createElement('button');

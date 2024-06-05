@@ -2,8 +2,8 @@
 {% block scripts %}
 
 <script>
-    function handleGameOver(winner) {
-        createGameOverUI(winner, function() {
+    function handleGameOver(winner, eloChange) {
+        createGameOverUI(winner, eloChange, function() {
         location.reload();
     });
     }
