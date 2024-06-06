@@ -3,7 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Single Player Game</title>
+    <title>Setup Multiplayer Game</title>
+    <style>
+        body {
+            background-color: #121212; /* Dark background for the body */
+            color: #ffffff; /* Light text color for readability */
+            font-family: Arial, sans-serif; /* Consistent font with the index page */
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            background-color: #333; /* Dark background for forms */
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        select, input[type="radio"] {
+            padding: 5px;
+            margin-top: 5px;
+            background-color: #495057;
+            color: #fff;
+            border: 1px solid #767676;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #555;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #666;
+        }
+        label {
+            color: #ccc;
+        }
+    </style>
 </head>
 <body>
     <form action="{% url 'singleplayer_view' %}" method="get">
@@ -17,7 +64,7 @@
         <label>Choose order:</label>
         <input type="radio" id="firstPlayer" name="firstPlayer" value="human" checked>
         <label for="first">First</label>
-        <input type="radio" id="firstPlayer" name="firstPlayer" value="computer">
+        <input type="radio" id="secondPlayer" name="firstPlayer" value="computer">
         <label for="second">Second</label>
         <br><br>
         <button type="submit">Play</button>

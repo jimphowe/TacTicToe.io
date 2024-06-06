@@ -1,8 +1,63 @@
 <!DOCTYPE html>
-<html lang="en"></html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
+    <style>
+        body {
+            background-color: #121212; /* Dark background for the body */
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        form {
+            width: 300px;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 5px;
+        }
+        input {
+            background-color: #333;
+            border: 1px solid #767676;
+            color: #fff;
+        }
+        button {
+            background-color: #555;
+            color: #fff;
+            border: none;
+        }
+        button:hover {
+            background-color: #666;
+        }
+        .error-modal {
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 400px;
+            background: rgba(200, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+        .close-btn {
+            float: right;
+            color: #fff;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <h2>Sign Up</h2>
@@ -11,5 +66,31 @@
         {{ form.as_p }}
         <button type="submit">Sign up</button>
     </form>
+    <div class="error-modal">
+        <span class="close-btn">&times;</span>
+        {% if form.errors %}
+            <div>
+                <strong>Errors:</strong>
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Check if there are errors and show the modal
+        const signupFormErrors = {{ form.errors|length }};
+        if (signupFormErrors > 0) {
+            document.querySelector('.error-modal').style.display = 'block';
+        }
+
+        // Add functionality to close button
+        document.querySelector('.close-btn').addEventListener('click', function() {
+            document.querySelector('.error-modal').style.display = 'none';
+        });
+    </script>
 </body>
 </html>
