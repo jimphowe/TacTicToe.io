@@ -528,6 +528,8 @@ class Board:
         for run in self.winningRuns:
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return True
+        if player == Piece.WHITE and self.numPieces(Piece.EMPTY) == 0:
+           return True
         return False
     
 # Returns a winning move if one exists, otherwise picks a random move
@@ -573,7 +575,7 @@ class HardAgent:
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getBestDefendingMove(self.player)
+            defendingMove = board.getGoodDefendingMove(self.player)
             if defendingMove:
               return defendingMove
             else:
