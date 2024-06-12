@@ -10,7 +10,7 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, white)
-        self.setupBoard(10)
+        self.setupBoard(16)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -567,13 +567,13 @@ class HardAgent:
 
     def getMove(self, board: Board, move_num):  
         if move_num == 0:
-           return board.getBestStartMove(self.player)
+           return board.getGoodStartMove(self.player)
         elif move_num == 1:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getGoodDefendingMove(self.player)
+            defendingMove = board.getBestDefendingMove(self.player)
             if defendingMove:
               return defendingMove
             else:
