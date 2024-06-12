@@ -8,6 +8,13 @@
     });
     }
 
+    function playSound(soundType) {
+        const sound = document.getElementById(soundType + "Sound");
+        if (sound) {
+            sound.play();
+        }
+    }
+
     function handlePieceClick(piece) {
         // AJAX request to the server with the clicked position
         fetch('/singleplayer/move', {
@@ -25,6 +32,7 @@
         })
         .then(response => response.json())
         .then(data => {
+            playSound("move");
             updateGameState(data.game_state);
             handleGameOver(data.winner);
         })

@@ -21,10 +21,19 @@
     <script src="{% static 'js/components.js' %}"></script>
 </head>
 <body>
+    <audio id="moveSound" src="{% static 'sounds/move.wav' %}" preload="auto"></audio>
+    <!-- Click by complex_waveform -- https://freesound.org/s/213148/ -- License: Attribution 4.0 -->
     <canvas id="myCanvas"></canvas>
     <button id="homeButton" onclick="location.href='/'">Home</button>
     <button id="restartButton" onclick="window.location.reload()">Restart</button>
     <script>
+        function playSound(soundType) {
+            const sound = document.getElementById(soundType + "Sound");
+            if (sound) {
+                sound.play();
+            }
+        }
+
         // Scene setup
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
