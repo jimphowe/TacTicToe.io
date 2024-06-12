@@ -21,6 +21,12 @@
     }
 
     function handleGameOver(winner, eloChange) {
+        if (eloChange > 0) {
+            playSound("win");
+        }
+        else {
+            playSound("lose");
+        }
         createGameOverUI(winner, eloChange, function() {
             startWebSocket();
             findOpponent().done(function(response) {

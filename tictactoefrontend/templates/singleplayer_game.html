@@ -3,16 +3,15 @@
 
 <script>
     function handleGameOver(winner, eloChange) {
+        if (winner == "RED") {
+            playSound("win");
+        }
+        else {
+            playSound("lose");
+        }
         createGameOverUI(winner, eloChange, function() {
         location.reload();
     });
-    }
-
-    function playSound(soundType) {
-        const sound = document.getElementById(soundType + "Sound");
-        if (sound) {
-            sound.play();
-        }
     }
 
     function handlePieceClick(piece) {
@@ -34,7 +33,9 @@
         .then(data => {
             playSound("move");
             updateGameState(data.game_state);
-            handleGameOver(data.winner);
+            if (data.winner) {
+                handleGameOver(data.winner);
+            }
         })
         .catch(error => console.error('Error:', error));
     }

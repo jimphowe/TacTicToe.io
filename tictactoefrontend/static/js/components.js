@@ -5,7 +5,7 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     if (winner == null) {
         return;
     }
-    
+
     window.removeEventListener('click', onMouseClick);
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseout', onMouseOut);
