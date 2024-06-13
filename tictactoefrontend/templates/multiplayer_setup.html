@@ -11,6 +11,7 @@
         var findOpponentUrl = "{% url 'find_opponent' %}";
     </script>
     <script src="{% static 'js/find_opponent.js' %}"></script>
+    <script src="{% static 'js/components.js' %}"></script>
     <style>
         body {
             background-color: #121212; /* Dark background for the body */
@@ -40,7 +41,17 @@
 <body>
     <button id="playButton">Play</button>
 
+    <audio id="startSound" src="{% static 'sounds/start.wav' %}" preload="auto"></audio>
+    <!-- Coin_C_09 by cabled_mess -- https://freesound.org/s/350876/ -- License: Creative Commons 0 -->
+
     <script>
+        function playSound(soundType) {
+            const sound = document.getElementById(soundType + "Sound");
+            if (sound) {
+                sound.play();
+            }
+        }
+
         var setupSocket;
 
         function startWebSocket() {
@@ -51,6 +62,7 @@
             setupSocket.onmessage = function(e) {
                 var data = JSON.parse(e.data);
                 if (data.status === 'success') {
+                    playSound("start");
                     window.location.href = '/game/' + data.game_id;
                 }
             };
@@ -65,6 +77,7 @@
                 findOpponent().done(function(response) {
                     startWebSocket();
                     if (response.status === 'success') {
+                        playSound("start");
                         window.location.href = '/game/' + response.game_id;
                     } else if (response.status === 'waiting') {
                         alert('Waiting for an opponent. You will be notified once matched.');

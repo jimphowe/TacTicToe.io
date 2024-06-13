@@ -48,3 +48,10 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     gameOverDiv.appendChild(restartButton);
     document.body.appendChild(gameOverDiv);
 }
+
+function playSound(soundType) {
+    const sound = document.getElementById(soundType + "Sound");
+    if (sound) {
+        sound.play();
+    }
+}
