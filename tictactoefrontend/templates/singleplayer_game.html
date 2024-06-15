@@ -2,8 +2,10 @@
 {% block scripts %}
 
 <script>
+    const playerColor = '{{ player_color }}';
+
     function handleGameOver(winner, eloChange) {
-        if (winner == "RED") {
+        if (winner == playerColor) {
             playSound("win");
         }
         else {
@@ -20,12 +22,12 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')  // Ensure CSRF token is sent with request
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
                 position: piece.userData.originalPosition,
                 direction: sideToDirection(directionMapping['BACK']),
-                player: "RED",
+                player: playerColor,
                 difficulty: '{{ difficulty|safe }}'
             })
         })

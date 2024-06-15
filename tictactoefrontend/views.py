@@ -27,7 +27,9 @@ def singleplayer_setup_view(request):
 def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
     firstPlayer = request.GET.get('firstPlayer', 'human')
-    game = GamePlayer(difficulty)
+    humanColor = 'RED' if firstPlayer == 'human' else 'WHITE'
+    computerColor = 'RED' if firstPlayer == 'computer' else 'WHITE'
+    game = GamePlayer(difficulty, computerColor)
     if firstPlayer == 'computer':
         game.makeComputerMove()
 
@@ -35,7 +37,8 @@ def singleplayer_game_view(request):
     
     context = {
         'game_state': json.dumps(game.board.getState()),
-        'difficulty': difficulty
+        'difficulty': difficulty,
+        'player_color': humanColor
     }
 
     template = loader.get_template('singleplayer_game.html')
@@ -55,8 +58,9 @@ def handle_singleplayer_move(request):
     game_state = request.session.get('game_state')
     if not game_state:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
-    
-    game = GamePlayer(difficulty)
+
+    computerColor = "RED" if player == "WHITE" else "WHITE"
+    game = GamePlayer(difficulty, computerColor)
     board = game.board
     
     board.setState(game_state)
@@ -88,7 +92,6 @@ def multiplayer_game_view(request, game_id):
         'is_player_one': game.player_one == request.user,
         'is_player_turn': game.turn == request.user
     }
-    #print(game.game_state)
     return render(request, 'multiplayer_game.html', context)
 
 from .models import Board

@@ -10,7 +10,7 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, white)
-        self.setupBoard(16)
+        self.setupBoard(17)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -628,9 +628,9 @@ class ExpertAgent:
                 return board.getRandomMove(self.player)
     
 class GamePlayer:
-    def __init__(self, difficulty):
+    def __init__(self, difficulty, computerColor):
         self.board = Board()
-        self.computerColor = Piece.WHITE
+        self.computerColor = Piece.RED if computerColor == 'RED' else Piece.WHITE
         match(difficulty):
             case 'easy':
                 self.computer = EasyAgent(self.computerColor)
