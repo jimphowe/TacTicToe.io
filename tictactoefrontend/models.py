@@ -11,20 +11,39 @@ class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, white)
         self.setupBoard(17)
+        while self.hasSuperCorners():
+           self.setupBoard(17)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
     def setupBoard(self,pieces):
-      self.pieces = [[[Piece.EMPTY for _ in range(3)] for _ in range(3)] for _ in range(3)]
-      for _ in range(pieces):
-        x = random.randrange(3)
-        y = random.randrange(3)
-        z = random.randrange(3)
-        while (self.pieces[x][y][z] == Piece.BLACK):
+        self.pieces = [[[Piece.EMPTY for _ in range(3)] for _ in range(3)] for _ in range(3)]
+        for _ in range(pieces):
           x = random.randrange(3)
           y = random.randrange(3)
           z = random.randrange(3)
-        self.pieces[x][y][z] = Piece.BLACK
+          while (self.pieces[x][y][z] == Piece.BLACK):
+            x = random.randrange(3)
+            y = random.randrange(3)
+            z = random.randrange(3)
+          self.pieces[x][y][z] = Piece.BLACK
+      
+
+    def hasSuperCorners(self):
+        superRuns = []
+        superRuns.append([(0,0,0),(1,0,0),(2,0,0),(0,1,0),(0,2,0),(0,0,1),(0,0,2)])
+        superRuns.append([(2,0,0),(1,0,0),(0,0,0),(2,1,0),(2,2,0),(2,0,1),(2,0,2)])
+        superRuns.append([(2,2,0),(2,1,0),(2,0,0),(1,2,0),(0,2,0),(2,2,1),(2,2,2)])
+        superRuns.append([(0,2,0),(0,1,0),(0,0,0),(1,2,0),(2,2,0),(0,2,1),(0,2,2)])
+        superRuns.append([(0,0,2),(1,0,2),(2,0,2),(0,0,1),(0,0,0),(0,1,2),(0,2,2)])
+        superRuns.append([(2,0,2),(2,0,1),(2,0,0),(2,1,2),(2,2,2),(1,0,2),(0,0,2)])
+        superRuns.append([(2,2,2),(2,1,2),(2,0,2),(2,2,1),(2,2,0),(1,2,2),(0,2,2)])
+        superRuns.append([(0,2,2),(0,1,2),(0,0,2),(1,2,2),(2,2,2),(0,2,1),(0,2,0)])
+
+        for run in superRuns:
+            if sum(1 for position in run if self.pieces[position[0]][position[1]][position[2]] == Piece.BLACK) == 6:
+                return True
+        return False
 
     def getState(self):
         # Convert the enum values to their string representations
