@@ -12,6 +12,23 @@ def home(request):
     template = loader.get_template('index.html')
     return HttpResponse(template.render({}, request))
 
+def profile_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    user_profile = UserProfile.objects.get(user=request.user)
+    latest_games = Game.objects.filter(player_one=request.user, winner__isnull=False).order_by('-created_at')[:5] | \
+                   Game.objects.filter(player_two=request.user, winner__isnull=False).order_by('-created_at')[:5]
+    latest_games = latest_games.order_by('-created_at')[:5]
+
+    context = {
+        'user_profile': user_profile,
+        'latest_games': latest_games,
+    }
+
+    template = loader.get_template('profile.html')
+    return HttpResponse(template.render(context, request))
+
 def multiplayer_setup_view(request):
     template = loader.get_template('multiplayer_setup.html')
     return HttpResponse(template.render({}, request))

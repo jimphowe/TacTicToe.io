@@ -20,7 +20,7 @@
         }
         canvas {
             display: block;
-            max-width: 800px; /* Set as needed */
+            max-width: 800px;
             width: 100%;
             height: auto;
         }
@@ -43,23 +43,65 @@
         .button:hover {
             background-color: #555;
         }
-        .header {
+        .header, .footer {
             position: fixed;
-            top: 0;
             width: 100%;
             text-align: center;
             padding: 10px 0;
             background: #222;
+        }
+        .header {
+            top: 0;
         }
         .footer {
-            position: fixed;
             bottom: 0;
-            width: 100%;
-            text-align: center;
-            padding: 10px 0;
-            background: #222;
+        }
+        .user-menu {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            text-align: right;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #333;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+        .dropdown-content a {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {background-color: #555}
+        .show {
+            display: block;
         }
     </style>
+    <script>
+        function toggleDropdown() {
+            document.getElementById("myDropdown").classList.toggle("show");
+        }
+        window.onclick = function(event) {
+          if (!event.target.matches('.dropbtn')) {
+            var dropdowns = document.getElementsByClassName("dropdown-content");
+            for (var i = 0; i < dropdowns.length; i++) {
+              var openDropdown = dropdowns[i];
+              if (openDropdown.classList.contains('show')) {
+                openDropdown.classList.remove('show');
+              }
+            }
+          }
+        }
+    </script>
 </head>
 <body>
     <div class="header">3D Tic-Tac-Toe</div>
@@ -69,16 +111,23 @@
         <button class="button" onclick="location.href='/singleplayer/setup'">SinglePlayer</button>
         <button class="button" onclick="location.href='/leaderboard'">Leaderboard</button>
         {% if user.is_authenticated %}
-            <span>Hello, {{ user.username }}</span>
-            <form action="{% url 'logout' %}" method="post">
-                {% csrf_token %}
-                <button type="submit" class="button">Logout</button>
-            </form>        
+        <div class="user-menu">
+            <div class="dropdown">
+                <button onclick="toggleDropdown()" class="button dropbtn">{{ user.username }}</button>
+                <div id="myDropdown" class="dropdown-content">
+                    <button id="profileButton" onclick="location.href='/profile'">Profile</button>
+                    <form action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="button">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
         {% else %}
-            <button class="button" onclick="location.href='/login'">Login</button>
-            <button class="button" onclick="location.href='/signup'">Sign Up</button>
+        <button class="button" onclick="location.href='/login'">Login</button>
+        <button class="button" onclick="location.href='/signup'">Sign Up</button>
         {% endif %}
     </div>
-    <div class="footer">Discord  Reddit</div>
+    <div class="footer">Discord Reddit</div>
 </body>
 </html>

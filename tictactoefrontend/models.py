@@ -27,7 +27,6 @@ class Board:
             y = random.randrange(3)
             z = random.randrange(3)
           self.pieces[x][y][z] = Piece.BLACK
-      
 
     def hasSuperCorners(self):
         superRuns = []
@@ -594,7 +593,7 @@ class HardAgent:
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getGoodDefendingMove(self.player)
+            defendingMove = board.getBestDefendingMove(self.player)
             if defendingMove:
               return defendingMove
             else:
@@ -699,21 +698,22 @@ class Game(models.Model):
     player_two = models.ForeignKey(User, related_name='games_as_player_two', on_delete=models.CASCADE)
     
     # Game state and status
-    game_state = models.JSONField(default=list)  # Storing the 3D grid as a list of lists of lists
+    game_state = models.JSONField(default=list)
     turn = models.ForeignKey(User, on_delete=models.CASCADE)
     completed = models.BooleanField(default=False)
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
+    elo_change = models.IntegerField(default=0)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
 
     def start_new_game(player_one, player_two):
-        board = Board()  # Initialize a new Board
+        board = Board() 
         game = Game(
             player_one=player_one,
             player_two=player_two,
-            game_state=json.dumps(board.getState()),  # Serialize the initial state of the board
+            game_state=json.dumps(board.getState()),  
             turn=player_one,#TODO update to random maybe? random.choice([player_one, player_two]),
             completed=False
         )
