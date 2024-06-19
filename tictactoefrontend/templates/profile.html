@@ -80,11 +80,13 @@
                 {{ game.player_one.username }} vs {{ game.player_two.username }} - 
                 {% if game.winner == request.user %}
                     <span>Won</span>
+                    <span style="color: green;">+{{ game.elo_change }}</span>
                 {% else %}
                     <span>Lost</span>
+                    <span style="color: red;">-{{ game.elo_change }}</span>
                 {% endif %}
-                on {{ game.created_at.date }}
             </li>
+            
             {% endfor %}
         </ol>
         {% else %}

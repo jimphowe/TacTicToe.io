@@ -149,13 +149,12 @@ def handle_multiplayer_move(request):
     winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
     winner_id = None if winner == None else winner.id
     winner_name = None if winner == None else winner.username
-    elo_change = None
     # Check if there's a winner
     if winner:
         game.completed = True
         game.completed_at = datetime.now()
         game.winner = winner
-        elo_change = update_elo_ratings(game.player_one, game.player_two, winner)
+        game.elo_change = update_elo_ratings(game.player_one, game.player_two, winner)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -165,7 +164,7 @@ def handle_multiplayer_move(request):
             'game_state': game.game_state,
             'winner': winner_id,
             'winner_name': winner_name,
-            'elo_change': elo_change
+            'elo_change': game.elo_change
         }
     )
     
@@ -175,7 +174,7 @@ def handle_multiplayer_move(request):
         'status': 'success',
         'game_state': game.game_state,
         'winner': winner_id,
-        'elo_change': elo_change
+        'elo_change': game.elo_change
     })
 
 def update_elo_ratings(player_one, player_two, winner):

@@ -702,7 +702,7 @@ class Game(models.Model):
     turn = models.ForeignKey(User, on_delete=models.CASCADE)
     completed = models.BooleanField(default=False)
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
-    elo_change = models.IntegerField(default=0)
+    elo_change = models.IntegerField(default=None, null=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
