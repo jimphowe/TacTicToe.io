@@ -164,7 +164,8 @@ def handle_multiplayer_move(request):
             'game_state': game.game_state,
             'winner': winner_id,
             'winner_name': winner_name,
-            'elo_change': game.elo_change
+            'elo_change': game.elo_change,
+            'turn': game.turn.id
         }
     )
     
@@ -174,7 +175,8 @@ def handle_multiplayer_move(request):
         'status': 'success',
         'game_state': game.game_state,
         'winner': winner_id,
-        'elo_change': game.elo_change
+        'elo_change': game.elo_change,
+        'turn': game.turn.id
     })
 
 def update_elo_ratings(player_one, player_two, winner):
@@ -258,7 +260,7 @@ def find_opponent(request):
                 'game_id': game.id
             }
         )
-        return JsonResponse({'status': 'success', 'game_id': game.id})
+        return JsonResponse({'status': 'success', 'game_id': game.id, 'player_one_id': game.turn.id})
     else:
         add_to_waiting_queue(current_user)
         return JsonResponse({'status': 'waiting'})

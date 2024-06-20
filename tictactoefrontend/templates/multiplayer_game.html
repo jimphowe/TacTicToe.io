@@ -1,46 +1,77 @@
 {% extends 'base_game.html' %}
 {% block scripts %}
+<style>
+    .timer {
+        position: absolute;
+        top: 20px;
+        font-size: 24px;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+    }
+    #myTimer {
+        left: 20px;
+    }
+    #opponentTimer {
+        right: 20px;
+    }
+</style>
+<div id="myTimer" class="timer">Your Time: 03:00</div>
+<div id="opponentTimer" class="timer">Opponent's Time: 03:00</div>
 <script>
-    var setupSocket;
+    let currentTurnId; // Store current player's turn ID
+    let myId = {{ request.user.id }};
 
-    function startWebSocket() {
-        setupSocket = new WebSocket(
-            'ws://' + window.location.host + '/ws/setup/'
-        );
+    let myTimeLeft = 180; // 3 minutes in seconds
+    let opponentTimeLeft = 180;
 
-        setupSocket.onmessage = function(e) {
-            var data = JSON.parse(e.data);
-            if (data.status === 'success') {
-                playSound("start");
-                window.location.href = '/game/' + data.game_id;
-            }
-        };
+    const myTimerElement = document.getElementById('myTimer');
+    const opponentTimerElement = document.getElementById('opponentTimer');
 
-        setupSocket.onclose = function(e) {
-            console.error('Setup socket closed unexpectedly');
-        };
+    function stopTimers() {
+        clearInterval(myInterval);
+        clearInterval(opponentInterval);
     }
 
-    function handleGameOver(winner, eloChange) {
-        if (eloChange > 0) {
-            playSound("win");
-        }
-        else {
-            playSound("lose");
-        }
-        createGameOverUI(winner, eloChange, function() {
-            startWebSocket();
-            findOpponent().done(function(response) {
-                if (response.status === 'success') {
-                    playSound("start");
-                    window.location.href = '/game/' + response.game_id;
-                } else if (response.status === 'waiting') {
-                    alert('Waiting for an opponent. You will be notified once matched.');
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    let myInterval; // Initialize interval for your timer
+    let opponentInterval; // Initialize interval for opponent's timer
+
+    const playerOneId = localStorage.getItem('playerOneId');
+    manageTimers(playerOneId);
+    localStorage.removeItem('playerOneId');
+
+    function manageTimers(currentTurnId) {
+        // console.log("CURRENT TURN: " + currentTurnId);
+        // console.log("MY ID: " + myId);
+        // console.log(currentTurnId === myId);
+        // Clear both intervals to prevent multiple intervals running simultaneously
+        clearInterval(myInterval);
+        clearInterval(opponentInterval);
+
+        if (currentTurnId == myId) {
+            myInterval = setInterval(() => {
+                myTimeLeft--;
+                myTimerElement.textContent = `Your Time: ${formatTime(myTimeLeft)}`;
+                if (myTimeLeft <= 0) {
+                    clearInterval(myInterval);
                 }
-            }).fail(function() {
-                alert('Error finding an opponent. Please try again.');
-            });
-        });
+            }, 1000);
+        } else {
+            opponentInterval = setInterval(() => {
+                opponentTimeLeft--;
+                opponentTimerElement.textContent = `Opponent's Time: ${formatTime(opponentTimeLeft)}`;
+                if (opponentTimeLeft <= 0) {
+                    clearInterval(opponentInterval);
+                }
+            }, 1000);
+        }
     }
 
     var gameSocket = new WebSocket(
@@ -54,7 +85,31 @@
         if (data.winner) {
             handleGameOver(data.winner_name, data.elo_change);
         }
+        manageTimers(data.turn)
     };
+
+    function handleGameOver(winner, eloChange) {
+        if (eloChange > 0) {
+            playSound("win");
+        }
+        else {
+            playSound("lose");
+        }
+        createGameOverUI(winner, eloChange, function() {
+            startWebSocket();
+            findOpponent().done(function(response) {
+                if (response.status === 'success') {
+                    playSound("start");
+                    localStorage.setItem('playerOneId', response.turn.id);
+                    window.location.href = '/game/' + response.game_id;
+                } else if (response.status === 'waiting') {
+                    alert('Waiting for an opponent. You will be notified once matched.');
+                }
+            }).fail(function() {
+                alert('Error finding an opponent. Please try again.');
+            });
+        });
+    }
 
     function handlePieceClick(piece) {
         fetch('/multiplayer/move', {  // Ensure this URL correctly points to your view handling moves

@@ -16,7 +16,7 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     let eloChangeMessage = "";
 
     if (eloChange !== undefined) {
-        const eloChangeText = `Elo: ${eloChange > 0 ? '+' + eloChange : '-' + eloChange}`;
+        const eloChangeText = `Elo: ${eloChange > 0 ? '+' + eloChange : eloChange}`;
         const eloChangeColor = eloChange > 0 ? 'green' : 'red';
         eloChangeMessage = `<br><span style='color: ${eloChangeColor};'>${eloChangeText}</span>`;
     }
