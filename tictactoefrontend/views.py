@@ -112,12 +112,14 @@ def multiplayer_game_view(request, game_id):
     return render(request, 'multiplayer_game.html', context)
 
 from .models import Board
-from datetime import datetime
+from datetime import datetime, timedelta
+import redis
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0) # TODO handle setup better?
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
 def handle_multiplayer_move(request):
-    # Parse the request data
     data = json.loads(request.body)
     game_id = data.get('game_id')
     position = data.get('position')
@@ -135,13 +137,13 @@ def handle_multiplayer_move(request):
     if request.user.id != game.turn.id:
         return JsonResponse({'status': 'error', 'message': 'Not your turn', 'game_state': game.game_state,
         'winner': None}, status=403)
-    
-    #import ipdb; ipdb.set_trace()
 
     board = Board()
     board.setState(json.loads(game.game_state))
     player = p1_color if request.user.id == game.player_one.id else p2_color
-    board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+    board.move(position.get('x'),position.get('y'),position.get('z'),direction,player) # TODO catch invalid move
+
+    game_key = f"game:{game_id}"
 
     game.game_state = json.dumps(board.getState())
     game.turn = game.player_two if game.turn == game.player_one else game.player_one

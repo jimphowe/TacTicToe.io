@@ -703,6 +703,10 @@ class Game(models.Model):
     completed = models.BooleanField(default=False)
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
     elo_change = models.IntegerField(default=None, null=True)
+
+    player_one_time_left = models.DurationField(default='00:03:00')
+    player_two_time_left = models.DurationField(default='00:03:00')
+    last_move_time = models.DateTimeField(auto_now_add=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

@@ -48,9 +48,6 @@
     localStorage.removeItem('playerOneId');
 
     function manageTimers(currentTurnId) {
-        // console.log("CURRENT TURN: " + currentTurnId);
-        // console.log("MY ID: " + myId);
-        // console.log(currentTurnId === myId);
         // Clear both intervals to prevent multiple intervals running simultaneously
         clearInterval(myInterval);
         clearInterval(opponentInterval);
