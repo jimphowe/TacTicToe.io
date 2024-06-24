@@ -112,10 +112,12 @@ def multiplayer_game_view(request, game_id):
     return render(request, 'multiplayer_game.html', context)
 
 from .models import Board
-from datetime import datetime, timedelta
+from datetime import datetime
+from django.utils import timezone
 import redis
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0) # TODO handle setup better?
+redis_client.config_set('notify-keyspace-events', 'Ex')
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
@@ -144,9 +146,26 @@ def handle_multiplayer_move(request):
     board.move(position.get('x'),position.get('y'),position.get('z'),direction,player) # TODO catch invalid move
 
     game_key = f"game:{game_id}"
+    now = timezone.now()
+    if game.turn == game.player_one:
+        game.player_one_time_left -= now - game.last_move_time
+        if game.player_one_time_left.total_seconds() < 0: # TODO delete after working
+            raise "Timing error"
+        print(game.player_two_time_left.total_seconds())
+        redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+        redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+        game.turn = game.player_two
+    else:
+        game.player_two_time_left -= now - game.last_move_time
+        if game.player_two_time_left.total_seconds() < 0: # TODO delete after working
+            raise "Timing error"
+        redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+        print(game.player_one_time_left.total_seconds())
+        redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+        game.turn = game.player_one
+    game.last_move_time = now
 
     game.game_state = json.dumps(board.getState())
-    game.turn = game.player_two if game.turn == game.player_one else game.player_one
 
     winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
     winner_id = None if winner == None else winner.id
@@ -254,6 +273,16 @@ def find_opponent(request):
         waiting_users.remove(opponent)
         cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
         game = Game.start_new_game(current_user, opponent)
+
+        game_key = f"game:{game.id}"
+        
+        if game.turn == game.player_one:
+            redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+        else:
+            redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+        
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             'setup_room', 

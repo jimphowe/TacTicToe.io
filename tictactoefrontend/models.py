@@ -691,6 +691,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         instance.profile.save()
 
 import json
+from datetime import timedelta
 
 class Game(models.Model):
     # Player fields
@@ -704,8 +705,8 @@ class Game(models.Model):
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
     elo_change = models.IntegerField(default=None, null=True)
 
-    player_one_time_left = models.DurationField(default='00:03:00')
-    player_two_time_left = models.DurationField(default='00:03:00')
+    player_one_time_left = models.DurationField(default=timedelta(minutes=3))
+    player_two_time_left = models.DurationField(default=timedelta(minutes=3))
     last_move_time = models.DateTimeField(auto_now_add=True)
     
     # Timestamps
