@@ -22,7 +22,6 @@ class Command(BaseCommand):
         print("Listening for events...")
         for message in pubsub.listen():
             if message['type'] == 'pmessage':
-                print(f"Received message: {message}")
                 data = message['data']
                 if isinstance(data, bytes):
                     data = data.decode('utf-8')
@@ -35,15 +34,13 @@ class Command(BaseCommand):
         game_id = key.split(':')[1]
 
         game = get_object_or_404(Game, pk=game_id)
-        print(game.turn.id)
+
+        winner = game.player_two if game.turn == game.player_one else game.player_one
 
         game.completed = True
         game.completed_at = datetime.now()
-        game.winner = game.turn
+        game.winner = winner
         game.elo_change = self.update_elo_ratings(game.player_one, game.player_two, game.turn)
-
-        print(game.winner)
-        print(game.elo_change)
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
@@ -51,8 +48,8 @@ class Command(BaseCommand):
             {
                 'type': 'send_game_update',
                 'game_state': game.game_state,
-                'winner': game.turn.id,
-                'winner_name': game.turn.username,
+                'winner': winner.id,
+                'winner_name': winner.username,
                 'elo_change': game.elo_change,
                 'turn': game.turn.id
             }

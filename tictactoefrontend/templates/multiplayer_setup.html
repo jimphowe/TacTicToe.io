@@ -79,7 +79,6 @@
                     startWebSocket();
                     if (response.status === 'success') {
                         playSound("start");
-                        localStorage.setItem('playerOneId', response.player_one_id);
                         window.location.href = '/game/' + response.game_id;
                     } else if (response.status === 'waiting') {
                         alert('Waiting for an opponent. You will be notified once matched.');
