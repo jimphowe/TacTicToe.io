@@ -705,8 +705,8 @@ class Game(models.Model):
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
     elo_change = models.IntegerField(default=None, null=True)
 
-    player_one_time_left = models.DurationField(default=timedelta(minutes=3))
-    player_two_time_left = models.DurationField(default=timedelta(minutes=3))
+    player_one_time_left = models.DurationField(default=timedelta(seconds=180))
+    player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
     
     # Timestamps

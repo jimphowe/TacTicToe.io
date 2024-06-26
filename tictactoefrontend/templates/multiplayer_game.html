@@ -17,15 +17,9 @@
         right: 20px;
     }
 </style>
-<div id="myTimer" class="timer">Your Time: 03:00</div>
-<div id="opponentTimer" class="timer">Opponent's Time: 03:00</div>
+<div id="myTimer" class="timer">Your Time: 3:00</div>
+<div id="opponentTimer" class="timer">Your Time: 3:00</div>
 <script>
-    let currentTurnId; // Store current player's turn ID
-    let myId = {{ request.user.id }};
-
-    let myTimeLeft = 180; // 3 minutes in seconds
-    let opponentTimeLeft = 180;
-
     const myTimerElement = document.getElementById('myTimer');
     const opponentTimerElement = document.getElementById('opponentTimer');
 
@@ -44,30 +38,73 @@
     let opponentInterval; // Initialize interval for opponent's timer
 
     const playerOneId = localStorage.getItem('playerOneId');
-    manageTimers(playerOneId);
+    //manageTimers(playerOneId);
     localStorage.removeItem('playerOneId');
 
+    let currentTurnId; // Store current player's turn ID
+    let myId = {{ request.user.id }};
+
+    let myTimeLeft;
+    let opponentTimeLeft; 
+    syncGameTimers();
+    function syncGameTimers() {
+        fetch(`/timer/${'{{ game_id }}'}`)
+        .then(response => response.json())
+        .then(data => {
+            if (myId == data.player_one_id) {
+                myTimeLeft = parseInt(data.player_one_time_left);
+                opponentTimeLeft = parseInt(data.player_two_time_left);
+            }
+            else {
+                myTimeLeft = parseInt(data.player_two_time_left);
+                opponentTimeLeft = parseInt(data.player_one_time_left);
+            }
+
+            myTimerElement.textContent = `Your Time: ${formatTime(myTimeLeft)}`;
+            opponentTimerElement.textContent = `Opponent's Time: ${formatTime(opponentTimeLeft)}`;
+
+            manageTimers(data.current_turn_id);
+        })
+        .catch(error => console.error('Failed to fetch timer data:', error));
+    }
+
     function manageTimers(currentTurnId) {
-        // Clear both intervals to prevent multiple intervals running simultaneously
         clearInterval(myInterval);
         clearInterval(opponentInterval);
 
-        if (currentTurnId == myId) {
-            myInterval = setInterval(() => {
-                myTimeLeft--;
-                myTimerElement.textContent = `Your Time: ${formatTime(myTimeLeft)}`;
-                if (myTimeLeft <= 0) {
+        // Determine the start time and initialize the timers immediately
+        const startTime = Date.now();
+
+        function updateTimer() {
+            const now = Date.now();
+            const elapsedTime = (now - startTime) / 1000; // Calculate elapsed time in seconds
+
+            // Update the timers based on which player's turn it is
+            if (currentTurnId == myId) {
+                const newTimeLeft = Math.max(0, myTimeLeft - elapsedTime);
+                myTimerElement.textContent = `Your Time: ${formatTime(Math.floor(newTimeLeft))}`;
+                if (newTimeLeft <= 0) {
                     clearInterval(myInterval);
+                    myTimerElement.textContent = `Your Time: 00:00`;
                 }
-            }, 1000);
-        } else {
-            opponentInterval = setInterval(() => {
-                opponentTimeLeft--;
-                opponentTimerElement.textContent = `Opponent's Time: ${formatTime(opponentTimeLeft)}`;
-                if (opponentTimeLeft <= 0) {
+            } else {
+                const newTimeLeft = Math.max(0, opponentTimeLeft - elapsedTime);
+                opponentTimerElement.textContent = `Opponent's Time: ${formatTime(Math.floor(newTimeLeft))}`;
+                if (newTimeLeft <= 0) {
                     clearInterval(opponentInterval);
+                    opponentTimerElement.textContent = `Opponent's Time: 00:00`;
                 }
-            }, 1000);
+            }
+        }
+
+        // Update the timers for the first time without delay
+        updateTimer();
+
+        // Set the interval for updating the timer for the current player
+        if (currentTurnId == myId) {
+            myInterval = setInterval(updateTimer, 1000);
+        } else {
+            opponentInterval = setInterval(updateTimer, 1000);
         }
     }
 
@@ -126,9 +163,11 @@
             console.log("Recieved click with data: ");
             console.log(data);
             playSound("move");
-            updateGameState(JSON.parse(data.game_state));  // Update the local state with the new state from the server
+            updateGameState(JSON.parse(data.game_state));
+            syncGameTimers();
         })
         .catch(error => console.error('Error:', error));
     }
+
 </script>
 {% endblock %}

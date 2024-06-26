@@ -149,18 +149,12 @@ def handle_multiplayer_move(request):
     now = timezone.now()
     if game.turn == game.player_one:
         game.player_one_time_left -= now - game.last_move_time
-        if game.player_one_time_left.total_seconds() < 0: # TODO delete after working
-            raise "Timing error"
-        print(game.player_two_time_left.total_seconds())
         redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
         redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
         game.turn = game.player_two
     else:
         game.player_two_time_left -= now - game.last_move_time
-        if game.player_two_time_left.total_seconds() < 0: # TODO delete after working
-            raise "Timing error"
         redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
-        print(game.player_one_time_left.total_seconds())
         redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
         game.turn = game.player_one
     game.last_move_time = now
@@ -314,3 +308,30 @@ def leaderboard_view(request):
         'top_users': top_users
     }
     return render(request, 'leaderboard.html', context)
+
+from django.utils import timezone
+
+def get_timers(request, game_id):
+    game = get_object_or_404(Game, pk=game_id)
+
+    redis_client = redis.Redis(host='localhost', port=6379, db=0)
+    game_key = f"game:{game_id}"
+
+    # Calculate the time left by retrieving the time left in Redis
+    remaining_time_key = redis_client.ttl(game_key)
+    current_time_left = max(0, remaining_time_key)  # Ensure it doesn't go below zero
+
+    # Determine whose timer to update based on whose turn it is
+    if game.turn == game.player_one:
+        player_one_time_left = current_time_left
+        player_two_time_left = game.player_two_time_left.total_seconds()
+    else:
+        player_one_time_left = game.player_one_time_left.total_seconds()
+        player_two_time_left = current_time_left
+
+    return JsonResponse({
+        'player_one_time_left': player_one_time_left,
+        'player_two_time_left': player_two_time_left,
+        'player_one_id': game.player_one.id,
+        'current_turn_id': game.turn.id,
+    })
