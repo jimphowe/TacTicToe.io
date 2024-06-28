@@ -26,16 +26,24 @@ class Command(BaseCommand):
                 if isinstance(data, bytes):
                     data = data.decode('utf-8')
                 # Process the expiration event
-                self.process_expiration(data)
+                if 'game' in data:
+                    self.process_expiration(data)
     
     def process_expiration(self, key):
         print(f"Processing expiration for key: {key}")
         # Your custom logic here, for example:
         game_id = key.split(':')[1]
+        redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        redis_client.delete(key)
 
         game = get_object_or_404(Game, pk=game_id)
 
         winner = game.player_two if game.turn == game.player_one else game.player_one
+        loser = game.player_one if game.turn == game.player_one else game.player_two
+        if loser == game.player_one:
+            game.player_one_time_left = 0
+        else:
+            game.player_two_time_left = 0
 
         game.completed = True
         game.completed_at = datetime.now()

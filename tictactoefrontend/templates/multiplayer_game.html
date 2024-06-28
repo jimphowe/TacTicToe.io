@@ -118,14 +118,14 @@
         manageTimers(data.turn)
     };
 
-    function handleGameOver(winner, eloChange) {
+    function handleGameOver(winner_name, eloChange) {
         if (eloChange > 0) {
             playSound("win");
         }
         else {
             playSound("lose");
         }
-        createGameOverUI(winner, eloChange, function() {
+        createGameOverUI(winner_name, eloChange, function() {
             startWebSocket();
             findOpponent().done(function(response) {
                 if (response.status === 'success') {
