@@ -41,9 +41,9 @@ class Command(BaseCommand):
         winner = game.player_two if game.turn == game.player_one else game.player_one
         loser = game.player_one if game.turn == game.player_one else game.player_two
         if loser == game.player_one:
-            game.player_one_time_left = 0
+            game.player_one_time_left = '0 second'
         else:
-            game.player_two_time_left = 0
+            game.player_two_time_left = '0 second'
 
         game.completed = True
         game.completed_at = datetime.now()

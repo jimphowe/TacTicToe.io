@@ -81,6 +81,7 @@
                 myTimerElement.textContent = `Your Time: ${formatTime(Math.floor(newTimeLeft))}`;
                 if (newTimeLeft <= 0) {
                     clearInterval(myInterval);
+                    myTimeLeft = 0;
                     myTimerElement.textContent = `Your Time: 00:00`;
                 }
             } else {
@@ -88,6 +89,7 @@
                 opponentTimerElement.textContent = `Opponent's Time: ${formatTime(Math.floor(newTimeLeft))}`;
                 if (newTimeLeft <= 0) {
                     clearInterval(opponentInterval);
+                    opponentTimeLeft = 0;
                     opponentTimerElement.textContent = `Opponent's Time: 00:00`;
                 }
             }
@@ -114,8 +116,9 @@
         updateGameState(JSON.parse(data.game_state));
         if (data.winner) {
             handleGameOver(data.winner_name, data.elo_change);
+        } else {
+            syncGameTimers();
         }
-        manageTimers(data.turn)
     };
 
     function handleGameOver(winner_name, eloChange) {
