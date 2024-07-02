@@ -29,6 +29,10 @@ def profile_view(request):
     template = loader.get_template('profile.html')
     return HttpResponse(template.render(context, request))
 
+def player_guide(request):
+    template = loader.get_template('player_guide.html')
+    return HttpResponse(template.render({}, request))
+
 def multiplayer_setup_view(request):
     template = loader.get_template('multiplayer_setup.html')
     return HttpResponse(template.render({}, request))

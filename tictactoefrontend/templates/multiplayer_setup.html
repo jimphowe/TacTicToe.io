@@ -36,11 +36,56 @@
         #playButton:hover {
             background-color: #444;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 25%; /* Adjusting to take up 25% of the window width */
+            height: 25%; /* Adjusting to take up 25% of the window height */
+            background-color: #333; /* Dark grey color */
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            color: #333; /* Ensuring text is visible on dark background */
+            overflow: hidden; /* Prevents content from overflowing */
+        }
+
+        .modal-content {
+            padding: 20px;
+            text-align: center; /* Centers the text within the modal */
+            height: calc(100% - 50px); /* Reduces height to fit the button */
+        }
+
+        .btn-flat {
+            padding: 10px 20px;
+            background-color: red; /* Red color for the button */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 50%; /* Making the button wider */
+            margin-top: 10px; /* Spacing from text above */
+            text-decoration: none; /* Ensures no underline on links */
+            display: inline-block; /* Allows centering */
+        }
+
+        .btn-flat:hover {
+            background-color: #cc0000; /* Darker red on hover */
+        }
     </style>
 </head>
 <body>
     <button id="homeButton" onclick="location.href='/'">Home</button>
     <button id="playButton">Play</button>
+
+    <div id="matchmakingModal" class="modal">
+        <div class="modal-content">
+            <h4>Searching for an opponent...</h4>
+            <a href="#!" class="modal-close btn-flat">Cancel</a>
+        </div>
+    </div>
 
     <audio id="startSound" src="{% static 'sounds/start.wav' %}" preload="auto"></audio>
     <!-- Coin_C_09 by cabled_mess -- https://freesound.org/s/350876/ -- License: Creative Commons 0 -->
@@ -81,10 +126,15 @@
                         playSound("start");
                         window.location.href = '/game/' + response.game_id;
                     } else if (response.status === 'waiting') {
-                        alert('Waiting for an opponent. You will be notified once matched.');
+                        $('#matchmakingModal').css('display', 'block');
                     }
                 }).fail(function() {
                     alert('Error finding an opponent. Please try again.');
+                });
+
+                $('.modal-close').click(function() {
+                    $('#matchmakingModal').css('display', 'none');
+                    // Potentially add more cleanup code here if needed
                 });
             });
         });
