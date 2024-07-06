@@ -1,26 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>How to Play</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212; /* Dark background */
+            color: #ffffff; /* Light text color */
+            margin: 0;
+            padding: 20px; /* Adjusted padding */
+        }
+        .image-pair {
+            display: flex; /* Ensures flexbox is used */
+            justify-content: center; /* Centers images horizontally within the container */
+            flex-wrap: wrap; /* Allows images to wrap onto the next line on smaller screens */
+        }
+        img {
+            width: 45%; /* Slightly less than half to account for margins/gaps */
+            height: auto; /* Maintains aspect ratio */
+            margin: 0 2.5%; /* Adds space between the images */
+        }
+        h1, h2 {
+            text-align: center;
+            color: #ccc;
+        }
+        p {
+            line-height: 1.6;
+        }
+    </style>
 </head>
 <body>
+    <h1>Welcome to TacTicToe.io!</h1>
+    <h2>How To Play</h2>
     <p>
-        Welcome to TacTicToe.io!
-
-[photo of game board]
-
-How To Play
-
-Objective: Position 3 of your pieces in a row anywhere on the three-dimensional 3x3x3 game board. Achieve this run vertically, horizontally, diagonally, or straight through the middle. Players alternate turns placing their pieces until one achieves a run of 3 or the board fills up without a winner. If the board fills up, the second player wins the game.
-
-The Twist: You can either place a new piece in an empty square, or push existing pieces in your chosen direction, provided the push doesn't force pieces out of the cube. You cannot place a piece in the middle directly, and must start from one of the outer squares instead. Rotate the board using your arrow keys or W, A, S, D to face any direction. Then, place your piece on the side facing you, which pushes any piece in that square towards the back of the board.
-
-[before and after picture of pushing existing pieces]
-
-Neutral Pieces and Strategy: Seventeen "neutral" black pieces start on the board as obstacles, placed in a random pattern generated each game you play. Use these to block your opponent or secure advantageous positions for your pieces. With only 10 open squares initially available, filling the board without completing a run of three is a real possibility. This dynamic creates a complex array of strategies, making this simple looking game easy to learn but challenging to master.
-
-Hope you enjoy!
+        <strong>Objective:</strong> Position 3 of your pieces in a row anywhere on the three-dimensional 3x3x3 game board. Achieve this run vertically, horizontally, diagonally, or straight through the middle. Players alternate turns placing their pieces until one achieves a run of 3 or the board fills up without a winner. If the board fills up, the second player wins the game.
     </p>
+    <div class="image-pair">
+        <img src="{% static 'images/red_wins.png' %}" alt="Red Wins">
+        <img src="{% static 'images/white_wins.png' %}" alt="White Wins">
+    </div>
+    <p>
+        <strong>The Twist:</strong> You can either place a new piece in an empty square, or push existing pieces in your chosen direction, provided the push doesn't force pieces out of the cube. You cannot place a piece in the middle directly, and must start from one of the outer squares instead. Rotate the board using your arrow keys or W, A, S, D to face any direction. Then, place your piece on the side facing you, which pushes any piece in that square towards the back of the board.
+    </p>
+    <div class="image-pair">
+        <img src="{% static 'images/before_push.png' %}" alt="Before Push">
+        <img src="{% static 'images/after_push.png' %}" alt="After Push">
+    </div>
+    <p>
+        <strong>Neutral Pieces:</strong> Seventeen "neutral" black pieces start on the board as obstacles, placed in a random pattern generated each game you play. Use these to block your opponent or secure advantageous positions for your pieces. With only 10 open squares initially available, filling the board without completing a run of three is a real possibility. This dynamic creates a complex array of strategies, making this simple looking game easy to learn but challenging to master.
+    </p>
+    <div class="image-pair">
+        <img src="{% static 'images/start_1.png' %}" alt="Start Position 1">
+        <img src="{% static 'images/start_2.png' %}" alt="Start Position 2">
+    </div>
+    <p>Hope you enjoy!</p>
 </body>
+</html>
