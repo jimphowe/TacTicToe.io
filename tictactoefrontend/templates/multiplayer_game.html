@@ -16,9 +16,26 @@
     #opponentTimer {
         right: 20px;
     }
+    #resignButton {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        color: white;
+        background-color: red; /* Red background for the resign button */
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    #resignButton:hover {
+        background-color: darkred; /* Darker red on hover for better interaction feedback */
+    }
 </style>
 <div id="myTimer" class="timer">Your Time: 3:00</div>
 <div id="opponentTimer" class="timer">Your Time: 3:00</div>
+<button id="resignButton" onclick="handleResignation()">Resign</button>
 <script>
     const myTimerElement = document.getElementById('myTimer');
     const opponentTimerElement = document.getElementById('opponentTimer');
@@ -34,10 +51,10 @@
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
-    let myInterval; // Initialize interval for your timer
-    let opponentInterval; // Initialize interval for opponent's timer
+    let myInterval;
+    let opponentInterval;
 
-    let currentTurnId; // Store current player's turn ID
+    let currentTurnId;
     let myId = {{ request.user.id }};
 
     let myTimeLeft;
@@ -68,14 +85,12 @@
         clearInterval(myInterval);
         clearInterval(opponentInterval);
 
-        // Determine the start time and initialize the timers immediately
         const startTime = Date.now();
 
         function updateTimer() {
             const now = Date.now();
-            const elapsedTime = (now - startTime) / 1000; // Calculate elapsed time in seconds
+            const elapsedTime = (now - startTime) / 1000;
 
-            // Update the timers based on which player's turn it is
             if (currentTurnId == myId) {
                 const newTimeLeft = Math.max(0, myTimeLeft - elapsedTime);
                 myTimerElement.textContent = `Your Time: ${formatTime(Math.floor(newTimeLeft))}`;
@@ -95,10 +110,8 @@
             }
         }
 
-        // Update the timers for the first time without delay
         updateTimer();
 
-        // Set the interval for updating the timer for the current player
         if (currentTurnId == myId) {
             myInterval = setInterval(updateTimer, 1000);
         } else {
@@ -122,6 +135,7 @@
     };
 
     function handleGameOver(winner_name, eloChange) {
+        stopTimers();
         if (eloChange > 0) {
             playSound("win");
         }
@@ -144,27 +158,38 @@
     }
 
     function handlePieceClick(piece) {
-        fetch('/multiplayer/move', {  // Ensure this URL correctly points to your view handling moves
+        fetch('/multiplayer/move', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')  // Ensuring CSRF token is included for Django
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                game_id: '{{ game_id }}',  // Pass the current game ID
+                game_id: '{{ game_id }}',
                 position: piece.userData.originalPosition,
                 direction: sideToDirection(directionMapping['BACK'])
             })
         })
         .then(response => response.json())
         .then(data => {
-            console.log("Recieved click with data: ");
-            console.log(data);
             playSound("move");
             updateGameState(JSON.parse(data.game_state));
             syncGameTimers();
         })
         .catch(error => console.error('Error:', error));
+    }
+
+    function handleResignation() {
+        fetch('/multiplayer/resign', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                game_id: '{{ game_id }}'
+            })
+        })
     }
 
 </script>

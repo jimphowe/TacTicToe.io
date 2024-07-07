@@ -192,10 +192,41 @@ def handle_multiplayer_move(request):
 
     return JsonResponse({
         'status': 'success',
-        'game_state': game.game_state,
-        'winner': winner_id,
-        'elo_change': game.elo_change,
-        'turn': game.turn.id
+        'game_state': game.game_state
+    })
+
+@csrf_exempt
+@require_http_methods(["POST"]) 
+def handle_resignation(request):
+    data = json.loads(request.body)
+    game_id = data.get('game_id')
+
+    game = get_object_or_404(Game, pk=game_id)
+
+    winner = game.player_one if request.user.id == game.player_two.id else game.player_two
+
+    game.completed = True
+    game.completed_at = datetime.now()
+    game.winner = winner
+    game.elo_change = update_elo_ratings(game.player_one, game.player_two, winner)
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'game_{game.id}',  # Use the same group name as in your consumer
+        {
+            'type': 'send_game_update',
+            'game_state': game.game_state,
+            'winner': winner.id,
+            'winner_name': winner.username,
+            'elo_change': game.elo_change,
+            'turn': game.turn.id
+        }
+    )
+    
+    game.save()
+
+    return JsonResponse({
+        'status': 'success'
     })
 
 def update_elo_ratings(player_one, player_two, winner):
