@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Multiplayer Game</title>
+    <title>Setup Single Player Game</title>
     <style>
         body {
-            background-color: #121212; /* Dark background for the body */
-            color: #ffffff; /* Light text color for readability */
-            font-family: Arial, sans-serif; /* Consistent font with the index page */
+            background-color: #121212; /* Dark background */
+            color: #ffffff; /* Light text color */
+            font-family: 'Arial', sans-serif; /* Consistent font */
             margin: 0;
             height: 100vh;
             display: flex;
@@ -20,21 +20,68 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
             padding: 20px;
-            background-color: #333; /* Dark background for forms */
+            background-color: #333; /* Dark background for form */
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            width: 80%;
+            max-width: 400px;
         }
-        select, input[type="radio"] {
+        select {
             padding: 5px;
             margin-top: 5px;
-            background-color: #495057;
-            color: #fff;
+            color: black; /* Change color to black for better visibility */
             border: 1px solid #767676;
             border-radius: 5px;
+            background-color: #495057;
         }
-        button {
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc; /* Off background color */
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3; /* On state background color */
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px); /* Move toggle on activation */
+        }
+        .order-labels {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 140px;
+        }
+        button, #homeButton {
             padding: 10px 20px;
             font-size: 16px;
             color: #fff;
@@ -44,31 +91,64 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        button:hover {
+        button:hover, #homeButton:hover {
             background-color: #666;
         }
         label {
             color: #ccc;
         }
+        #homeButton {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: auto;
+        }
     </style>
 </head>
 <body>
     <button id="homeButton" onclick="location.href='/'">Home</button>
-    <form action="{% url 'singleplayer_view' %}" method="get">
+    <form id="gameSetupForm" action="{% url 'singleplayer_view' %}" method="get">
+        <h2>Setup Game</h2>
         <label for="difficulty">Choose difficulty:</label>
-        <select name="difficulty" id="difficulty">
-            <option value="easy">Easy</option>
+        <select name="difficulty" id="difficulty" onchange="changeColor(this)">
+            <option value="easy" selected>Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
             <option value="expert">Expert</option>
         </select>
         <label>Choose order:</label>
-        <input type="radio" id="firstPlayer" name="firstPlayer" value="human" checked>
-        <label for="first">First</label>
-        <input type="radio" id="secondPlayer" name="firstPlayer" value="computer">
-        <label for="second">Second</label>
-        <br><br>
+        <div class="order-labels">
+            <span>First</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="orderToggle" checked>
+                <span class="slider"></span>
+            </label>
+            <span>Second</span>
+        </div>
+        <input type="hidden" id="firstPlayer" name="firstPlayer" value="human">
         <button type="submit">Play</button>
     </form>
+    <script>
+        function changeColor(select) {
+            var color = 'green'; // default to green for 'easy'
+            if (select.value === 'easy') color = 'green';
+            else if (select.value === 'medium') color = 'yellow';
+            else if (select.value === 'hard') color = 'orange';
+            else if (select.value === 'expert') color = 'red';
+            select.style.backgroundColor = color;
+        }
+
+        document.getElementById('gameSetupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var toggle = document.getElementById('orderToggle');
+            var firstPlayerInput = document.getElementById('firstPlayer');
+            firstPlayerInput.value = toggle.checked ? 'computer' : 'human';
+            this.submit();
+        });
+
+        window.onload = function() {
+            changeColor(document.getElementById('difficulty'));
+        };
+    </script>
 </body>
 </html>
