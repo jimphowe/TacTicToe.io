@@ -29,14 +29,6 @@
     <button id="homeButton" onclick="location.href='/'">Home</button>
     <button id="restartButton" onclick="window.location.reload()">Restart</button>
     <script>
-        let isRotating = false;
-        let rotationAxis = new THREE.Vector3();
-        let rotationAngle = 0;
-        let rotationProgress = 0;
-        let ROTATION_DURATION = 500;
-        var mouse = new THREE.Vector2();
-        var raycaster = new THREE.Raycaster();
-        
         function playSound(soundType) {
             const sound = document.getElementById(soundType + "Sound");
             if (sound) {
@@ -57,10 +49,6 @@
             emissive: 0x333300,
             side: THREE.DoubleSide
         });
-
-        // Camera position
-        camera.position.set(7, 4, 3);
-        camera.lookAt(scene.position);
 
         var lastIntersected = null;
 
@@ -139,132 +127,13 @@
 
         window.addEventListener('click', onMouseClick, false);
 
-        async function rotateCube(direction) {
-            return new Promise((resolve) => {
-                if (isRotating) {
-                    resolve();
-                    return;
-                }
-            
-                isRotating = true;
-                rotationProgress = 0;
-                
-                // Set rotation axis and angle
-                switch (direction) {
-                    case 'UP':
-                        rotationAxis.set(0, 0, 1);
-                        rotationAngle = Math.PI / 2;
-                        break;
-                    case 'DOWN':
-                        rotationAxis.set(0, 0, -1);
-                        rotationAngle = Math.PI / 2;
-                        break;
-                    case 'LEFT':
-                        rotationAxis.set(0, -1, 0);
-                        rotationAngle = Math.PI / 2;
-                        break;
-                    case 'RIGHT':
-                        rotationAxis.set(0, 1, 0);
-                        rotationAngle = Math.PI / 2;
-                        break;
-                }
-
-                updateDirectionMapping(direction);
-                
-                requestAnimationFrame((timestamp) => animateRotation(timestamp, direction, resolve));
-            });
-        }
-
-        function updatePieceLocations(direction) {
-            clickableSpheres = []
-            spheres.forEach(sphere => {
-                var x = sphere.userData.position.x;
-                var y = sphere.userData.position.y;
-                var z = sphere.userData.position.z;
-                switch (direction) {
-                    case 'UP':
-                        sphere.userData.position = { x: x, y: 2 - z, z: y };
-                        break;
-                    case 'DOWN':
-                        sphere.userData.position = { x: x, y: z, z: 2 - y };
-                        break;
-                    case 'LEFT':
-                        sphere.userData.position = { x: y, y: 2 - x, z: z };
-                        break;
-                    case 'RIGHT':
-                        sphere.userData.position = { x: 2 - y, y: x, z: z };
-                        break;
-                }
-                if (sphere.userData.position.y === 0) {
-                    clickableSpheres.push(sphere);
-                    sphere.userData.clickable = true;
-                }
-                else {
-                    sphere.userData.clickable = false;
-                }
-
-                const { x: newX, y: newY, z: newZ } = sphere.userData.position;
-                sphere.position.set(-newY * 2 + 2, -newZ * 2 + 2, -newX * 2 + 2);
-            });
-        }
-
-        function animateRotation(timestamp, direction, resolve) {
-            if (!isRotating) {
-                resolve();
-                return;
-            }
-    
-            if (!animateRotation.startTime) animateRotation.startTime = timestamp;
-            const elapsed = timestamp - animateRotation.startTime;
-            rotationProgress = Math.min(elapsed / ROTATION_DURATION, 1);
-            
-            // Apply rotation to the entire cube group
-            const rotation = new THREE.Quaternion().setFromAxisAngle(rotationAxis, rotationAngle * rotationProgress);
-            cubeGroup.setRotationFromQuaternion(rotation);
-            
-            // Re-render the scene
-            renderer.render(scene, camera);
-            
-            if (rotationProgress < 1) {
-                requestAnimationFrame(animateRotation);
-            } else {
-                // Rotation complete
-                isRotating = false;
-                animateRotation.startTime = null;
-                
-                // Reset the cube group's rotation
-                cubeGroup.rotation.set(0, 0, 0);
-                
-                console.log(getDirectionFromAxis());
-                // Update piece locations in the data structure
-                updatePieceLocations(getDirectionFromAxis());
-                
-                // Update actual positions of spheres
-                spheres.forEach(sphere => {
-                    const { x, y, z } = sphere.userData.position;
-                    sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
-                });
-                
-                // Reset clickable spheres
-                updateClickableSpheres();
-            }
-        }
-
-        function getDirectionFromAxis() {
-            console.log(rotationAxis);
-            if (rotationAxis.z !== 0) {
-                return rotationAxis.z > 0 ? 'UP' : 'DOWN';
-            } else if (rotationAxis.y !== 0) {
-                return rotationAxis.y > 0 ? 'RIGHT' : 'LEFT';
-            }
-            return 'NONE';
-        }
-
-        function updateClickableSpheres() {
-            clickableSpheres = spheres.filter(sphere => sphere.userData.position.y === 0);
-            spheres.forEach(sphere => {
-                sphere.userData.clickable = (sphere.userData.position.y === 0);
-            });
+        function rotateCube(direction) {
+            // Update pieces locations in cube
+            updatePieceLocations(direction);
+            // Update mapping so we know what the front was originally
+            updateDirectionMapping(direction);
+            // Update pieces actual locations in space
+            rotatePieces(direction);
         }
 
         directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
@@ -298,22 +167,35 @@
             }
         }
 
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        function updatePieceLocations(direction) {
+            clickableSpheres = []
+            spheres.forEach(sphere => {
+                var x = sphere.userData.position.x;
+                var y = sphere.userData.position.y;
+                var z = sphere.userData.position.z;
+                switch (direction) {
+                    case 'UP':
+                        sphere.userData.position = { x: x, y: -z + 2, z: y };
                         break;
-                    }
+                    case 'DOWN':
+                        sphere.userData.position = { x: x, y: z, z: -y + 2 };
+                        break;
+                    case 'LEFT':
+                        sphere.userData.position = { x: y, y: -x + 2, z: z };
+                        break;
+                    case 'RIGHT':
+                        sphere.userData.position = { x: -y + 2, y: x, z: z };
+                        break;
                 }
-            }
-            return cookieValue;
+                if (sphere.userData.position.y === 0) {
+                    clickableSpheres.push(sphere);
+                    sphere.userData.clickable = true;
+                }
+                else {
+                    sphere.userData.clickable = false;
+                }
+            });
         }
-
-        //MESSSSSSYYYYYY
 
         function rotatePieces(direction) {
             var angle = Math.PI / 2;
@@ -336,24 +218,35 @@
             }
 
             var rotation = new THREE.Matrix4().makeRotationAxis(axis.normalize(), angle);
-
-            cubeGroup.children.forEach(child => {
-                child.position.applyMatrix4(rotation);
-                child.updateMatrix();
+            spheres.forEach(sphere => {
+                sphere.position.applyMatrix4(rotation);
             });
 
             // Re-render the scene
             renderer.render(scene, camera);
         }
 
-        //MESSSSYYYYY ^^
-
-        async function updateGameState(gameState) {
-            scene.remove(piecesGroup);
-            spheres = [];  // Clear the spheres array
-            while (piecesGroup.children.length > 0) {
-                piecesGroup.remove(piecesGroup.children[0]);
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
             }
+            return cookieValue;
+        }
+
+        function updateGameState(gameState) {
+            // Remove all existing spheres from the scene
+            spheres.forEach(sphere => {
+                scene.remove(sphere);
+            });
+            spheres = [];  // Clear the spheres array
             clickableSpheres = [];  // Clear clickable spheres array
 
             // Iterate through the updated game state and create new spheres
@@ -383,7 +276,7 @@
                         };
 
                         spheres.push(sphere);
-                        piecesGroup.add(sphere);
+                        scene.add(sphere);
 
                         if (sphere.userData.clickable) {
                             clickableSpheres.push(sphere);
@@ -392,34 +285,34 @@
                 });
             });
 
+            console.log(directionMapping);
             targetDirectionMapping = directionMapping;
             directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
             let count = 0;
-            ROTATION_DURATION = 0;
             while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
                 if (count % 2 == 0) {
                     if (count % 4 == 0) {
-                        await rotateCube('LEFT');
+                        rotateCube('LEFT');
                     }
                     else {
-                        await rotateCube('RIGHT');
+                        rotateCube('RIGHT');
                     }
                 }
                 else {
-                    await rotateCube('UP');
+                    rotateCube('UP');
                 }
                 count += 1;
             }
             while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
-                console.log('rotating right');
-                await rotateCube('RIGHT');
+                console.log("ROTATING RIGHT");
+                rotateCube('RIGHT');
             }
-            ROTATION_DURATION = 500;
 
             spheres.forEach((sphere) => {
                 sphere.userData.clickable = (sphere.userData.position.y === 0);
             });
 
+            // Re-render the scene
             renderer.render(scene, camera);
         }
 
@@ -446,12 +339,6 @@
         pointLight.castShadow = true;
         scene.add(pointLight);
 
-        const cubeGroup = new THREE.Group();
-        const cubeStructure = new THREE.Group();
-        const piecesGroup = new THREE.Group();
-        cubeGroup.add(cubeStructure);
-        cubeGroup.add(piecesGroup);
-
         // Set Up Cube
         var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
         var edgePaths = [
@@ -471,7 +358,7 @@
                     var path = new THREE.LineCurve3(start, end);
                     var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
                     var mesh = new THREE.Mesh(geometry, tubeMaterial);
-                    cubeStructure.add(mesh);
+                    scene.add(mesh);
                 }
             });
         });
@@ -480,7 +367,7 @@
             var path = new THREE.LineCurve3(new THREE.Vector3(...start), new THREE.Vector3(...end));
             var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
             var mesh = new THREE.Mesh(geometry, tubeMaterial);
-            cubeStructure.add(mesh);
+            scene.add(mesh);
         }
 
         var cubeSize = 6;
@@ -541,21 +428,22 @@
                         clickableSpheres.push(sphere);
                     }
                     spheres.push(sphere);
-                    piecesGroup.add(sphere); 
+                    scene.add(sphere); 
                 });
             });
         });
 
-        scene.add(cubeGroup);
+        // Initialize Raycaster
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+
+        // Camera position
+        camera.position.set(7, 4, 3);
+        camera.lookAt(scene.position);
 
         // Animation loop
-        function animate(timestamp) {
+        function animate() {
             requestAnimationFrame(animate);
-
-            if (isRotating) {
-                animateRotation(timestamp);
-            }
-
             renderer.render(scene, camera);
         }
 
