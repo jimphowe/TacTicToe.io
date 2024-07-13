@@ -17,7 +17,7 @@
     }
 
     function handlePieceClick(piece) {
-        // AJAX request to the server with the clicked position
+        currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         fetch('/singleplayer/move', {
             method: 'POST',
             headers: {
@@ -26,7 +26,7 @@
             },
             body: JSON.stringify({
                 position: piece.userData.originalPosition,
-                direction: sideToDirection(directionMapping['BACK']),
+                direction: sideToDirection(currentDirectionMapping['BACK']),
                 player: playerColor,
                 difficulty: '{{ difficulty|safe }}'
             })

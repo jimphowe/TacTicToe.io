@@ -143,6 +143,8 @@
             var toggle = document.getElementById('orderToggle');
             var firstPlayerInput = document.getElementById('firstPlayer');
             firstPlayerInput.value = toggle.checked ? 'computer' : 'human';
+            const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+            localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
             this.submit();
         });
 

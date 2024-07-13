@@ -89,24 +89,30 @@
         window.addEventListener('mouseout', onMouseOut, false);
 
         function onKeyDown(event) {
+            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
             switch (event.key) {
                 case 'ArrowUp':
                 case 'w':
                     rotateCube('UP');
+                    updateDirectionMapping(directionMapping, 'UP');
                     break;
                 case 'ArrowDown':
                 case 's':
                     rotateCube('DOWN');
+                    updateDirectionMapping(directionMapping, 'DOWN');
                     break;
                 case 'ArrowLeft':
                 case 'a':
                     rotateCube('LEFT');
+                    updateDirectionMapping(directionMapping, 'LEFT');
                     break;
                 case 'ArrowRight':
                 case 'd':
                     rotateCube('RIGHT');
+                    updateDirectionMapping(directionMapping, 'RIGHT');
                     break;
             }
+            localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
         }
 
         window.addEventListener('keydown', onKeyDown, false);
@@ -128,16 +134,48 @@
         window.addEventListener('click', onMouseClick, false);
 
         function rotateCube(direction) {
-            // Update pieces locations in cube
+            // Update pieces game board indexed locations in cube
             updatePieceLocations(direction);
-            // Update mapping so we know what the front was originally
-            updateDirectionMapping(direction);
-            // Update pieces actual locations in space
+            // Update pieces actual locations in space for rendering
             rotatePieces(direction);
         }
 
-        directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
-        function updateDirectionMapping(direction) {
+        document.addEventListener('DOMContentLoaded', (event) => {
+            reapplyRotations();
+        });
+
+        function reapplyRotations() {
+            // Starting at the default mapping, rotate until we get to the current mapping (cube rotation). This will rotate the game 
+            // state to match the rotation the user currently has set
+            const targetDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            let directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
+            let count = 0;
+            while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
+                if (count % 2 == 0) {
+                    if (count % 4 == 0) {
+                        rotateCube('LEFT');
+                        updateDirectionMapping(directionMapping, 'LEFT');
+                    }
+                    else {
+                        rotateCube('RIGHT');
+                        updateDirectionMapping(directionMapping, 'RIGHT');
+                    }
+                }
+                else {
+                    rotateCube('UP');
+                    updateDirectionMapping(directionMapping, 'UP');
+                }
+                count += 1;
+            }
+            while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
+                console.log("ROTATING RIGHT");
+                rotateCube('RIGHT');
+                updateDirectionMapping(directionMapping, 'RIGHT');
+            }
+        }
+
+        function updateDirectionMapping(directionMapping, direction) {
+            // Update the mapping in place depending on rotation
             frontVal = directionMapping['FRONT']
             switch (direction) {
                 case 'UP':
@@ -222,7 +260,6 @@
                 sphere.position.applyMatrix4(rotation);
             });
 
-            // Re-render the scene
             renderer.render(scene, camera);
         }
 
@@ -242,14 +279,12 @@
         }
 
         function updateGameState(gameState) {
-            // Remove all existing spheres from the scene
             spheres.forEach(sphere => {
                 scene.remove(sphere);
             });
-            spheres = [];  // Clear the spheres array
-            clickableSpheres = [];  // Clear clickable spheres array
+            spheres = [];
+            clickableSpheres = [];
 
-            // Iterate through the updated game state and create new spheres
             gameState.forEach((layer, x) => {
                 layer.forEach((row, y) => {
                     row.forEach((cell, z) => {
@@ -265,14 +300,14 @@
                                 material = redMaterial;
                                 break;
                             default:
-                                material = emptyMaterial; // Handle empty or undefined cells
+                                material = emptyMaterial;
                         }
                         var sphere = new THREE.Mesh(sphereGeometry, material);
                         sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
                         sphere.userData = {
                             position: { x: x, y: y, z: z },
                             originalPosition: { x: x, y: y, z: z },
-                            clickable: (y === 0) // Assuming y=0 makes the sphere clickable
+                            clickable: (y === 0)
                         };
 
                         spheres.push(sphere);
@@ -285,34 +320,12 @@
                 });
             });
 
-            console.log(directionMapping);
-            targetDirectionMapping = directionMapping;
-            directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
-            let count = 0;
-            while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
-                if (count % 2 == 0) {
-                    if (count % 4 == 0) {
-                        rotateCube('LEFT');
-                    }
-                    else {
-                        rotateCube('RIGHT');
-                    }
-                }
-                else {
-                    rotateCube('UP');
-                }
-                count += 1;
-            }
-            while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
-                console.log("ROTATING RIGHT");
-                rotateCube('RIGHT');
-            }
-
             spheres.forEach((sphere) => {
                 sphere.userData.clickable = (sphere.userData.position.y === 0);
             });
 
             // Re-render the scene
+            reapplyRotations();
             renderer.render(scene, camera);
         }
 

@@ -124,6 +124,8 @@
                     startWebSocket();
                     if (response.status === 'success') {
                         playSound("start");
+                        const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+                        localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
                         window.location.href = '/game/' + response.game_id;
                     } else if (response.status === 'waiting') {
                         $('#matchmakingModal').css('display', 'block');
