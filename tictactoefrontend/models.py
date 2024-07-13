@@ -4,12 +4,12 @@ from enum import Enum
 class Piece(Enum):
     EMPTY = "EMPTY"
     BLACK = "BLACK"
-    WHITE = "WHITE"
+    BLUE = "BLUE"
     RED = "RED"
 
 class Board:
     def __init__(self):
-        # A 3x3x3 grid of pieces (empty, red, black, white)
+        # A 3x3x3 grid of pieces (empty, red, black, blue)
         self.setupBoard(17)
         while self.hasSuperCorners():
            self.setupBoard(17)
@@ -215,8 +215,8 @@ class Board:
     def move(self,x,y,z,dir,player):
         if player == "RED":
             player = Piece.RED
-        elif player == "WHITE":
-            player = Piece.WHITE
+        elif player == "BLUE":
+            player = Piece.BLUE
         if not self.validMove(x,y,z,dir):
              exc = f'\nAttempted to make move {(x,y,z,dir)}\nOn board:\n{self.getStatePretty()}'
              print(exc)
@@ -289,7 +289,7 @@ class Board:
 
     # Returns a string representation of the gameboard, for debugging purposes
     def getStatePretty(self):
-        displayStr = { Piece.RED : " RED ", Piece.BLACK : "BLACK", Piece.WHITE : "WHITE", Piece.EMPTY : "EMPTY"}
+        displayStr = { Piece.RED : " RED ", Piece.BLACK : "BLACK", Piece.BLUE : " BLUE", Piece.EMPTY : "EMPTY"}
         gameState = "+----------------------\n"
         gameState += "| \\ " + displayStr[self.pieces[0][2][0]] + "  " + displayStr[self.pieces[1][2][0]] + "  " + displayStr[self.pieces[2][2][0]] + " \\\n"
         gameState += "|   \\                     \\\n"
@@ -325,9 +325,9 @@ class Board:
             dir = random.choice(directions)
         return (x,y,z,dir)
     
-    # Returns the other player color. Red -> White. White -> Red
+    # Returns the other player color. Red -> Blue. Blue -> Red
     def otherPlayer(self,player: Piece):
-        return Piece.RED if player == Piece.WHITE else Piece.WHITE
+        return Piece.RED if player == Piece.BLUE else Piece.BLUE
 
     # Loops through possible moves and returns if a move wins the game, else returns None
     def getWinInOne(self,player: Piece):
@@ -546,7 +546,7 @@ class Board:
         for run in self.winningRuns:
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return True
-        if player == Piece.WHITE and self.numPieces(Piece.EMPTY) == 0:
+        if player == Piece.BLUE and self.numPieces(Piece.EMPTY) == 0:
            return True
         return False
     
@@ -648,7 +648,7 @@ class ExpertAgent:
 class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
-        self.computerColor = Piece.RED if computerColor == 'RED' else Piece.WHITE
+        self.computerColor = Piece.RED if computerColor == 'RED' else Piece.BLUE
         match(difficulty):
             case 'easy':
                 self.computer = EasyAgent(self.computerColor)
@@ -660,7 +660,7 @@ class GamePlayer:
                 self.computer = ExpertAgent(self.computerColor)
 
     def isOver(self):
-        return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.WHITE)
+        return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.BLUE)
 
     def makeComputerMove(self):
         (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))

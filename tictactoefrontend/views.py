@@ -48,8 +48,8 @@ def singleplayer_setup_view(request):
 def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
     firstPlayer = request.GET.get('firstPlayer', 'human')
-    humanColor = 'RED' if firstPlayer == 'human' else 'WHITE'
-    computerColor = 'RED' if firstPlayer == 'computer' else 'WHITE'
+    humanColor = 'RED' if firstPlayer == 'human' else 'BLUE'
+    computerColor = 'RED' if firstPlayer == 'computer' else 'BLUE'
     game = GamePlayer(difficulty, computerColor)
     if firstPlayer == 'computer':
         game.makeComputerMove()
@@ -80,7 +80,7 @@ def handle_singleplayer_move(request):
     if not game_state:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
 
-    computerColor = "RED" if player == "WHITE" else "WHITE"
+    computerColor = "RED" if player == "BLUE" else "BLUE"
     game = GamePlayer(difficulty, computerColor)
     board = game.board
     
@@ -96,8 +96,8 @@ def handle_singleplayer_move(request):
     winner = None
     if board.hasWon(Piece.RED):
         winner = 'RED'
-    elif board.hasWon(Piece.WHITE):
-        winner = 'WHITE'
+    elif board.hasWon(Piece.BLUE):
+        winner = 'BLUE'
     return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})
 
 from django.shortcuts import render, get_object_or_404
@@ -132,7 +132,7 @@ def handle_multiplayer_move(request):
     direction = data.get('direction')
 
     p1_color = Piece.RED
-    p2_color = Piece.WHITE
+    p2_color = Piece.BLUE
 
     # Fetch the game from the database
     game = get_object_or_404(Game, pk=game_id)
