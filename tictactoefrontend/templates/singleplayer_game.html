@@ -4,6 +4,11 @@
 <script>
     const playerColor = '{{ player_color }}';
 
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
+        localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
+    });
+
     function handleGameOver(winner, eloChange) {
         if (winner == playerColor) {
             playSound("win");

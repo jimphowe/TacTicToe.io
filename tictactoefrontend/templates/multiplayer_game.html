@@ -37,6 +37,10 @@
 <div id="opponentTimer" class="timer">Your Time: 3:00</div>
 <button id="resignButton" onclick="handleResignation()">Resign</button>
 <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        reapplyRotations();
+    });
+
     const myTimerElement = document.getElementById('myTimer');
     const opponentTimerElement = document.getElementById('opponentTimer');
 

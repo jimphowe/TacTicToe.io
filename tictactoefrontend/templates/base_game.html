@@ -50,6 +50,19 @@
         scene.add(pointLight);
 
         // Set Up Cube
+        const cubeGroup = new THREE.Group();
+        const boardGroup = new THREE.Group();
+        const piecesGroup = new THREE.Group();
+        cubeGroup.add(boardGroup);
+        cubeGroup.add(piecesGroup);
+
+        function addTube(start, end) {
+            var path = new THREE.LineCurve3(new THREE.Vector3(...start), new THREE.Vector3(...end));
+            var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
+            var mesh = new THREE.Mesh(geometry, tubeMaterial);
+            boardGroup.add(mesh);
+        }
+        
         var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
         var edgePaths = [
             new THREE.Vector3(-3, -3, -3),
@@ -65,20 +78,10 @@
         edgePaths.forEach((start, index) => {
             edgePaths.forEach((end, subIndex) => {
                 if (start.distanceTo(end) === 6) {
-                    var path = new THREE.LineCurve3(start, end);
-                    var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
-                    var mesh = new THREE.Mesh(geometry, tubeMaterial);
-                    scene.add(mesh);
+                    addTube(start.toArray(), end.toArray());
                 }
             });
         });
-
-        function addTube(start, end) {
-            var path = new THREE.LineCurve3(new THREE.Vector3(...start), new THREE.Vector3(...end));
-            var geometry = new THREE.TubeGeometry(path, 64, 0.05, 8, false);
-            var mesh = new THREE.Mesh(geometry, tubeMaterial);
-            scene.add(mesh);
-        }
 
         var cubeSize = 6;
         var halfCubeSize = cubeSize / 2;
@@ -113,7 +116,6 @@
         });
 
         var clickableSpheres = [];
-        var spheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
         gameState.forEach((layer, x) => {
             layer.forEach((row, y) => {
@@ -137,16 +139,17 @@
                     sphere.userData = {
                         position: {x: x, y: y, z: z},
                         originalPosition: {x: x, y: y, z: z},
-                        clickable: true
+                        clickable: (y == 0)
                     };
                     if (y == 0) {
                         clickableSpheres.push(sphere);
                     }
-                    spheres.push(sphere);
-                    scene.add(sphere); 
+                    piecesGroup.add(sphere); 
                 });
             });
         });
+
+        scene.add(cubeGroup);
 
         // Initialize Raycaster
         var raycaster = new THREE.Raycaster();
@@ -272,10 +275,6 @@
             rotatePieces(direction);
         }
 
-        document.addEventListener('DOMContentLoaded', (event) => {
-            reapplyRotations();
-        });
-
         function reapplyRotations() {
             // Starting at the default mapping, rotate until we get to the current mapping (cube rotation). This will rotate the game 
             // state to match the rotation the user currently has set
@@ -337,9 +336,21 @@
             }
         }
 
+        function updateClickableSpheres() {
+            clickableSpheres = [];
+            piecesGroup.children.forEach(sphere => {
+                if (sphere.userData.position.y === 0) {
+                    sphere.userData.clickable = true;
+                    clickableSpheres.push(sphere);
+                }
+                else {
+                    sphere.userData.clickable = false;
+                }
+            });
+        }
+
         function updatePieceLocations(direction) {
-            clickableSpheres = []
-            spheres.forEach(sphere => {
+            piecesGroup.children.forEach(sphere => {
                 var x = sphere.userData.position.x;
                 var y = sphere.userData.position.y;
                 var z = sphere.userData.position.z;
@@ -357,14 +368,8 @@
                         sphere.userData.position = { x: -y + 2, y: x, z: z };
                         break;
                 }
-                if (sphere.userData.position.y === 0) {
-                    clickableSpheres.push(sphere);
-                    sphere.userData.clickable = true;
-                }
-                else {
-                    sphere.userData.clickable = false;
-                }
             });
+            updateClickableSpheres();
         }
 
         function rotatePieces(direction) {
@@ -388,7 +393,7 @@
             }
 
             var rotation = new THREE.Matrix4().makeRotationAxis(axis.normalize(), angle);
-            spheres.forEach(sphere => {
+            piecesGroup.children.forEach(sphere => {
                 sphere.position.applyMatrix4(rotation);
             });
 
@@ -411,12 +416,9 @@
         }
 
         function updateGameState(gameState) {
-            spheres.forEach(sphere => {
-                scene.remove(sphere);
-            });
-            spheres = [];
-            clickableSpheres = [];
-
+            while (piecesGroup.children.length > 0) {
+                piecesGroup.remove(piecesGroup.children[0]);
+            }
             gameState.forEach((layer, x) => {
                 layer.forEach((row, y) => {
                     row.forEach((cell, z) => {
@@ -442,18 +444,9 @@
                             clickable: (y === 0)
                         };
 
-                        spheres.push(sphere);
-                        scene.add(sphere);
-
-                        if (sphere.userData.clickable) {
-                            clickableSpheres.push(sphere);
-                        }
+                        piecesGroup.add(sphere);
                     });
                 });
-            });
-
-            spheres.forEach((sphere) => {
-                sphere.userData.clickable = (sphere.userData.position.y === 0);
             });
 
             // Re-render the scene
