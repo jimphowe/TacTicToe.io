@@ -29,6 +29,8 @@
     <button id="homeButton" onclick="location.href='/'">Home</button>
     <button id="restartButton" onclick="window.location.reload()">Restart</button>
     <script>
+        let isRotating = false;
+        let ROTATION_DURATION = 500;
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -224,30 +226,46 @@
         window.addEventListener('mouseout', onMouseOut, false);
 
         function onKeyDown(event) {
+            if (isRotating) return;
+
             const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            let direction;
+
             switch (event.key) {
                 case 'ArrowUp':
                 case 'w':
-                    rotateCube('UP');
-                    updateDirectionMapping(directionMapping, 'UP');
+                    direction = 'UP';
                     break;
                 case 'ArrowDown':
                 case 's':
-                    rotateCube('DOWN');
-                    updateDirectionMapping(directionMapping, 'DOWN');
+                    direction = 'DOWN';
                     break;
                 case 'ArrowLeft':
                 case 'a':
-                    rotateCube('LEFT');
-                    updateDirectionMapping(directionMapping, 'LEFT');
+                    direction = 'LEFT';
                     break;
                 case 'ArrowRight':
                 case 'd':
-                    rotateCube('RIGHT');
-                    updateDirectionMapping(directionMapping, 'RIGHT');
+                    direction = 'RIGHT';
                     break;
+                default:
+                    return;
             }
+
+            updatePieceLocations(direction);
+            rotatePieces(direction);
+            updateDirectionMapping(directionMapping, direction);
             localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
+
+            // uncomment for animated rotations
+            // isRotating = true;
+
+            // animateRotation(direction, () => {
+            //     updatePieceLocations(direction);
+            //     updateDirectionMapping(directionMapping, direction);
+            //     localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
+            //     isRotating = false;
+            // });
         }
 
         window.addEventListener('keydown', onKeyDown, false);
@@ -398,6 +416,50 @@
             });
 
             renderer.render(scene, camera);
+        }
+
+        function animateRotation(direction, callback) {
+            const startQuaternion = new THREE.Quaternion().copy(cubeGroup.quaternion);
+            const endQuaternion = new THREE.Quaternion();
+            const angle = Math.PI / 2;
+            let axis;
+
+            switch (direction) {
+                case 'UP':
+                    axis = new THREE.Vector3(0, 0, 1);
+                    break;
+                case 'DOWN':
+                    axis = new THREE.Vector3(0, 0, -1);
+                    break;
+                case 'LEFT':
+                    axis = new THREE.Vector3(0, -1, 0);
+                    break;
+                case 'RIGHT':
+                    axis = new THREE.Vector3(0, 1, 0);
+                    break;
+            }
+
+            endQuaternion.setFromAxisAngle(axis.normalize(), angle);
+            endQuaternion.multiply(startQuaternion);
+
+            const startTime = Date.now();
+
+            function update() {
+                const elapsedTime = Date.now() - startTime;
+                const progress = Math.min(elapsedTime / ROTATION_DURATION, 1);
+
+                if (progress < 1) {
+                    THREE.Quaternion.slerp(startQuaternion, endQuaternion, cubeGroup.quaternion, progress);
+                    requestAnimationFrame(update);
+                } else {
+                    cubeGroup.quaternion.copy(endQuaternion);
+                    if (callback) callback();
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            update();
         }
 
         function getCookie(name) {
