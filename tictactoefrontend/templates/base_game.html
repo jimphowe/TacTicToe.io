@@ -252,20 +252,13 @@
                     return;
             }
 
+            isRotating = true;
             updatePieceLocations(direction);
-            rotatePieces(direction);
+            animateRotation(direction, () => {
+                isRotating = false;
+            });
             updateDirectionMapping(directionMapping, direction);
             localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
-
-            // uncomment for animated rotations
-            // isRotating = true;
-
-            // animateRotation(direction, () => {
-            //     updatePieceLocations(direction);
-            //     updateDirectionMapping(directionMapping, direction);
-            //     localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
-            //     isRotating = false;
-            // });
         }
 
         window.addEventListener('keydown', onKeyDown, false);
@@ -297,6 +290,7 @@
             // Starting at the default mapping, rotate until we get to the current mapping (cube rotation). This will rotate the game 
             // state to match the rotation the user currently has set
             const targetDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            console.log(targetDirectionMapping);
             let directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
             let count = 0;
             while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
@@ -391,19 +385,18 @@
         }
 
         function rotatePieces(direction) {
-            var angle = Math.PI / 2;
+            const angle = Math.PI / 2;
+            let axis;
 
             switch (direction) {
                 case 'UP':
                     axis = new THREE.Vector3(0, 0, 1);
                     break;
                 case 'DOWN':
-                    axis = new THREE.Vector3(0, 0, 1);
-                    angle *= -1;
+                    axis = new THREE.Vector3(0, 0, -1);
                     break;
                 case 'LEFT':
-                    axis = new THREE.Vector3(0, 1, 0);
-                    angle *= -1;
+                    axis = new THREE.Vector3(0, -1, 0);
                     break;
                 case 'RIGHT':
                     axis = new THREE.Vector3(0, 1, 0);
@@ -417,6 +410,8 @@
 
             renderer.render(scene, camera);
         }
+
+        let totalRotation = new THREE.Quaternion();
 
         function animateRotation(direction, callback) {
             const startQuaternion = new THREE.Quaternion().copy(cubeGroup.quaternion);
@@ -453,6 +448,7 @@
                     requestAnimationFrame(update);
                 } else {
                     cubeGroup.quaternion.copy(endQuaternion);
+                    totalRotation.multiply(endQuaternion);
                     if (callback) callback();
                 }
 
@@ -478,6 +474,7 @@
         }
 
         function updateGameState(gameState) {
+            cubeGroup.quaternion.set(0, 0, 0, 1);
             while (piecesGroup.children.length > 0) {
                 piecesGroup.remove(piecesGroup.children[0]);
             }
