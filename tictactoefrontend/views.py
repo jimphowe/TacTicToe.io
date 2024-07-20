@@ -205,6 +205,9 @@ def handle_resignation(request):
 
     game = get_object_or_404(Game, pk=game_id)
 
+    if game.completed:
+        return
+
     winner = game.player_one if request.user.id == game.player_two.id else game.player_two
 
     game.completed = True
