@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup MultiPlayer Game</title>
     {% load static %}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <title>Setup MultiPlayer Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var findOpponentUrl = "{% url 'find_opponent' %}";
     </script>
@@ -14,81 +16,76 @@
     <script src="{% static 'js/components.js' %}"></script>
     <style>
         body {
-            background-color: #121212; /* Dark background for the body */
-            color: #ffffff; /* Light text color for readability */
-            font-family: Arial, sans-serif; /* Consistent font with the index page */
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: #121212;
+            color: #ffffff;
+            min-height: 100vh;
         }
-        #playButton {
-            padding: 10px 20px;
-            font-size: 16px;
+        .game-container {
+            background-color: #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .btn-custom {
             background-color: #333;
             color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
             transition: background-color 0.3s;
-        }
-        #playButton:hover {
-            background-color: #444;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 25%; /* Adjusting to take up 25% of the window width */
-            height: 25%; /* Adjusting to take up 25% of the window height */
-            background-color: #333; /* Dark grey color */
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 1000;
-            color: #333; /* Ensuring text is visible on dark background */
-            overflow: hidden; /* Prevents content from overflowing */
-        }
-
-        .modal-content {
+            width: 100%;
             padding: 20px;
-            text-align: center; /* Centers the text within the modal */
-            height: calc(100% - 50px); /* Reduces height to fit the button */
-        }
-
-        .btn-flat {
-            padding: 10px 20px;
-            background-color: red; /* Red color for the button */
-            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 50%; /* Making the button wider */
-            margin-top: 10px; /* Spacing from text above */
-            text-decoration: none; /* Ensures no underline on links */
-            display: inline-block; /* Allows centering */
         }
-
-        .btn-flat:hover {
-            background-color: #cc0000; /* Darker red on hover */
+        .btn-custom:hover {
+            background-color: #555;
+            color: #fff;
+        }
+        .home-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
         }
     </style>
 </head>
-<body>
-    <button id="homeButton" onclick="location.href='/'">Home</button>
-    <button id="playButton">Play</button>
+<body class="d-flex align-items-center justify-content-center">
+    <a href="/" class="btn btn-outline-light home-button">
+        <i class="fas fa-home"></i> Home
+    </a>
+    
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <button id="localButton" class="btn btn-custom">
+                    <i class="fas fa-users me-2"></i>Local Game
+                </button>
+                <button id="onlineButton" class="btn btn-custom">
+                    <i class="fas fa-globe me-2"></i>Online Game
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <div id="matchmakingModal" class="modal">
-        <div class="modal-content">
-            <h4>Searching for an opponent...</h4>
-            <a href="#!" class="modal-close btn-flat">Cancel</a>
+    <div class="modal fade" id="matchmakingModal" tabindex="-1" aria-labelledby="matchmakingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="matchmakingModalLabel">Finding Opponent</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p>Searching for an opponent...</p>
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <audio id="startSound" src="{% static 'sounds/start.wav' %}" preload="auto"></audio>
-    <!-- Coin_C_09 by cabled_mess -- https://freesound.org/s/350876/ -- License: Creative Commons 0 -->
 
     <script>
         function playSound(soundType) {
@@ -119,7 +116,13 @@
         }
 
         $(document).ready(function() {
-            $('#playButton').click(function() {
+            var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'));
+
+            $('#localButton').click(function() {
+                alert('Local game feature is coming soon!');
+            });
+
+            $('#onlineButton').click(function() {
                 findOpponent().done(function(response) {
                     startWebSocket();
                     if (response.status === 'success') {
@@ -128,16 +131,15 @@
                         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
                         window.location.href = '/game/' + response.game_id;
                     } else if (response.status === 'waiting') {
-                        $('#matchmakingModal').css('display', 'block');
+                        matchmakingModal.show();
                     }
                 }).fail(function() {
                     alert('Error finding an opponent. Please try again.');
                 });
+            });
 
-                $('.modal-close').click(function() {
-                    $('#matchmakingModal').css('display', 'none');
-                    // Potentially add more cleanup code here if needed
-                });
+            $('#matchmakingModal').on('hidden.bs.modal', function () {
+                // Add any cleanup code here if needed
             });
         });
     </script>

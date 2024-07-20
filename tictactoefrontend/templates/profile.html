@@ -2,96 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ user_profile.user.username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #121212; /* Dark background for the body */
-            color: #ffffff; /* Light text color for readability */
-            font-family: Arial, sans-serif; /* Consistent font with the index page */
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
         }
-        .container {
-            background-color: #333; /* Darker card background */
+        .profile-container {
+            background-color: #333;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        .profile-header {
+            background-color: #007BFF;
+            color: white;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
             padding: 20px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
-            border-radius: 8px; /* Rounded corners */
-            max-width: 600px;
-            width: 100%;
         }
-        h1, h2 {
-            color: #eee; /* Lighter text for headings */
-            text-align: center;
-        }
-        ol {
+        .game-list {
             list-style-type: none;
             padding: 0;
         }
-        li {
-            background: #424242; /* Slightly lighter gray for list items */
-            padding: 10px 20px;
-            font-size: 16px;
-            color: #ddd; /* Lighter text color for list items */
-            border-left: 3px solid #007BFF; /* Bright blue left border */
+        .game-item {
+            background: #424242;
+            border-left: 3px solid #007BFF;
             margin-bottom: 10px;
+            padding: 15px;
+            transition: transform 0.2s;
         }
-        li:before {
-            content: counter(list) ". ";
-            font-weight: bold;
-            color: #007BFF; /* Blue color for numbering */
+        .game-item:hover {
+            transform: translateX(5px);
         }
-        .btn {
-            background-color: #555; /* Darker button background */
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            transition: background-color 0.3s;
+        .won {
+            color: #28a745;
         }
-        .btn:hover {
-            background-color: #666; /* Hover effect */
+        .lost {
+            color: #dc3545;
         }
-        a {
-            color: #0d6efd; /* Bootstrap primary link color */
-            text-decoration: none;
-        }
-        a:hover {
-            color: #0a58ca; /* Darken link on hover */
-        }
-        button {
-            margin: 5px;
-            font-size: 16px;
+        .home-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
-    <button class="btn" onclick="location.href='/'">Home</button>
-    <div class="container">
-        <h1>{{ user_profile.user.username }}'s Profile</h1>
-        <p>Elo Rating: {{ user_profile.elo_rating }}</p>
-        <h2>Recent Games</h2>
-        {% if latest_games %}
-        <ol>
-            {% for game in latest_games %}
-            <li>
-                {{ game.player_one.username }} vs {{ game.player_two.username }} - 
-                {% if game.winner == request.user %}
-                    <span>Won</span>
-                    <span style="color: green;">+{{ game.elo_change }}</span>
-                {% else %}
-                    <span>Lost</span>
-                    <span style="color: red;">-{{ game.elo_change }}</span>
-                {% endif %}
-            </li>
-            
-            {% endfor %}
-        </ol>
-        {% else %}
-        <p>No completed games to display.</p>
-        {% endif %}
+    <a href="/" class="btn btn-outline-light home-button">
+        <i class="fas fa-home"></i> Home
+    </a>
+    
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="profile-container">
+                    <div class="profile-header text-center">
+                        <h1 class="display-4">{{ user_profile.user.username }}</h1>
+                        <p class="lead">Elo Rating: {{ user_profile.elo_rating }}</p>
+                    </div>
+                    <div class="p-4">
+                        <h2 class="text-center mb-4">Recent Games</h2>
+                        {% if latest_games %}
+                            <ol class="game-list">
+                                {% for game in latest_games %}
+                                    <li class="game-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>{{ game.player_one.username }} vs {{ game.player_two.username }}</span>
+                                            {% if game.winner == request.user %}
+                                                <span class="won">Won <strong>+{{ game.elo_change }}</strong></span>
+                                            {% else %}
+                                                <span class="lost">Lost <strong>-{{ game.elo_change }}</strong></span>
+                                            {% endif %}
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ol>
+                        {% else %}
+                            <p class="text-center">No completed games to display.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
