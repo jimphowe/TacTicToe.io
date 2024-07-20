@@ -181,7 +181,10 @@
             updateGameState(JSON.parse(data.game_state));
             syncGameTimers();
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            showToast();
+        });
     }
 
     function handleResignation() {
