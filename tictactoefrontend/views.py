@@ -330,6 +330,15 @@ def find_opponent(request):
         add_to_waiting_queue(current_user)
         return JsonResponse({'status': 'waiting'})
     
+@login_required
+def cancel_search(request):
+    current_user = request.user
+    waiting_users = cache.get('waiting_users', [])
+    if current_user in waiting_users:
+        waiting_users.remove(current_user)
+        cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
+    return JsonResponse({'status': 'success'})
+    
 from django.core.cache import cache
 
 def add_to_waiting_queue(user):

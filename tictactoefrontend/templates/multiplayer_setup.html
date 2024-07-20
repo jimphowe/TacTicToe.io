@@ -12,7 +12,6 @@
     <script>
         var findOpponentUrl = "{% url 'find_opponent' %}";
     </script>
-    <script src="{% static 'js/find_opponent.js' %}"></script>
     <script src="{% static 'js/components.js' %}"></script>
     <style>
         body {
@@ -68,9 +67,16 @@
         .toast.show {
             opacity: 1;
         }
+
+        .modal-header,
+        .modal-footer {
+            border: none;
+        }
     </style>
 </head>
 <body class="d-flex align-items-center justify-content-center">
+    <div id="loggedIn" data-logged-in="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+
     <div id="toast-container">
         <div id="mustLoginToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             Login to play online
@@ -97,18 +103,16 @@
     <div class="modal fade" id="matchmakingModal" tabindex="-1" aria-labelledby="matchmakingModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-light">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="matchmakingModalLabel">Finding Opponent</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header justify-content-center">
+                    <h5 class="modal-title" id="matchmakingModalLabel">Searching for Opponent</h5>
                 </div>
                 <div class="modal-body text-center">
-                    <p>Searching for an opponent...</p>
-                    <div class="spinner-border text-light" role="status">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal" id="cancelSearchBtn">Cancel Search</button>
                 </div>
             </div>
         </div>
@@ -125,16 +129,62 @@
             }, 3000);
         }
 
-        function isUserLoggedIn() {
-            const cookies = document.cookie;
-            return cookies.split('; ').some(cookie => cookie.trim().startsWith('sessionid='));
-        }
-
         function playSound(soundType) {
             const sound = document.getElementById(soundType + "Sound");
             if (sound) {
                 sound.play();
             }
+        }
+
+        function findOpponent() {
+            return $.ajax({
+                url: findOpponentUrl,
+                type: 'GET'
+            });
+        }
+
+        function setupWebSocket(onGameStart) {
+            var socket = new WebSocket(
+                'ws://' + window.location.host + '/ws/setup/'
+            );
+
+            socket.onmessage = function(e) {
+                var data = JSON.parse(e.data);
+                if (data.status === 'success') {
+                    onGameStart(data.game_id);
+                }
+            };
+
+            socket.onclose = function(e) {
+                console.error('Setup socket closed unexpectedly');
+            };
+
+            return socket;
+        }
+
+        function cancelSearch() {
+            return $.ajax({
+                url: '/cancel-search/',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
         }
 
         var setupSocket;
@@ -165,7 +215,8 @@
             });
 
             $('#onlineButton').click(function() {
-                if (!isUserLoggedIn()) {
+                //console.log(document.getElementById('loggedIn').getAttribute('data-logged-in') == 'falst');
+                if (document.getElementById('loggedIn').getAttribute('data-logged-in') == 'false') {
                     showToast();
                 } else {
                     findOpponent().done(function(response) {
@@ -182,6 +233,19 @@
                         alert('Error finding an opponent. Please try again.');
                     });
                 }
+            });
+
+            $('#cancelSearchBtn').click(function() {
+                cancelSearch().done(function(response) {
+                    if (response.status === 'success') {
+                        matchmakingModal.hide();
+                        if (setupSocket) {
+                            setupSocket.close();
+                        }
+                    }
+                }).fail(function() {
+                    alert('Error cancelling search. Please try again.');
+                });
             });
         });
     </script>
