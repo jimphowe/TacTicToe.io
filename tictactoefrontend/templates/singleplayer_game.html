@@ -38,15 +38,20 @@
         })
         .then(response => response.json())
         .then(data => {
-            playSound("move");
-            updateGameState(data.game_state);
-            if (data.winner) {
-                handleGameOver(data.winner);
+            if (data.status == 'error') {
+                showToast("Invalid Move");
+            }
+            else {
+                playSound("move");
+                updateGameState(data.game_state);
+                if (data.winner) {
+                    handleGameOver(data.winner);
+                }
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast();
+            showToast("Unexpected Error");
         });
     }
 </script>

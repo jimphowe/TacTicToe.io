@@ -177,13 +177,27 @@
         })
         .then(response => response.json())
         .then(data => {
-            playSound("move");
-            updateGameState(JSON.parse(data.game_state));
-            syncGameTimers();
+            if (data.status == 'error') {
+                switch(data.message) {
+                    case 'Invalid Move':
+                        showToast("Invalid Move");
+                        break;
+                    case 'Not Your Turn':
+                        showToast("Not Your Turn");
+                        break;
+                    default:
+                        showToast("Unexpected Error");
+                }
+            }
+            else {
+                playSound("move");
+                updateGameState(JSON.parse(data.game_state));
+                syncGameTimers();
+            }
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast();
+            showToast("Unexpected Error");
         });
     }
 

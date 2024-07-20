@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tac-Tic-Toe</title>
+    <title>TacTicToe</title>
     {% load static %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
@@ -213,8 +213,9 @@
             }
         }
 
-        function showToast() {
+        function showToast(message) {
             const toast = document.getElementById('invalidMoveToast');
+            toast.textContent = message;
             toast.classList.add('show');
             setTimeout(() => {
                 toast.classList.remove('show');

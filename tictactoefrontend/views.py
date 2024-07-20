@@ -86,8 +86,10 @@ def handle_singleplayer_move(request):
     
     board.setState(game_state)
 
-    #import ipdb; ipdb.set_trace()
-    game.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+    try:
+        board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+    except:
+        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
     if not game.isOver():
         game.makeComputerMove()
     new_game_state = board.getState()
@@ -137,17 +139,17 @@ def handle_multiplayer_move(request):
     # Fetch the game from the database
     game = get_object_or_404(Game, pk=game_id)
 
-    # Assume that the current user making the move is the one who sent the request
-    # You should add additional checks to ensure the correct player is making the move based on your game logic
     #import ipdb; ipdb.set_trace()
     if request.user.id != game.turn.id:
-        return JsonResponse({'status': 'error', 'message': 'Not your turn', 'game_state': game.game_state,
-        'winner': None}, status=403)
+        return JsonResponse({'status': 'error', 'message': 'Not Your Turn'}, status=403)
 
     board = Board()
     board.setState(json.loads(game.game_state))
     player = p1_color if request.user.id == game.player_one.id else p2_color
-    board.move(position.get('x'),position.get('y'),position.get('z'),direction,player) # TODO catch invalid move
+    try:
+        board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+    except:
+        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
 
     game_key = f"game:{game_id}"
     now = timezone.now()
