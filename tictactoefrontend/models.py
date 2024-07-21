@@ -711,6 +711,12 @@ class Game(models.Model):
     # Player fields
     player_one = models.ForeignKey(User, related_name='games_as_player_one', on_delete=models.CASCADE)
     player_two = models.ForeignKey(User, related_name='games_as_player_two', on_delete=models.CASCADE)
+
+    GAME_TYPES = [
+        ('rapid', 'rapid'),
+        ('blitz', 'blitz'),
+    ]
+    game_type = models.CharField(max_length=20, choices=GAME_TYPES)
     
     # Game state and status
     game_state = models.JSONField(default=list)
@@ -727,11 +733,12 @@ class Game(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
 
-    def start_new_game(player_one, player_two):
+    def start_new_game(player_one, player_two, game_type):
         board = Board() 
         game = Game(
             player_one=player_one,
             player_two=player_two,
+            game_type=game_type,
             game_state=json.dumps(board.getState()),  
             turn=player_one,#TODO update to random maybe? random.choice([player_one, player_two]),
             completed=False
