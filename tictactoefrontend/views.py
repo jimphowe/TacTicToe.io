@@ -117,13 +117,37 @@ from .models import Game
 
 def multiplayer_game_view(request, game_id):
     game = get_object_or_404(Game, pk=game_id)
+
+    rapid_elo_subquery = EloRating.objects.filter(
+        user_profile=OuterRef('pk'),
+        game_type='rapid'
+    ).values('rating')[:1]
+
+    player_one_profile = UserProfile.objects.filter(user=game.player_one).annotate(
+        rapid_elo=Subquery(rapid_elo_subquery)
+    ).first()
+    player_two_profile = UserProfile.objects.filter(user=game.player_two).annotate(
+        rapid_elo=Subquery(rapid_elo_subquery)
+    ).first()
+
+    if request.user == game.player_one:
+        player_profile = player_one_profile
+        opponent_profile = player_two_profile
+    else:
+        player_profile = player_two_profile
+        opponent_profile = player_one_profile
+
     context = {
         'game_id': game.id,
         'game_state': game.game_state,
         'player_one': game.player_one,
         'player_two': game.player_two,
         'is_player_one': game.player_one == request.user,
-        'is_player_turn': game.turn == request.user
+        'is_player_turn': game.turn == request.user,
+        'player_name': player_profile.user.username,
+        'player_elo': player_profile.rapid_elo,
+        'opponent_name': opponent_profile.user.username,
+        'opponent_elo': opponent_profile.rapid_elo,
     }
     return render(request, 'multiplayer_game.html', context)
 
