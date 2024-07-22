@@ -35,9 +35,6 @@
             padding: 15px;
             transition: transform 0.2s;
         }
-        .game-item:hover {
-            transform: translateX(5px);
-        }
         .won {
             color: #28a745;
         }
@@ -63,7 +60,7 @@
                 <div class="profile-container">
                     <div class="profile-header text-center">
                         <h1 class="display-4">{{ user_profile.user.username }}</h1>
-                        <p class="lead">Elo Rating: {{ user_profile.elo_rating }}</p>
+                        <p class="lead">Elo Rating: {% if user_profile.rapid_elo %}{{ user_profile.rapid_elo }}{% else %}N/A{% endif %}</p>
                     </div>
                     <div class="p-4">
                         <h2 class="text-center mb-4">Recent Games</h2>

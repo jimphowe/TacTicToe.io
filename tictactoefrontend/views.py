@@ -18,7 +18,15 @@ def profile_view(request):
     if not request.user.is_authenticated:
         return redirect('login')
     
-    user_profile = UserProfile.objects.get(user=request.user)
+    rapid_elo_subquery = EloRating.objects.filter(
+        user_profile=OuterRef('pk'),
+        game_type='rapid'
+    ).values('rating')[:1]
+
+    user_profile = UserProfile.objects.filter(user=request.user).annotate(
+        rapid_elo=Subquery(rapid_elo_subquery)
+    ).first()
+
     latest_games = Game.objects.filter(player_one=request.user, winner__isnull=False).order_by('-created_at')[:5] | \
                    Game.objects.filter(player_two=request.user, winner__isnull=False).order_by('-created_at')[:5]
     latest_games = latest_games.order_by('-created_at')[:5]
@@ -215,7 +223,7 @@ def handle_resignation(request):
     game.completed = True
     game.completed_at = datetime.now()
     game.winner = winner
-    game.elo_change = update_elo_ratings(game.player_one, game.player_two, winner)
+    game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
