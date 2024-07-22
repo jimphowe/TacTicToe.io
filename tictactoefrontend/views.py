@@ -8,6 +8,8 @@ from django.contrib.auth import login, authenticate
 from tictactoefrontend.models import GamePlayer, Piece
 from tictactoefrontend.forms import SignUpForm
 
+from tictactoefrontend import models
+
 def home(request):
     template = loader.get_template('index.html')
     return HttpResponse(template.render({}, request))
@@ -175,7 +177,7 @@ def handle_multiplayer_move(request):
         game.completed = True
         game.completed_at = datetime.now()
         game.winner = winner
-        game.elo_change = update_elo_ratings(game.player_one, game.player_two, winner)
+        game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -234,14 +236,21 @@ def handle_resignation(request):
         'status': 'success'
     })
 
-def update_elo_ratings(player_one, player_two, winner):
+from django.db import transaction
+
+def update_elo_ratings(game_type, player_one, player_two, winner):
     p1_profile = player_one.profile
     p2_profile = player_two.profile
-    average_elo = (p2_profile.elo_rating + p1_profile.elo_rating) / 2
+
+    # Get or create EloRating objects for both players
+    p1_elo, _ = EloRating.objects.get_or_create(user_profile=p1_profile, game_type=game_type)
+    p2_elo, _ = EloRating.objects.get_or_create(user_profile=p2_profile, game_type=game_type)
+
+    average_elo = (p1_elo.rating + p2_elo.rating) / 2
     k_factor = calculate_k_factor(average_elo)
 
     # Calculate expected scores
-    expected_p1 = 1 / (1 + 10 ** ((p2_profile.elo_rating - p1_profile.elo_rating) / 400))
+    expected_p1 = 1 / (1 + 10 ** ((p2_elo.rating - p1_elo.rating) / 400))
     expected_p2 = 1 - expected_p1
 
     # Calculate Elo changes
@@ -249,12 +258,11 @@ def update_elo_ratings(player_one, player_two, winner):
     elo_change_p2 = round(k_factor * (1 - expected_p2) if winner == player_two else -k_factor * expected_p2, 0)
 
     # Update ratings
-    p1_profile.elo_rating += elo_change_p1
-    p2_profile.elo_rating += elo_change_p2
-
-    # Save the updated profiles
-    p1_profile.save()
-    p2_profile.save()
+    with transaction.atomic():
+        p1_elo.rating += elo_change_p1
+        p2_elo.rating += elo_change_p2
+        p1_elo.save()
+        p2_elo.save()
 
     return elo_change_p1 if winner == player_one else elo_change_p2
 
@@ -348,15 +356,22 @@ def add_to_waiting_queue(user):
         waiting_users.append(user)
         cache.set('waiting_users', waiting_users, timeout=300)  # Timeout in seconds (e.g., 5 minutes)
 
-from .models import UserProfile
+from django.db.models import OuterRef, Subquery
+from .models import UserProfile, EloRating
+
 def leaderboard_view(request):
-    # Query top 50 users sorted by Elo rating
-    top_users = UserProfile.objects.order_by('-elo_rating')[:50]
-    
-    context = {
-        'top_users': top_users
-    }
-    return render(request, 'leaderboard.html', context)
+    rapid_elo_subquery = EloRating.objects.filter(
+        user_profile=OuterRef('pk'),
+        game_type='rapid'
+    ).values('rating')[:1]
+
+    top_users = UserProfile.objects.annotate(
+        rapid_elo=Subquery(rapid_elo_subquery)
+    ).filter(
+        rapid_elo__isnull=False
+    ).order_by('-rapid_elo', 'user__username')[:50]
+
+    return render(request, 'leaderboard.html', {'top_users': top_users})
 
 from django.utils import timezone
 

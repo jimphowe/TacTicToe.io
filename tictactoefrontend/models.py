@@ -691,7 +691,6 @@ from django.dispatch import receiver
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    elo_rating = models.IntegerField(default=1500)
     is_paid_account = models.BooleanField(default=False)
 
     def __str__(self):
@@ -704,6 +703,22 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     else:
         instance.profile.save()
 
+GAME_TYPES = [
+        ('rapid', 'rapid'),
+        ('blitz', 'blitz'),
+]
+
+class EloRating(models.Model):
+    user_profile = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='elo_ratings')
+    game_type = models.CharField(max_length=20, choices=GAME_TYPES)
+    rating = models.IntegerField(default=1500)
+
+    class Meta:
+        unique_together = ('user_profile', 'game_type')
+
+    def __str__(self):
+        return f"{self.user_profile.user.username} elo: {self.rating}"
+
 import json
 from datetime import timedelta
 
@@ -712,10 +727,6 @@ class Game(models.Model):
     player_one = models.ForeignKey(User, related_name='games_as_player_one', on_delete=models.CASCADE)
     player_two = models.ForeignKey(User, related_name='games_as_player_two', on_delete=models.CASCADE)
 
-    GAME_TYPES = [
-        ('rapid', 'rapid'),
-        ('blitz', 'blitz'),
-    ]
     game_type = models.CharField(max_length=20, choices=GAME_TYPES)
     
     # Game state and status

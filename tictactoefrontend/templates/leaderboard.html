@@ -60,7 +60,7 @@
             {% for user_profile in top_users %}
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 <span class="text-white">{{ user_profile.user.username }}</span>
-                <span class="badge bg-primary rounded-pill">Elo: {{ user_profile.elo_rating }}</span>
+                <span class="badge bg-primary rounded-pill">Elo: {% if user_profile.rapid_elo %}{{ user_profile.rapid_elo }}{% else %}N/A{% endif %}</span>
             </li>
             {% endfor %}
         </ol>
