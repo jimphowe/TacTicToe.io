@@ -14,28 +14,23 @@
     <i class="fas fa-home"></i> Home
 </a>
 <script>
-    const playerColor = '{{ player_color }}';
-
     document.addEventListener('DOMContentLoaded', (event) => {
+        localStorage.setItem('player', JSON.stringify('RED'));
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
     });
 
     function handleGameOver(winner) {
-        if (winner == playerColor) {
-            playSound("win");
-        }
-        else {
-            playSound("lose");
-        }
+        playSound("win");
         createGameOverUI(winner, null, function() {
         location.reload();
     });
     }
 
     function handlePieceClick(piece) {
+        currentPlayer = JSON.parse(localStorage.getItem('player'));
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
-        fetch('/singleplayer/move', {
+        fetch('/local/move', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -44,7 +39,7 @@
             body: JSON.stringify({
                 position: piece.userData.originalPosition,
                 direction: sideToDirection(currentDirectionMapping['BACK']),
-                player: playerColor,
+                player: currentPlayer,
                 difficulty: '{{ difficulty|safe }}'
             })
         })
@@ -56,6 +51,8 @@
             else {
                 playSound("move");
                 updateGameState(data.game_state);
+                const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
+                localStorage.setItem('player', JSON.stringify(nextPlayer));
                 if (data.winner) {
                     handleGameOver(data.winner);
                 }
