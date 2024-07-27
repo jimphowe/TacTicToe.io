@@ -720,7 +720,9 @@ class EloRating(models.Model):
         return f"{self.user_profile.user.username} elo: {self.rating}"
 
 import json
+import string
 from datetime import timedelta
+from django.db import IntegrityError
 
 class Game(models.Model):
     # Player fields
@@ -728,6 +730,7 @@ class Game(models.Model):
     player_two = models.ForeignKey(User, related_name='games_as_player_two', on_delete=models.CASCADE)
 
     game_type = models.CharField(max_length=20, choices=GAME_TYPES)
+    game_code = models.CharField(max_length=6, unique=True)
     
     # Game state and status
     game_state = models.JSONField(default=list)
@@ -744,9 +747,21 @@ class Game(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
 
-    def start_new_game(player_one, player_two, game_type):
+    @classmethod
+    def create(cls, **kwargs):
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            try:
+                kwargs['game_code'] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                return cls.objects.create(**kwargs)
+            except IntegrityError:
+                if attempt == max_attempts - 1:
+                    raise
+
+    @classmethod
+    def start_new_game(cls, player_one, player_two, game_type):
         board = Board() 
-        game = Game(
+        game = cls.create(
             player_one=player_one,
             player_two=player_two,
             game_type=game_type,

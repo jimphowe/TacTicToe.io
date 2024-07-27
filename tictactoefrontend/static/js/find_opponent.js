@@ -13,7 +13,7 @@ function setupWebSocket(onGameStart) {
     socket.onmessage = function(e) {
         var data = JSON.parse(e.data);
         if (data.status === 'success') {
-            onGameStart(data.game_id);
+            onGameStart(data.game_code);
         }
     };
 

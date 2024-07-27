@@ -115,7 +115,7 @@
     let opponentTimeLeft; 
     syncGameTimers();
     function syncGameTimers() {
-        fetch(`/timer/${'{{ game_id }}'}`)
+        fetch(`/timer/${'{{ game_code }}'}`)
         .then(response => response.json())
         .then(data => {
             if (myId == data.player_one_id) {
@@ -174,7 +174,7 @@
     }
 
     var gameSocket = new WebSocket(
-        'ws://' + window.location.host + '/ws/game/' + '{{ game_id }}' + '/'
+        'ws://' + window.location.host + '/ws/game/' + '{{ game_code }}' + '/'
     );
 
     gameSocket.onmessage = function(e) {
@@ -202,7 +202,7 @@
             findOpponent().done(function(response) {
                 if (response.status === 'success') {
                     playSound("start");
-                    window.location.href = '/game/' + response.game_id;
+                    window.location.href = '/game/' + response.game_code;
                 } else if (response.status === 'waiting') {
                     alert('Waiting for an opponent. You will be notified once matched.');
                 }
@@ -221,7 +221,7 @@
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                game_id: '{{ game_id }}',
+                game_code: '{{ game_code }}',
                 position: piece.userData.originalPosition,
                 direction: sideToDirection(currentDirectionMapping['BACK'])
             })
@@ -260,7 +260,7 @@
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                game_id: '{{ game_id }}'
+                game_code: '{{ game_code }}'
             })
         })
     }

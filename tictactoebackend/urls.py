@@ -29,7 +29,7 @@ urlpatterns = [
     path('multiplayer/setup/', multiplayer_setup_view, name='multiplayer_setup_view'),
     path('find_opponent/', find_opponent, name='find_opponent'),
     path('cancel-search/', cancel_search, name='cancel_search'),
-    path('game/<int:game_id>/', multiplayer_game_view, name='multiplayer_game_view'),
+    path('game/<str:game_code>/', multiplayer_game_view, name='multiplayer_game_view'),
     path('multiplayer/move', handle_multiplayer_move, name='handle_multiplayer_move'),
     path('multiplayer/resign', handle_resignation, name='handle_resignation'),
     path('singleplayer/setup/', singleplayer_setup_view, name='singleplayer_setup_view'),
@@ -38,6 +38,6 @@ urlpatterns = [
     path('local/play/', local_game_view, name='local_game_view'),
     path('local/move', handle_local_move, name='handle_local_move'),
     path('leaderboard/', leaderboard_view, name='leaderboard'),
-    path('timer/<int:game_id>', get_timers, name='get_timers'),
+    path('timer/<str:game_code>', get_timers, name='get_timers'),
     path('player_guide/', player_guide, name='player_guide'),
 ]

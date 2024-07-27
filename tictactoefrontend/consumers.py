@@ -4,8 +4,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         #import ipdb; ipdb.set_trace()
-        self.game_id = self.scope['url_route']['kwargs']['game_id']
-        self.game_group_name = f'game_{self.game_id}'
+        self.game_code = self.scope['url_route']['kwargs']['game_code']
+        self.game_group_name = f'game_{self.game_code}'
 
         # Join game group
         await self.channel_layer.group_add(
@@ -91,6 +91,6 @@ class SetupConsumer(AsyncWebsocketConsumer):
         # Send message to WebSocket to update the client
         await self.send(text_data=json.dumps({
             'status': 'success',
-            'game_id': event['game_id']
+            'game_code': event['game_code']
         }))
 

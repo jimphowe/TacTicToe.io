@@ -158,8 +158,8 @@ def handle_singleplayer_move(request):
 from django.shortcuts import render, get_object_or_404
 from .models import Game
 
-def multiplayer_game_view(request, game_id):
-    game = get_object_or_404(Game, pk=game_id)
+def multiplayer_game_view(request, game_code):
+    game = get_object_or_404(Game, game_code=game_code)
 
     rapid_elo_subquery = EloRating.objects.filter(
         user_profile=OuterRef('pk'),
@@ -181,7 +181,7 @@ def multiplayer_game_view(request, game_id):
         opponent_profile = player_one_profile
 
     context = {
-        'game_id': game.id,
+        'game_code': game.game_code,
         'game_state': game.game_state,
         'player_one': game.player_one,
         'player_two': game.player_two,
@@ -206,81 +206,80 @@ redis_client.config_set('notify-keyspace-events', 'Ex')
 @require_http_methods(["POST"]) 
 def handle_multiplayer_move(request):
     data = json.loads(request.body)
-    game_id = data.get('game_id')
+    game_code = data.get('game_code')
     position = data.get('position')
     direction = data.get('direction')
 
     p1_color = Piece.RED
     p2_color = Piece.BLUE
 
-    # Fetch the game from the database
-    game = get_object_or_404(Game, pk=game_id)
+    with transaction.atomic():
+        game = get_object_or_404(Game, game_code=game_code)
 
-    #import ipdb; ipdb.set_trace()
-    if request.user.id != game.turn.id:
-        return JsonResponse({'status': 'error', 'message': 'Not Your Turn'}, status=403)
+        if request.user.id != game.turn.id:
+            return JsonResponse({'status': 'error', 'message': 'Not Your Turn'}, status=403)
 
-    board = Board()
-    board.setState(json.loads(game.game_state))
-    player = p1_color if request.user.id == game.player_one.id else p2_color
-    try:
-        board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
-    except:
-        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
+        board = Board()
+        board.setState(json.loads(game.game_state))
+        player = p1_color if request.user.id == game.player_one.id else p2_color
+        try:
+            board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+        except:
+            return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
 
-    game_key = f"game:{game_id}"
-    now = timezone.now()
-    if game.turn == game.player_one:
-        game.player_one_time_left -= now - game.last_move_time
-        redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
-        redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
-        game.turn = game.player_two
-    else:
-        game.player_two_time_left -= now - game.last_move_time
-        redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
-        redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
-        game.turn = game.player_one
-    game.last_move_time = now
+        game_key = f"game:{game_code}"
+        now = timezone.now()
+        if game.turn == game.player_one:
+            game.player_one_time_left -= now - game.last_move_time
+            redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+            game.turn = game.player_two
+        else:
+            game.player_two_time_left -= now - game.last_move_time
+            redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+            game.turn = game.player_one
+        game.last_move_time = now
 
-    game.game_state = json.dumps(board.getState())
+        game.game_state = json.dumps(board.getState())
 
-    winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
-    winner_id = None if winner == None else winner.id
-    winner_name = None if winner == None else winner.username
-    # Check if there's a winner
-    if winner:
-        game.completed = True
-        game.completed_at = datetime.now()
-        game.winner = winner
-        game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
+        winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
+        winner_id = None if winner == None else winner.id
+        winner_name = None if winner == None else winner.username
+        # Check if there's a winner
+        if winner:
+            game.completed = True
+            game.completed_at = datetime.now()
+            game.winner = winner
+            game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
 
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f'game_{game.id}',  # Use the same group name as in your consumer
-        {
-            'type': 'send_game_update',
-            'game_state': game.game_state,
-            'winner': winner_id,
-            'winner_name': winner_name,
-            'elo_change': game.elo_change,
-            'turn': game.turn.id
-        }
-    )
-    
-    game.save()
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'game_{game.game_code}',
+            {
+                'type': 'send_game_update',
+                'game_state': game.game_state,
+                'winner': winner_id,
+                'winner_name': winner_name,
+                'elo_change': game.elo_change,
+                'turn': game.turn.id
+            }
+        )
+        
+        game.save()
 
-    return JsonResponse({
-        'status': 'success',
-        'game_state': game.game_state
-    })
+        return JsonResponse({
+            'status': 'success',
+            'game_state': game.game_state
+        })
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
 def handle_resignation(request):
     data = json.loads(request.body)
-    game_id = data.get('game_id')
+    game_code = data.get('game_code')
 
-    game = get_object_or_404(Game, pk=game_id)
+    game = get_object_or_404(Game, game_code=game_code)
 
     if game.completed:
         return
@@ -294,7 +293,7 @@ def handle_resignation(request):
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
-        f'game_{game.id}',  # Use the same group name as in your consumer
+        f'game_{game.game_code}',  # Use the same group name as in your consumer
         {
             'type': 'send_game_update',
             'game_state': game.game_state,
@@ -391,7 +390,7 @@ def find_opponent(request):
         cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
         game = Game.start_new_game(current_user, opponent, 'rapid') # Todo update when blitz/bullet added
 
-        game_key = f"game:{game.id}"
+        game_key = f"game:{game.game_code}"
         
         if game.turn == game.player_one:
             redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
@@ -405,10 +404,10 @@ def find_opponent(request):
             'setup_room', 
             {
                 'type': 'send_game_ready',
-                'game_id': game.id
+                'game_code': game.game_code
             }
         )
-        return JsonResponse({'status': 'success', 'game_id': game.id, 'player_one_id': game.turn.id})
+        return JsonResponse({'status': 'success', 'game_code': game.game_code, 'player_one_id': game.turn.id})
     else:
         add_to_waiting_queue(current_user)
         return JsonResponse({'status': 'waiting'})
@@ -450,11 +449,11 @@ def leaderboard_view(request):
 
 from django.utils import timezone
 
-def get_timers(request, game_id):
-    game = get_object_or_404(Game, pk=game_id)
+def get_timers(request, game_code):
+    game = get_object_or_404(Game, game_code=game_code)
 
     redis_client = redis.Redis(host='localhost', port=6379, db=0)
-    game_key = f"game:{game_id}"
+    game_key = f"game:{game_code}"
 
     # Calculate the time left by retrieving the time left in Redis
     remaining_time_key = redis_client.ttl(game_key)
