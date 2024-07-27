@@ -420,7 +420,7 @@ def cancel_search(request):
         waiting_users.remove(current_user)
         cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
     return JsonResponse({'status': 'success'})
-    
+ 
 from django.core.cache import cache
 
 def add_to_waiting_queue(user):
@@ -430,8 +430,94 @@ def add_to_waiting_queue(user):
         waiting_users.append(user)
         cache.set('waiting_users', waiting_users, timeout=300)  # Timeout in seconds (e.g., 5 minutes)
 
+@login_required
+def create_room(request):
+    current_user = request.user
+    room_code = generate_room_code()
+    
+    # Store the room code and user in cache
+    cache.set(f'room:{room_code}', current_user.id, timeout=300)  # 5 minutes timeout
+    
+    # Store the room code for the current user
+    cache.set(f'user_room:{current_user.id}', room_code, timeout=300)
+    
+    return JsonResponse({'status': 'success', 'room_code': room_code})
+
+@login_required
+def join_room(request):
+    if request.method == 'POST':
+        room_code = request.POST.get('room_code')
+        current_user = request.user
+        
+        # Check if the room exists
+        creator_id = cache.get(f'room:{room_code}')
+        if creator_id is None:
+            return JsonResponse({'status': 'error', 'message': 'Room not found or expired.'})
+        
+        if creator_id == current_user.id:
+            return JsonResponse({'status': 'error', 'message': 'You cannot join your own room.'})
+        
+        # Start the game
+        creator = User.objects.get(id=creator_id)
+        game = Game.start_new_game(creator, current_user, 'rapid')
+        
+        # Remove the room from cache
+        cache.delete(f'room:{room_code}')
+        
+        # Remove the room code reference for the creator
+        cache.delete(f'user_room:{creator_id}')
+        
+        # Set initial timer value in Redis
+        game_key = f"game:{game.game_code}"
+        if game.turn == game.player_one:
+            redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+        else:
+            redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+        
+        # Notify the creator
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'setup_room',
+            {
+                'type': 'send_game_ready',
+                'game_code': game.game_code
+            }
+        )
+        
+        return JsonResponse({'status': 'success', 'game_code': game.game_code})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+@login_required
+def cancel_create_room(request):
+    if request.method == 'POST':
+        current_user = request.user
+        
+        room_code = cache.get(f'user_room:{current_user.id}')
+        
+        if room_code:
+            cache.delete(f'room:{room_code}')
+            cache.delete(f'user_room:{current_user.id}')
+            return JsonResponse({'status': 'success'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'No room found for this user.'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+import random
+import string
+
+def generate_room_code():
+    valid_characters = string.ascii_uppercase.replace('O', '').replace('I', '') + string.digits.replace('0', '')
+    while True:
+        code = ''.join(random.choices(valid_characters, k=4))
+        if cache.get(f'room:{code}') is None:
+            return code
+
 from django.db.models import OuterRef, Subquery
-from .models import UserProfile, EloRating
+from .models import UserProfile, EloRating, User
 
 def leaderboard_view(request):
     rapid_elo_subquery = EloRating.objects.filter(

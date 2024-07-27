@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tictactoefrontend.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_multiplayer_move, handle_resignation, leaderboard_view
+from tictactoefrontend.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_multiplayer_move, handle_resignation, leaderboard_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,6 +29,9 @@ urlpatterns = [
     path('multiplayer/setup/', multiplayer_setup_view, name='multiplayer_setup_view'),
     path('find_opponent/', find_opponent, name='find_opponent'),
     path('cancel-search/', cancel_search, name='cancel_search'),
+    path('create-room/', create_room, name='create_room'),
+    path('join-room/', join_room, name='join_room'),
+    path('cancel-create-room/', cancel_create_room, name='cancel_create_room'),
     path('game/<str:game_code>/', multiplayer_game_view, name='multiplayer_game_view'),
     path('multiplayer/move', handle_multiplayer_move, name='handle_multiplayer_move'),
     path('multiplayer/resign', handle_resignation, name='handle_resignation'),
