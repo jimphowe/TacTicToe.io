@@ -191,6 +191,7 @@ def multiplayer_game_view(request, game_code):
         'player_elo': player_profile.rapid_elo,
         'opponent_name': opponent_profile.user.username,
         'opponent_elo': opponent_profile.rapid_elo,
+        'is_game_over': game.completed,
     }
     return render(request, 'multiplayer_game.html', context)
 
@@ -272,6 +273,21 @@ def handle_multiplayer_move(request):
             'status': 'success',
             'game_state': game.game_state
         })
+    
+def game_state(request, game_code):
+    game = Game.objects.get(game_code=game_code)
+    data = {
+        'is_game_over': game.completed,
+    }
+    elo_change = game.elo_change
+    if not game.winner.id == request.user.id:
+        elo_change *= -1
+    if game.completed:
+        data.update({
+            'winner_name': game.winner.username,
+            'elo_change': elo_change,
+        })
+    return JsonResponse(data)
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
@@ -558,4 +574,5 @@ def get_timers(request, game_code):
         'player_two_time_left': player_two_time_left,
         'player_one_id': game.player_one.id,
         'current_turn_id': game.turn.id,
+        'is_game_over': game.completed,
     })

@@ -2,7 +2,6 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     if (winner == null) {
         return;
     }
-
     window.removeEventListener('click', onMouseClick);
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseout', onMouseOut);
@@ -11,7 +10,6 @@ function createGameOverUI(winner, eloChange, buttonAction) {
 
     // Calculate Elo change display
     let eloChangeMessage = "";
-
     if (eloChange !== null) {
         const eloChangeText = `Elo: ${eloChange > 0 ? '+' + eloChange : eloChange}`;
         const eloChangeColor = eloChange > 0 ? '#4CAF50' : '#F44336';
@@ -21,15 +19,18 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     // Create game over overlay
     const gameOverDiv = document.createElement('div');
     gameOverDiv.style.position = 'fixed';
-    gameOverDiv.style.top = '80px';  // Adjusted to be below the top bar
-    gameOverDiv.style.left = '20px';
-    gameOverDiv.style.backgroundColor = 'rgba(44, 62, 80, 0.9)';  // Semi-transparent dark background
+    gameOverDiv.style.top = '90px';
+    gameOverDiv.style.left = '50%';
+    gameOverDiv.style.transform = 'translateX(-50%)';
+    gameOverDiv.style.backgroundColor = 'rgba(44, 62, 80, 0.9)';
     gameOverDiv.style.color = 'white';
     gameOverDiv.style.padding = '20px';
     gameOverDiv.style.borderRadius = '10px';
     gameOverDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
     gameOverDiv.style.zIndex = '1000';
     gameOverDiv.style.maxWidth = '300px';
+    gameOverDiv.style.width = '90%';
+    gameOverDiv.style.textAlign = 'center';
 
     // Game over message
     const messageDiv = document.createElement('div');
@@ -59,8 +60,8 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     newGameButton.onmouseover = function() { this.style.backgroundColor = '#2980B9'; }
     newGameButton.onmouseout = function() { this.style.backgroundColor = '#3498DB'; }
     newGameButton.onclick = buttonAction;
-    gameOverDiv.appendChild(newGameButton);
 
+    gameOverDiv.appendChild(newGameButton);
     document.body.appendChild(gameOverDiv);
 }
 
