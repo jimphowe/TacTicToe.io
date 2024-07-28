@@ -425,10 +425,16 @@ class Board:
                 points += 100
             current_two_in_a_rows = self.getTwoInARows(player)
             points += current_two_in_a_rows * 5
-            non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
+            neighbors = self.neighbor_positions(x, y, z)
+            non_empty_neighbors = sum(1 for i, j, k in neighbors
                                        if self.pieces[i][j][k] != Piece.EMPTY)
+            for (i,j,k) in neighbors:
+               if self.pieces[i][j][k] == player:
+                  points += 6
+            if self.pieces[x][y][z] == player:
+               points += 15
             if non_empty_neighbors == 6:
-               points += 3
+               points += 10
             if (x,y,z) in corners:
                points += 2
             if (x,y,z) in middles:
