@@ -5,21 +5,34 @@ function findOpponent() {
     });
 }
 
-function setupWebSocket(onGameStart) {
-    var socket = new WebSocket(
+function cancelSearch() {
+    return $.ajax({
+        url: '/cancel-search/',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    });
+}
+
+let setupSocket;
+
+function startWebSocket() {
+    setupSocket = new WebSocket(
         'ws://' + window.location.host + '/ws/setup/'
     );
 
-    socket.onmessage = function(e) {
+    setupSocket.onmessage = function(e) {
         var data = JSON.parse(e.data);
         if (data.status === 'success') {
-            onGameStart(data.game_code);
+            playSound("start");
+            window.location.href = '/game/' + data.game_code;
         }
     };
 
-    socket.onclose = function(e) {
+    setupSocket.onclose = function(e) {
         console.error('Setup socket closed unexpectedly');
     };
-
-    return socket;
 }
+
+window.setupSocket = setupSocket;

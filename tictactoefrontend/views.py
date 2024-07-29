@@ -403,8 +403,11 @@ def find_opponent(request):
 
     if opponent:
         waiting_users.remove(opponent)
-        cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
-        game = Game.start_new_game(current_user, opponent, 'rapid') # Todo update when blitz/bullet added
+        cache.set('waiting_users', waiting_users, timeout=300)  # TODO think about this
+        players = [current_user, opponent]
+        random.shuffle(players)
+        player_one, player_two = players
+        game = Game.start_new_game(player_one, player_two, 'rapid') # TODO update when blitz/bullet added
 
         game_key = f"game:{game.game_code}"
         

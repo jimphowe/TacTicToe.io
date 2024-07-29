@@ -16,8 +16,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {
         localStorage.setItem('player', JSON.stringify('RED'));
-        const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
-        localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
     });
 
     function handleGameOver(winner) {

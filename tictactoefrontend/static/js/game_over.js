@@ -64,10 +64,3 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     gameOverDiv.appendChild(newGameButton);
     document.body.appendChild(gameOverDiv);
 }
-
-function playSound(soundType) {
-    const sound = document.getElementById(soundType + "Sound");
-    if (sound) {
-        sound.play();
-    }
-}

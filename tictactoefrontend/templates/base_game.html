@@ -7,6 +7,10 @@
     {% load static %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+    <script src="{% static 'js/utils.js' %}"></script>
+    <script src="{% static 'js/find_opponent.js' %}"></script>
+    <script src="{% static 'js/game_over.js' %}"></script>
     <style>
         body { margin: 0; }
         canvas { display: block; }
@@ -35,8 +39,6 @@
             opacity: 1;
         }
     </style>
-    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
-    <script src="{% static 'js/components.js' %}"></script>
 </head>
 <body>
     <audio id="moveSound" src="{% static 'sounds/move.wav' %}" preload="auto"></audio>
@@ -490,21 +492,6 @@
             }
 
             update();
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
         }
 
         function updateGameState(gameState) {

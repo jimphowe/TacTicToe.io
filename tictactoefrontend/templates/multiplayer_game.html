@@ -144,37 +144,6 @@
         }
     }
 
-    function startWebSocket() {
-        setupSocket = new WebSocket(
-            'ws://' + window.location.host + '/ws/setup/'
-        );
-
-        setupSocket.onmessage = function(e) {
-            var data = JSON.parse(e.data);
-            if (data.status === 'success') {
-                playSound("start");
-                window.location.href = '/game/' + data.game_code;
-            }
-        };
-
-        setupSocket.onclose = function(e) {
-            console.error('Setup socket closed unexpectedly');
-        };
-    }
-
-    function findOpponent() {
-        return $.ajax({
-            url: findOpponentUrl,
-            type: 'GET'
-        });
-    }
-
-    function formatTime(seconds) {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-
     let myInterval;
     let opponentInterval;
 
@@ -217,7 +186,6 @@
         function updateTimer() {
             const now = Date.now();
             const elapsedTime = Math.floor((now - startTime) / 1000);
-            //const elapsedTime = (now - startTime) / 1000;
 
             if (currentTurnId == myId) {
                 const newTimeLeft = Math.max(0, myTimeLeft - elapsedTime);
@@ -270,16 +238,15 @@
         else {
             playSound("lose");
         }
+        var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'));
         document.querySelector('.home-button').style.display = 'block';
         createGameOverUI(winner_name, eloChange, function() {
-            var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'));
+            const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+            localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
             startWebSocket();
             findOpponent().done(function(response) {
-                startWebSocket();
                 if (response.status === 'success') {
                     playSound("start");
-                    const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
-                    localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
                     window.location.href = '/game/' + response.game_code;
                 } else if (response.status === 'waiting') {
                     matchmakingModal.show();
@@ -299,16 +266,6 @@
             }).fail(function() {
                 alert('Error cancelling search. Please try again.');
             });
-        });
-    }
-
-    function cancelSearch() {
-        return $.ajax({
-            url: '/cancel-search/',
-            type: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
         });
     }
 
