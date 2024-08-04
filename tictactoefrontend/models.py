@@ -10,9 +10,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(15)
+        self.setupBoard(16)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(15)
+           self.setupBoard(16)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -772,7 +772,7 @@ class Game(models.Model):
             player_two=player_two,
             game_type=game_type,
             game_state=json.dumps(board.getState()),  
-            turn=player_one,#TODO update to random maybe? random.choice([player_one, player_two]),
+            turn=player_one,
             completed=False
         )
         game.save()
