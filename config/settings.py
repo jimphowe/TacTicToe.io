@@ -48,7 +48,9 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("tactictoe-redis.vnfk5z.use1.cache.amazonaws.com", 6379)],
+            # Uncomment for local
+            # "hosts": [("127.0.0.1", 6379)],
         },
     },
     "in_memory": {
