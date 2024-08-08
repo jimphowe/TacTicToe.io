@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-*zn8vea%s*ettxbn5mr&6szg-iyfid)o4vzp28ei68s)m4zm%u
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['54.91.209.128', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['54.91.209.128', 'tactictoe.io', 'www.tactictoe.io', 'localhost', '127.0.0.1']
 
 
 # Application definition
