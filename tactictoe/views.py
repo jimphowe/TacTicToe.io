@@ -202,7 +202,6 @@ import redis
 from django.conf import settings
 
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0) # TODO handle setup better?
-redis_client.config_set('notify-keyspace-events', 'Ex')
 
 @csrf_exempt
 @require_http_methods(["POST"]) 
