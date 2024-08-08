@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tictactoefrontend', '0009_game_game_type_alter_game_player_one_time_left_and_more'),
+        ('tactictoe', '0009_game_game_type_alter_game_player_one_time_left_and_more'),
     ]
 
     operations = [
@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('game_type', models.CharField(choices=[('rapid', 'rapid'), ('blitz', 'blitz')], max_length=20)),
                 ('rating', models.IntegerField(default=1500)),
-                ('user_profile', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='elo_ratings', to='tictactoefrontend.userprofile')),
+                ('user_profile', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='elo_ratings', to='tactictoe.userprofile')),
             ],
             options={
                 'unique_together': {('user_profile', 'game_type')},

@@ -5,10 +5,8 @@ from django.views.decorators.http import require_http_methods
 from django.template import loader
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
-from tictactoefrontend.models import GamePlayer, Piece
-from tictactoefrontend.forms import SignUpForm
-
-from tictactoefrontend import models
+from tactictoe.models import GamePlayer, Piece
+from tactictoe.forms import SignUpForm
 
 def home(request):
     template = loader.get_template('index.html')
@@ -118,6 +116,8 @@ def singleplayer_game_view(request):
 
     template = loader.get_template('singleplayer_game.html')
     return HttpResponse(template.render(context, request))
+
+import time
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -371,9 +371,6 @@ def signup(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save()
-            user.refresh_from_db()  # load the profile instance created by the signal
-            user.profile.email = form.cleaned_data.get('email')
-            user.save()
             raw_password = form.cleaned_data.get('password1')
             user = authenticate(username=user.username, password=raw_password)
             login(request, user)

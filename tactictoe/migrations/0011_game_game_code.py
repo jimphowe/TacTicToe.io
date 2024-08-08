@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tictactoefrontend', '0010_remove_userprofile_elo_rating_elorating'),
+        ('tactictoe', '0010_remove_userprofile_elo_rating_elorating'),
     ]
 
     operations = [

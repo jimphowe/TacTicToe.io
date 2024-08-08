@@ -1,5 +1,5 @@
 """
-URL configuration for tictactoebackend project.
+URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tictactoefrontend.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_multiplayer_move, handle_resignation, leaderboard_view
+from tactictoe.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_multiplayer_move, handle_resignation, leaderboard_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),

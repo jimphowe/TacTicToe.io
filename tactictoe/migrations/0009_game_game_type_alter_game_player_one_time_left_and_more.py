@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tictactoefrontend', '0008_game_last_move_time_game_player_one_time_left_and_more'),
+        ('tactictoe', '0008_game_last_move_time_game_player_one_time_left_and_more'),
     ]
 
     operations = [

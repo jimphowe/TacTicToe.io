@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class TictactoefrontendConfig(AppConfig):
+class TactictoeConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'tictactoefrontend'
+    name = 'tactictoe'
 
     def ready(self):
-        import tictactoefrontend.signals
+        import tactictoe.signals

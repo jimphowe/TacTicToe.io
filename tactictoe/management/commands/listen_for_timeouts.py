@@ -6,7 +6,7 @@ import redis
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from tictactoefrontend.models import EloRating, Game
+from tactictoe.models import EloRating, Game
 
 from django.db import transaction
 

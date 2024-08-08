@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('tictactoefrontend', '0003_game'),
+        ('tactictoe', '0003_game'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
