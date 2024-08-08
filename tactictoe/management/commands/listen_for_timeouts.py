@@ -16,7 +16,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
-        redis_client.config_set('notify-keyspace-events', 'Ex')
+
+        # can't change redis conf at runtime, per AWS
+        #redis_client.config_set('notify-keyspace-events', 'Ex')
+        
         pubsub = redis_client.pubsub()
 
         # Subscribe to key expiration events
