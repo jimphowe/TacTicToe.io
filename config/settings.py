@@ -44,13 +44,15 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'config.asgi.application'
 
+import os
+
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("tactictoe-redis.vnfk5z.use1.cache.amazonaws.com", 6379)],
-            # Uncomment for local
-            # "hosts": [("127.0.0.1", 6379)],
+            "hosts": [(REDIS_HOST, 6379)],
         },
     },
     "in_memory": {
@@ -58,22 +60,23 @@ CHANNEL_LAYERS = {
     },
 }
 
-# Uncomment for local
-# CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_BROKER_URL = "redis://tactictoe-redis.vnfk5z.use1.cache.amazonaws.com:6379/0"
+CELERY_BROKER_URL = "redis://${REDIS_HOST}:6379/0"
 
-CACHES = {
-    # Uncomment for local
-    # "default": {
-    #     "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    # }
-    "default": {
+if REDIS_HOST == 'localhost':
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+else:
+    CACHES = {
+        "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://tactictoe-redis.vnfk5z.use1.cache.amazonaws.com:6379/1",
+        "LOCATION": "${REDIS_HOST}:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
-    }
+    } 
 }
 
 MIDDLEWARE = [

@@ -9,12 +9,13 @@ from asgiref.sync import async_to_sync
 from tactictoe.models import EloRating, Game
 
 from django.db import transaction
+from django.conf import settings
 
 class Command(BaseCommand):
     help = 'Listens for Redis Pub/Sub messages on key expirations'
 
     def handle(self, *args, **options):
-        redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
         redis_client.config_set('notify-keyspace-events', 'Ex')
         pubsub = redis_client.pubsub()
 
@@ -27,15 +28,13 @@ class Command(BaseCommand):
                 data = message['data']
                 if isinstance(data, bytes):
                     data = data.decode('utf-8')
-                # Process the expiration event
                 if 'game' in data:
                     self.process_expiration(data)
 
     def process_expiration(self, key):
         print(f"Processing expiration for key: {key}")
-        # Your custom logic here, for example:
         game_code = key.split(':')[1]
-        redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
         redis_client.delete(key)
 
         game = get_object_or_404(Game, game_code=game_code)

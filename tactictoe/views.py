@@ -199,8 +199,9 @@ from .models import Board
 from datetime import datetime
 from django.utils import timezone
 import redis
+from django.conf import settings
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0) # TODO handle setup better?
+redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0) # TODO handle setup better?
 redis_client.config_set('notify-keyspace-events', 'Ex')
 
 @csrf_exempt
@@ -554,7 +555,7 @@ from django.utils import timezone
 def get_timers(request, game_code):
     game = get_object_or_404(Game, game_code=game_code)
 
-    redis_client = redis.Redis(host='localhost', port=6379, db=0)
+    redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
     game_key = f"game:{game_code}"
 
     # Calculate the time left by retrieving the time left in Redis
