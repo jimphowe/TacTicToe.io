@@ -49,7 +49,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(REDIS_HOST, 6379)],
+            "hosts": [f"redis://{REDIS_HOST}:6379/0"],
         },
     },
     "in_memory": {
@@ -57,7 +57,7 @@ CHANNEL_LAYERS = {
     },
 }
 
-CELERY_BROKER_URL = "redis://${REDIS_HOST}:6379/0"
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:6379/0"
 
 if REDIS_HOST == 'localhost':
     CACHES = {
@@ -69,7 +69,7 @@ else:
     CACHES = {
         "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "${REDIS_HOST}:6379/1",
+        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -165,10 +165,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
 
 # Uncomment for local
 # DEBUG = True
