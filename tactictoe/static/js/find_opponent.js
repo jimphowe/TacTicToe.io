@@ -18,8 +18,9 @@ function cancelSearch() {
 let setupSocket;
 
 function startWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
     setupSocket = new WebSocket(
-        'ws://' + window.location.host + '/ws/setup/'
+        protocol + window.location.host + '/ws/setup/'
     );
 
     setupSocket.onmessage = function(e) {
