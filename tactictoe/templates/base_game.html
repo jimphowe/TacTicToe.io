@@ -13,7 +13,11 @@
     <script src="{% static 'js/game_over.js' %}"></script>
     <style>
         body { margin: 0; }
-        canvas { display: block; }
+        canvas { 
+            display: block; 
+            width: 100% !important;
+            height: 100% !important;
+        }
         #homeButton { position: absolute; left: 20px; top: 20px; padding: 10px 20px; font-size: 16px; }
         #toast-container {
             position: fixed;
@@ -63,8 +67,16 @@
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x828282);
+        renderer.setClearColor(0xd3d2c0);
         document.body.appendChild(renderer.domElement);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.addEventListener('resize', onWindowResize, false);
 
         // Adding lights
         var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
@@ -92,7 +104,7 @@
             boardGroup.add(mesh);
         }
         
-        var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xedd8a8});
         var edgePaths = [
             new THREE.Vector3(-3, -3, -3),
             new THREE.Vector3(3, -3, -3),
@@ -129,20 +141,24 @@
 
         // Set Up Balls
         var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
-        var redMaterial = new THREE.MeshPhongMaterial({color: 0xff0000});
-        var blueMaterial = new THREE.MeshPhongMaterial({color: 0x0339fc});
-        var blackMaterial = new THREE.MeshPhongMaterial({color: 0x000000});
+        var redMaterial = new THREE.MeshPhongMaterial({color: 0xdf7053});
+        var blueMaterial = new THREE.MeshPhongMaterial({color: 0x5b95e1});
+        var blackMaterial = new THREE.MeshPhongMaterial({color: 0x3b3934});
         var emptyMaterial = new THREE.MeshPhongMaterial({
             color: 0x000000,
             transparent: true,
             opacity: 0.0,
             depthWrite: false
         });
-        var highlightMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffff00,
-            emissive: 0x333300,
-            side: THREE.DoubleSide
-        });
+        let highlightMaterial;
+        var redHighlightMaterial = new THREE.MeshPhongMaterial({
+            color: 0xdf7053,
+            emissive: 0x333300
+        })
+        var blueHighlightMaterial = new THREE.MeshPhongMaterial({
+            color: 0x5b95e1,
+            emissive: 0x333300
+        })
 
         var clickableSpheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');

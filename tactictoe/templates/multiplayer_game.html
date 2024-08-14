@@ -111,6 +111,8 @@
     </div>
 </div>
 <script>
+    highlightMaterial = (myId == data.player_one_id) ? redHighlightMaterial : blueHighlightMaterial;
+
     var findOpponentUrl = "{% url 'find_opponent' %}";
 
     document.addEventListener('DOMContentLoaded', (event) => {

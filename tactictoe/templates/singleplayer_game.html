@@ -16,6 +16,8 @@
 <script>
     const playerColor = '{{ player_color }}';
 
+    highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+
     document.addEventListener('DOMContentLoaded', (event) => {
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));

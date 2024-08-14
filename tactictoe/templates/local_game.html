@@ -16,6 +16,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {
         localStorage.setItem('player', JSON.stringify('RED'));
+        highlightMaterial = redHighlightMaterial;
     });
 
     function handleGameOver(winner) {
@@ -51,6 +52,7 @@
                 updateGameState(data.game_state);
                 const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
                 localStorage.setItem('player', JSON.stringify(nextPlayer));
+                highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
                 if (data.winner) {
                     handleGameOver(data.winner);
                 }
