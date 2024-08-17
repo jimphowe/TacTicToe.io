@@ -17,19 +17,86 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
-        .form-select {
-            background-color: #495057;
-            color: #ffffff;
-            border: 1px solid #767676;
-        }
-        .form-select option {
-            background-color: #495057;
-        }
         .home-button {
             position: fixed;
             top: 20px;
             left: 20px;
             z-index: 1000;
+        }
+        .custom-slider-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .custom-slider {
+            width: 90%;
+            height: 40px;
+            background: linear-gradient(to right, #28a745 25%, #ffc107 25% 50%, #fd7e14 50% 75%, #dc3545 75%);
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+        .slider-handle {
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            cursor: grab;
+        }
+        .slider-handle:active {
+            cursor: grabbing;
+        }
+        .difficulty-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .difficulty-label {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+        }
+        .player-order {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 5rem;
+        }
+        .player-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .player-button:hover, .player-button:focus {
+            transform: scale(1.1);
+        }
+        .player-button.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        #firstPlayer {
+            background-color: #dc3545;
+        }
+        #secondPlayer {
+            background-color: #007bff;
+        }
+        .section-label {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-top: 1rem;
+            margin-bottom: 3rem;
         }
     </style>
 </head>
@@ -37,62 +104,94 @@
     <a href="/" class="btn btn-outline-light home-button">
         <i class="fas fa-home"></i> Home
     </a>
-
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <form id="gameSetupForm" action="{% url 'singleplayer_view' %}" method="get" class="form-container p-4">
-                    <h2 class="text-center mb-4">Setup Game</h2>
-                    
-                    <div class="mb-3">
-                        <label for="difficulty" class="form-label">Choose difficulty:</label>
-                        <select name="difficulty" id="difficulty" class="form-select" onchange="changeColor(this)">
-                            <option value="easy" selected>Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
-                            <option value="expert">Expert</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Choose order:</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="firstPlayer" id="first" value="human" checked>
-                            <label class="form-check-label" for="first">
-                                First
-                            </label>
+                    <div class="mb-4">
+                        <h3 class="section-label">Choose difficulty</h3>
+                        <div class="custom-slider-container">
+                            <div id="custom-slider" class="custom-slider">
+                                <div id="slider-handle" class="slider-handle"></div>
+                            </div>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="firstPlayer" id="second" value="computer">
-                            <label class="form-check-label" for="second">
-                                Second
-                            </label>
+                        <div class="difficulty-labels">
+                            <span class="difficulty-label">Easy</span>
+                            <span class="difficulty-label">Medium</span>
+                            <span class="difficulty-label">Hard</span>
+                            <span class="difficulty-label">Expert</span>
                         </div>
+                        <input type="hidden" name="difficulty" id="difficulty-value" value="easy">
                     </div>
-                    
+                    <div class="mb-4">
+                        <h3 class="section-label">Choose order</h3>
+                        <div class="player-order">
+                            <button type="button" id="firstPlayer" class="player-button active" onclick="selectPlayer('human')">First</button>
+                            <button type="button" id="secondPlayer" class="player-button" onclick="selectPlayer('computer')">Second</button>
+                        </div>
+                        <input type="hidden" name="firstPlayer" id="player-value" value="human">
+                    </div>
                     <div class="text-center">
-                        <button type="submit" class="btn btn-primary btn-lg">Play</button>
+                        <button type="submit" class="btn btn-success btn-lg">Play</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-
-    <!-- Bootstrap JS and Popper.js -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function changeColor(select) {
-            var color = 'green';
-            if (select.value === 'easy') color = '#28a745';
-            else if (select.value === 'medium') color = '#ffc107';
-            else if (select.value === 'hard') color = '#fd7e14';
-            else if (select.value === 'expert') color = '#dc3545';
-            select.style.backgroundColor = color;
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            const slider = document.getElementById('custom-slider');
+            const handle = document.getElementById('slider-handle');
+            const difficultyValue = document.getElementById('difficulty-value');
 
-        window.onload = function() {
-            changeColor(document.getElementById('difficulty'));
-        };
+            function updateSlider(clientX) {
+                const rect = slider.getBoundingClientRect();
+                let position = (clientX - rect.left) / rect.width;
+                position = Math.max(0, Math.min(position, 1));
+                handle.style.left = `${position * 100}%`;
+
+                if (position < 0.25) {
+                    difficultyValue.value = 'easy';
+                } else if (position < 0.5) {
+                    difficultyValue.value = 'medium';
+                } else if (position < 0.75) {
+                    difficultyValue.value = 'hard';
+                } else {
+                    difficultyValue.value = 'expert';
+                }
+            }
+
+            slider.addEventListener('mousedown', function(e) {
+                updateSlider(e.clientX);
+                
+                function onMouseMove(e) {
+                    updateSlider(e.clientX);
+                }
+                
+                function onMouseUp() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            updateSlider(slider.getBoundingClientRect().left);
+        });
+
+        function selectPlayer(player) {
+            document.getElementById('player-value').value = player;
+            if (player === 'human') {
+                document.getElementById('firstPlayer').classList.add('active');
+                document.getElementById('secondPlayer').classList.remove('active');
+            } else {
+                document.getElementById('secondPlayer').classList.add('active');
+                document.getElementById('firstPlayer').classList.remove('active');
+            }
+        }
     </script>
 </body>
 </html>
