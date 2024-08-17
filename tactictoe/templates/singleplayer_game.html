@@ -56,10 +56,25 @@
                 showToast("Invalid Move");
             }
             else {
-                playSound("move");
-                updateGameState(data.game_state);
-                if (data.winner) {
-                    handleGameOver(data.winner);
+                if (data.halfway_game_state) {
+                    playSound("move");
+                    updateGameState(data.halfway_game_state);
+                    setTimeout(function() {
+                        playSound("move");
+                        updateGameState(data.game_state);
+                        
+                        if (data.winner) {
+                            handleGameOver(data.winner)
+                        }
+                    }, 3000);
+                }
+                else {
+                    playSound("move");
+                    updateGameState(data.game_state);
+
+                    if (data.winner) {
+                        handleGameOver(data.winner)
+                    }
                 }
             }
         })

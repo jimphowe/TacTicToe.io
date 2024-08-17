@@ -136,24 +136,36 @@ def handle_singleplayer_move(request):
     computerColor = "RED" if player == "BLUE" else "BLUE"
     game = GamePlayer(difficulty, computerColor)
     board = game.board
-    
+
     board.setState(game_state)
 
     try:
         board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
     except:
         return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
-    if not game.isOver():
+    halfway_game_state = board.getState()
+
+    if game.isOver():
+        game_state = halfway_game_state
+        request.session['game_state'] = game_state
+        request.session.save()
+        winner = None
+        if board.hasWon(Piece.RED):
+            winner = 'RED'
+        elif board.hasWon(Piece.BLUE):
+            winner = 'BLUE'
+        return JsonResponse({'status': 'success', 'position': position, 'game_state': game_state, 'winner': winner})
+    else:
         game.makeComputerMove()
-    new_game_state = board.getState()
-    request.session['game_state'] = new_game_state
-    request.session.save()
-    winner = None
-    if board.hasWon(Piece.RED):
-        winner = 'RED'
-    elif board.hasWon(Piece.BLUE):
-        winner = 'BLUE'
-    return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})
+        game_state = board.getState()
+        request.session['game_state'] = game_state
+        request.session.save()
+        winner = None
+        if board.hasWon(Piece.RED):
+            winner = 'RED'
+        elif board.hasWon(Piece.BLUE):
+            winner = 'BLUE'
+        return JsonResponse({'status': 'success', 'position': position, 'halfway_game_state': halfway_game_state, 'game_state': game_state, 'winner': winner})
 
 from django.shortcuts import render, get_object_or_404
 from .models import Game
