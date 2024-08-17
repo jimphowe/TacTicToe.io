@@ -65,14 +65,14 @@
                 showToast("Invalid Move");
             } else {
                 if (data.halfway_game_state) {
-                    playSound("move");
                     updateGameState(data.halfway_game_state);
-                    await new Promise(resolve => setTimeout(resolve, 3000));
                     playSound("move");
+                    await new Promise(resolve => setTimeout(resolve, 2500));
                     updateGameState(data.game_state);
+                    playSound("move");
                 } else {
-                    playSound("move");
                     updateGameState(data.game_state);
+                    playSound("move");
                 }
 
                 if (data.winner) {

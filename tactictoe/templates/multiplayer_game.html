@@ -226,6 +226,7 @@
         var data = JSON.parse(e.data);
         console.log("RECEIVED gameSocket msg with data" + JSON.stringify(data));
         updateGameState(JSON.parse(data.game_state));
+        playSound("move");
         if (data.winner) {
             handleGameOver(data.winner_name, data.elo_change);
         } else {
@@ -301,8 +302,8 @@
                 }
             }
             else {
-                playSound("move");
                 updateGameState(JSON.parse(data.game_state));
+                playSound("move");
                 syncGameTimers();
             }
         })

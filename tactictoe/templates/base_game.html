@@ -280,7 +280,6 @@
         function onKeyDown(event) {
             if (isRotating) return;
 
-            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
             let direction;
 
             switch (event.key) {
@@ -303,14 +302,14 @@
                 default:
                     return;
             }
-
             isRotating = true;
+            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            updateDirectionMapping(directionMapping, direction);
+            localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
             updatePieceLocations(direction);
             animateRotation(direction, () => {
                 isRotating = false;
             });
-            updateDirectionMapping(directionMapping, direction);
-            localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
         }
 
         window.addEventListener('keydown', onKeyDown, false);
@@ -511,6 +510,10 @@
         }
 
         function updateGameState(gameState) {
+            if (isRotating) {
+                setTimeout(() => updateGameState(gameState), 50);
+                return;
+            }
             cubeGroup.quaternion.set(0, 0, 0, 1);
             while (piecesGroup.children.length > 0) {
                 piecesGroup.remove(piecesGroup.children[0]);
