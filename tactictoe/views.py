@@ -403,7 +403,6 @@ def find_opponent(request):
     current_user = request.user
     waiting_users = cache.get('waiting_users', [])
 
-    # Try to find an opponent in the cache
     opponent = None
     for user in waiting_users:
         if user != current_user:
@@ -412,7 +411,7 @@ def find_opponent(request):
 
     if opponent:
         waiting_users.remove(opponent)
-        cache.set('waiting_users', waiting_users, timeout=300)  # TODO think about this
+        cache.set('waiting_users', waiting_users, timeout=1200)
         players = [current_user, opponent]
         random.shuffle(players)
         player_one, player_two = players
@@ -446,7 +445,7 @@ def cancel_search(request):
     waiting_users = cache.get('waiting_users', [])
     if current_user in waiting_users:
         waiting_users.remove(current_user)
-        cache.set('waiting_users', waiting_users, timeout=300)  # Reset the cache with the updated list
+        cache.set('waiting_users', waiting_users, timeout=1200)
     return JsonResponse({'status': 'success'})
  
 from django.core.cache import cache
@@ -456,7 +455,7 @@ def add_to_waiting_queue(user):
     waiting_users = cache.get('waiting_users', [])
     if user.id not in [u.id for u in waiting_users]:
         waiting_users.append(user)
-        cache.set('waiting_users', waiting_users, timeout=300)  # Timeout in seconds (e.g., 5 minutes)
+        cache.set('waiting_users', waiting_users, timeout=1200)
 
 @login_required
 def create_room(request):
@@ -464,10 +463,10 @@ def create_room(request):
     room_code = generate_room_code()
     
     # Store the room code and user in cache
-    cache.set(f'room:{room_code}', current_user.id, timeout=300)  # 5 minutes timeout
+    cache.set(f'room:{room_code}', current_user.id, timeout=1200)  # 5 minutes timeout
     
     # Store the room code for the current user
-    cache.set(f'user_room:{current_user.id}', room_code, timeout=300)
+    cache.set(f'user_room:{current_user.id}', room_code, timeout=1200)
     
     return JsonResponse({'status': 'success', 'room_code': room_code})
 

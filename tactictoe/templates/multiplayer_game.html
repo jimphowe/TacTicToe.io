@@ -118,6 +118,20 @@
         checkGameState();
     });
 
+    window.addEventListener('beforeunload', function (e) {
+        if (window.setupSocket && setupSocket.readyState === WebSocket.OPEN) {
+            setupSocket.close();
+        }
+        
+        fetch('/cancel-search/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            keepalive: true
+        });
+    });
+
     const myTimerElement = document.getElementById('myTimer');
     const opponentTimerElement = document.getElementById('opponentTimer');
 
