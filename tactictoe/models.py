@@ -404,9 +404,9 @@ class Board:
             non_empty_neighbors = sum(1 for i, j, k in neighbors
                                        if self.pieces[i][j][k] != Piece.EMPTY)
             for (i,j,k) in neighbors:
-               if self.pieces[i][j][k] == player:
+               if self.pieces[i][j][k] == self.otherPlayer(player):
                   points += 6
-            if self.pieces[x][y][z] == player:
+            if self.pieces[x][y][z] == self.otherPlayer(player):
                points += 15
             if non_empty_neighbors == 6:
                points += 10
