@@ -35,7 +35,12 @@
     });
     }
 
+    let moving = False;
+
     function handlePieceClick(piece) {
+        if (moving) {
+            return;
+        } 
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         fetch('/singleplayer/move', {
             method: 'POST',
@@ -56,6 +61,7 @@
                 showToast("Invalid Move");
             }
             else {
+                moving = True;
                 if (data.halfway_game_state) {
                     playSound("move");
                     updateGameState(data.halfway_game_state);
@@ -76,6 +82,7 @@
                         handleGameOver(data.winner)
                     }
                 }
+                moving = False;
             }
         })
         .catch(error => {
