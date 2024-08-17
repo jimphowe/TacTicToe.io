@@ -368,49 +368,25 @@ class Board:
     
     def getGoodDefendingMove(self, player: Piece):
         potential_moves = []
-        max_two_in_a_rows = 0
         
         for (x, y, z, dir) in self.getPossibleMoves():
+            points = 0
             self.move(x, y, z, dir, player)
             if self.getWinInOne(self.otherPlayer(player)) == None:
-                current_two_in_a_rows = self.getTwoInARows(player)
-                if current_two_in_a_rows > max_two_in_a_rows:
-                    max_two_in_a_rows = current_two_in_a_rows
-                    potential_moves = [(x, y, z, dir)]
-                elif current_two_in_a_rows == max_two_in_a_rows:
-                    potential_moves.append((x, y, z, dir))
+                points += 100
+            points += self.getTwoInARows(player) * 4
+            if self.pieces[x][y][z] == self.otherPlayer(player):
+               points += 10
+            neighbors = self.neighbor_positions(x, y, z)
+            for (i,j,k) in neighbors:
+               if self.pieces[i][j][k] == self.otherPlayer(player):
+                  points += 3
+            potential_moves.append(((x, y, z, dir), points))
             self.undo()
 
-        if potential_moves:
-            return random.choice(potential_moves)
-        return None
-    
-    def oldGetBestDefendingMove(self, player: Piece):
-        potential_moves = []
-        max_two_in_a_rows = 0
-        
-        for (x, y, z, dir) in self.getPossibleMoves():
-            self.move(x, y, z, dir, player)
-            if self.getWinInOne(self.otherPlayer(player)) == None:
-                current_two_in_a_rows = self.getTwoInARows(player)
-                if current_two_in_a_rows > max_two_in_a_rows:
-                    max_two_in_a_rows = current_two_in_a_rows
-                    potential_moves = [(x, y, z, dir)]
-                elif current_two_in_a_rows == max_two_in_a_rows:
-                    potential_moves.append((x, y, z, dir))
-            self.undo()
+        potential_moves.sort(key=lambda move: move[1], reverse=True)
 
-        for (x, y, z, dir) in potential_moves:
-           self.move(x, y, z, dir, player)
-           non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
-                                       if self.pieces[i][j][k] != Piece.EMPTY)
-           self.undo()
-           if non_empty_neighbors == 6:
-              return (x, y, z, dir)
-
-        if potential_moves:
-            return random.choice(potential_moves)
-        return None
+        return potential_moves[0][0]
     
     def getBestDefendingMove(self, player: Piece):
         corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
@@ -423,8 +399,7 @@ class Board:
             self.move(x, y, z, dir, player)
             if self.getWinInOne(self.otherPlayer(player)) == None:
                 points += 100
-            current_two_in_a_rows = self.getTwoInARows(player)
-            points += current_two_in_a_rows * 5
+            points += self.getTwoInARows(player) * 5
             neighbors = self.neighbor_positions(x, y, z)
             non_empty_neighbors = sum(1 for i, j, k in neighbors
                                        if self.pieces[i][j][k] != Piece.EMPTY)
@@ -446,7 +421,6 @@ class Board:
 
         # Check top 5 moves for getWinInTwo condition
         top_moves = potential_moves[:5]
-        print(potential_moves[:5])
         for move, _ in top_moves:
             x, y, z, dir = move
             self.move(x, y, z, dir, player)
@@ -570,17 +544,30 @@ class Board:
            return True
         return False
     
+    def getSimpleDefendingMove(self,player: Piece):
+        for (x, y, z, dir) in self.getPossibleMoves():
+            if self.pieces[x][y][z] == self.otherPlayer(player):
+               return((x,y,z,dir))
+            neighbors = self.neighbor_positions(x, y, z)
+            for (i,j,k) in neighbors:
+              if self.pieces[i][j][k] == self.otherPlayer(player):
+                return((x,y,z,dir))
+       
+    
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
     def __init__(self,player):
         self.player = player
 
     def getMove(self, board: Board, move_num):
-        winningMove = board.getWinInOne(self.player)
-        if winningMove:
-          return winningMove
-        else:
-          return board.getRandomMove(self.player)
+        if move_num > 4:
+           winningMove = board.getWinInOne(self.player)
+           if winningMove:
+              return winningMove
+        simpleDefendingMove = board.getSimpleDefendingMove(self.player)
+        if simpleDefendingMove:
+            return simpleDefendingMove
+        return board.getRandomMove(self.player)
         
 # Returns a winning move if one exists, otherwise a move preventing the opponent from 
 # winning if one exists, otherwise a random move
@@ -595,7 +582,7 @@ class MediumAgent:
         if winningMove:
           return winningMove
         else:
-          defendingMove = board.getDefendingMove(self.player)
+          defendingMove = board.getGoodDefendingMove(self.player)
           if defendingMove:
             return defendingMove
           else:
