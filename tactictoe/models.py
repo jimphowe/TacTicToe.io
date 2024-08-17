@@ -560,7 +560,7 @@ class EasyAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num):
-        if move_num > 4:
+        if move_num > 3:
            winningMove = board.getWinInOne(self.player)
            if winningMove:
               return winningMove
