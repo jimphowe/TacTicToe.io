@@ -35,60 +35,56 @@
     });
     }
 
-    let moving = False;
+    let moving = false;
 
-    function handlePieceClick(piece) {
+    async function handlePieceClick(piece) {
         if (moving) {
             return;
-        } 
-        currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
-        fetch('/singleplayer/move', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                position: piece.userData.originalPosition,
-                direction: sideToDirection(currentDirectionMapping['BACK']),
-                player: playerColor,
-                difficulty: '{{ difficulty|safe }}'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+        }
+        moving = true;
+
+        try {
+            const currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            const response = await fetch('/singleplayer/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    position: piece.userData.originalPosition,
+                    direction: sideToDirection(currentDirectionMapping['BACK']),
+                    player: playerColor,
+                    difficulty: '{{ difficulty|safe }}'
+                })
+            });
+
+            const data = await response.json();
+
             if (data.status == 'error') {
                 showToast("Invalid Move");
-            }
-            else {
-                moving = True;
+            } else {
                 if (data.halfway_game_state) {
                     playSound("move");
                     updateGameState(data.halfway_game_state);
-                    setTimeout(function() {
-                        playSound("move");
-                        updateGameState(data.game_state);
-                        
-                        if (data.winner) {
-                            handleGameOver(data.winner)
-                        }
-                    }, 3000);
-                }
-                else {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                     playSound("move");
                     updateGameState(data.game_state);
-
-                    if (data.winner) {
-                        handleGameOver(data.winner)
-                    }
+                } else {
+                    playSound("move");
+                    updateGameState(data.game_state);
                 }
-                moving = False;
+
+                if (data.winner) {
+                    handleGameOver(data.winner);
+                }
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
             showToast("Unexpected Error");
-        });
+        } finally {
+            moving = false;
+        }
     }
 </script>
 {% endblock %}
