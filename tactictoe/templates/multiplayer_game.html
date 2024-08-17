@@ -111,8 +111,6 @@
     </div>
 </div>
 <script>
-    highlightMaterial = (myId == data.player_one_id) ? redHighlightMaterial : blueHighlightMaterial;
-
     var findOpponentUrl = "{% url 'find_opponent' %}";
 
     document.addEventListener('DOMContentLoaded', (event) => {
@@ -163,10 +161,12 @@
                 return;
             }
             if (myId == data.player_one_id) {
+                highlightMaterial = redHighlightMaterial;
                 myTimeLeft = parseInt(data.player_one_time_left);
                 opponentTimeLeft = parseInt(data.player_two_time_left);
             }
             else {
+                highlightMaterial = blueHighlightMaterial;
                 myTimeLeft = parseInt(data.player_two_time_left);
                 opponentTimeLeft = parseInt(data.player_one_time_left);
             }
