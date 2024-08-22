@@ -53,6 +53,8 @@
     <!-- negative_beeps.wav by themusicalnomad -- https://freesound.org/s/253886/ -- License: Creative Commons 0 -->
     <audio id="startSound" src="{% static 'sounds/start.wav' %}" preload="auto"></audio>
     <!-- Coin_C_09 by cabled_mess -- https://freesound.org/s/350876/ -- License: Creative Commons 0 -->
+    <audio id="invalidSound" src="{% static 'sounds/invalid.wav' %}" preload="auto"></audio>
+    <!-- GASP_UI_Reject.wav by Rob_Marion -- https://freesound.org/s/542040/ -- License: Creative Commons 0 -->
     <canvas id="myCanvas"></canvas>
     <div id="toast-container">
         <div id="invalidMoveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -61,6 +63,7 @@
     </div>
     <script>
         let isRotating = false;
+        let isJiggling = false;
         let ROTATION_DURATION = 600;
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
@@ -237,6 +240,78 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        function jigglePieces(row, direction, callback) {
+            if (isJiggling) return;
+            isJiggling = true;
+
+            const JIGGLE_DURATION = 450;
+            const JIGGLE_AMPLITUDE = 0.15;
+
+            const startPositions = row.map(piece => piece.position.clone());
+            const startTime = Date.now();
+
+            function update() {
+                const elapsedTime = Date.now() - startTime;
+                const progress = Math.min(elapsedTime / JIGGLE_DURATION, 1);
+
+                if (progress < 1) {
+                    const displacement = Math.sin(progress * Math.PI * 7) * JIGGLE_AMPLITUDE * (1 - progress);
+
+                    row.forEach((piece, index) => {
+                        const start = startPositions[index];
+                        switch (direction) {
+                            case 'LEFT':
+                            case 'RIGHT':
+                                piece.position.set(
+                                    start.x,
+                                    start.y + (index % 2 == 0 ? displacement : -displacement),
+                                    start.z + (index % 2 == 0 ? displacement : -displacement)
+                                );
+                            case 'FRONT':
+                            case 'BACK':
+                                piece.position.set(
+                                    start.x + (index % 2 == 0 ? displacement : -displacement),
+                                    start.y,
+                                    start.z + (index % 2 == 0 ? displacement : -displacement)
+                                );
+                            case 'UP':
+                            case 'DOWN':
+                                piece.position.set(
+                                    start.x + (index % 2 == 0 ? displacement : -displacement),
+                                    start.y + (index % 2 == 0 ? displacement : -displacement),
+                                    start.z
+                                );
+                        }
+                    });
+
+                    requestAnimationFrame(update);
+                } else {
+                    row.forEach((piece, index) => {
+                        piece.position.copy(startPositions[index]);
+                    });
+
+                    if (callback) callback();
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            update();
+        }
+
+        function getRowToJiggle(piece) {
+            const { x, y, z } = piece.userData.position;
+            const row = [];
+            
+            piecesGroup.children.forEach(sphere => {
+                if (sphere.userData.position.x === x && sphere.userData.position.z === z) {
+                    row.push(sphere);
+                }
+            });
+            
+            return row;
         }
 
         var lastIntersected = null;

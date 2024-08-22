@@ -463,7 +463,7 @@ def create_room(request):
     room_code = generate_room_code()
     
     # Store the room code and user in cache
-    cache.set(f'room:{room_code}', current_user.id, timeout=1200)  # 5 minutes timeout
+    cache.set(f'room:{room_code}', current_user.id, timeout=1200)
     
     # Store the room code for the current user
     cache.set(f'user_room:{current_user.id}', room_code, timeout=1200)

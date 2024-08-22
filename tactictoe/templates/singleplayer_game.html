@@ -45,6 +45,7 @@
 
         try {
             const currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            const direction = sideToDirection(currentDirectionMapping['BACK']);
             const response = await fetch('/singleplayer/move', {
                 method: 'POST',
                 headers: {
@@ -53,7 +54,7 @@
                 },
                 body: JSON.stringify({
                     position: piece.userData.originalPosition,
-                    direction: sideToDirection(currentDirectionMapping['BACK']),
+                    direction: direction,
                     player: playerColor,
                     difficulty: '{{ difficulty|safe }}'
                 })
@@ -62,7 +63,11 @@
             const data = await response.json();
 
             if (data.status == 'error') {
-                showToast("Invalid Move");
+                playSound("invalid");
+                const row = getRowToJiggle(piece);
+                jigglePieces(row, direction, () => {
+                    isJiggling = false;
+                });
             } else {
                 if (data.halfway_game_state) {
                     updateGameState(data.halfway_game_state);

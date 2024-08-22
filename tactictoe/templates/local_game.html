@@ -29,6 +29,7 @@
     function handlePieceClick(piece) {
         currentPlayer = JSON.parse(localStorage.getItem('player'));
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+        const direction = sideToDirection(currentDirectionMapping['BACK']);
         fetch('/local/move', {
             method: 'POST',
             headers: {
@@ -37,7 +38,7 @@
             },
             body: JSON.stringify({
                 position: piece.userData.originalPosition,
-                direction: sideToDirection(currentDirectionMapping['BACK']),
+                direction: direction,
                 player: currentPlayer,
                 difficulty: '{{ difficulty|safe }}'
             })
@@ -45,7 +46,11 @@
         .then(response => response.json())
         .then(data => {
             if (data.status == 'error') {
-                showToast("Invalid Move");
+                playSound("invalid");
+                const row = getRowToJiggle(piece);
+                jigglePieces(row, direction, () => {
+                    isJiggling = false;
+                });
             }
             else {
                 playSound("move");
