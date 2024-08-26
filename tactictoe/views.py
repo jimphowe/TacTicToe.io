@@ -122,10 +122,37 @@ import time
 @csrf_exempt
 @require_http_methods(["POST"])
 def handle_singleplayer_move(request):
-    # Parse the position from the POST data
     data = json.loads(request.body)
     position = data.get('position')
     direction = data.get('direction')
+    player = data.get('player')
+    
+    game_state = request.session.get('game_state')
+    if not game_state:
+        return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
+
+    game = GamePlayer('easy', 'RED') # TODO make gameplayer with no args
+    board = game.board
+
+    board.setState(game_state)
+
+    try:
+        board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+    except:
+        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
+    game_state = board.getState()
+
+    request.session['game_state'] = game_state
+    request.session.save()
+    winner = None
+    if board.hasWon(Piece.RED):
+        winner = 'RED'
+    elif board.hasWon(Piece.BLUE):
+        winner = 'BLUE'
+    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner})
+    
+def get_computer_move(request):
+    data = json.loads(request.body)
     player = data.get('player')
     difficulty = data.get('difficulty')
     
@@ -139,33 +166,17 @@ def handle_singleplayer_move(request):
 
     board.setState(game_state)
 
-    try:
-        board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
-    except:
-        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
-    halfway_game_state = board.getState()
+    game.makeComputerMove()
+    game_state = board.getState()
+    request.session['game_state'] = game_state
+    request.session.save()
+    winner = None
+    if board.hasWon(Piece.RED):
+        winner = 'RED'
+    elif board.hasWon(Piece.BLUE):
+        winner = 'BLUE'
+    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner})
 
-    if game.isOver():
-        game_state = halfway_game_state
-        request.session['game_state'] = game_state
-        request.session.save()
-        winner = None
-        if board.hasWon(Piece.RED):
-            winner = 'RED'
-        elif board.hasWon(Piece.BLUE):
-            winner = 'BLUE'
-        return JsonResponse({'status': 'success', 'position': position, 'game_state': game_state, 'winner': winner})
-    else:
-        game.makeComputerMove()
-        game_state = board.getState()
-        request.session['game_state'] = game_state
-        request.session.save()
-        winner = None
-        if board.hasWon(Piece.RED):
-            winner = 'RED'
-        elif board.hasWon(Piece.BLUE):
-            winner = 'BLUE'
-        return JsonResponse({'status': 'success', 'position': position, 'halfway_game_state': halfway_game_state, 'game_state': game_state, 'winner': winner})
 
 from django.shortcuts import render, get_object_or_404
 from .models import Game
