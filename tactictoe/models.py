@@ -544,6 +544,12 @@ class Board:
            return True
         return False
     
+    def winningRun(self,player: Piece):
+        for run in self.winningRuns:
+            if all(self.pieces[x][y][z] == player for (x,y,z) in run):
+                return run
+        return None
+    
     def getSimpleDefendingMove(self,player: Piece):
         for (x, y, z, dir) in self.getPossibleMoves():
             if self.pieces[x][y][z] == self.otherPlayer(player):

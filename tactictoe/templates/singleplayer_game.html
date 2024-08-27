@@ -23,17 +23,19 @@
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
     });
 
-    function handleGameOver(winner) {
+    function handleGameOver(winner, winningRun) {
         if (winner == playerColor) {
             playSound("win");
         }
         else {
             playSound("lose");
         }
+        highlightWinningRun(winner, winningRun);
         createGameOverUI(winner, null, function() {
         location.reload();
     });
     }
+
 
     let moving = false;
 
@@ -72,7 +74,7 @@
                 playSound("move");
 
                 if (data.winner) {
-                    handleGameOver(data.winner);
+                    handleGameOver(data.winner, data.winning_run);
                 } else {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     const response = await fetch('/singleplayer/computer-move', {
@@ -93,7 +95,7 @@
                     playSound("move");
 
                     if (data.winner) {
-                        handleGameOver(data.winner);
+                        handleGameOver(data.winner, data.winning_run);
                     }
                 }
             }

@@ -242,6 +242,32 @@
             }, 3000);
         }
 
+        const redWinningMaterial = new THREE.MeshPhongMaterial({
+            color: 0xe03c11,
+            emissive: 0xe03c11,
+            emissiveIntensity: 0.1,
+            shininess: 10
+        });
+        const blueWinningMaterial = new THREE.MeshPhongMaterial({
+            color: 0x116ae0,
+            emissive: 0x116ae0,
+            emissiveIntensity: 0.1,
+            shininess: 10
+        });
+
+        function highlightWinningRun(winner, winningRun) {
+            if (!winningRun) return;
+
+            piecesGroup.children.forEach(sphere => {
+                const { x, y, z } = sphere.userData.originalPosition;
+                if (winningRun.some(coord => coord[0] === x && coord[1] === y && coord[2] === z)) {
+                    sphere.material = winner == 'RED' ? redWinningMaterial : blueWinningMaterial;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
         function jigglePieces(row, direction, callback) {
             if (isJiggling) return;
             isJiggling = true;

@@ -117,8 +117,6 @@ def singleplayer_game_view(request):
     template = loader.get_template('singleplayer_game.html')
     return HttpResponse(template.render(context, request))
 
-import time
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def handle_singleplayer_move(request):
@@ -145,11 +143,14 @@ def handle_singleplayer_move(request):
     request.session['game_state'] = game_state
     request.session.save()
     winner = None
+    winning_run = None
     if board.hasWon(Piece.RED):
         winner = 'RED'
+        winning_run = board.winningRun(Piece.RED)
     elif board.hasWon(Piece.BLUE):
         winner = 'BLUE'
-    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner})
+        winning_run = board.winningRun(Piece.BLUE)
+    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
     
 def get_computer_move(request):
     data = json.loads(request.body)
@@ -171,11 +172,14 @@ def get_computer_move(request):
     request.session['game_state'] = game_state
     request.session.save()
     winner = None
+    winning_run = None
     if board.hasWon(Piece.RED):
         winner = 'RED'
+        winning_run = board.winningRun(Piece.RED)
     elif board.hasWon(Piece.BLUE):
         winner = 'BLUE'
-    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner})
+        winning_run = board.winningRun(Piece.BLUE)
+    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
 
 
 from django.shortcuts import render, get_object_or_404
