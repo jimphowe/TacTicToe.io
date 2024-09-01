@@ -152,6 +152,8 @@ def handle_singleplayer_move(request):
         winning_run = board.winningRun(Piece.BLUE)
     return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
     
+@csrf_exempt
+@require_http_methods(["POST"])
 def get_computer_move(request):
     data = json.loads(request.body)
     player = data.get('player')
