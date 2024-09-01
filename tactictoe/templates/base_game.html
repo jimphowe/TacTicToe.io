@@ -242,26 +242,39 @@
             }, 3000);
         }
 
+        const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
         const redWinningMaterial = new THREE.MeshPhongMaterial({
             color: 0xe03c11,
             emissive: 0xe03c11,
-            emissiveIntensity: 0.1,
-            shininess: 10
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.3
         });
         const blueWinningMaterial = new THREE.MeshPhongMaterial({
             color: 0x116ae0,
             emissive: 0x116ae0,
-            emissiveIntensity: 0.1,
-            shininess: 10
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.3
         });
+
+        const highlightCubeGroup = new THREE.Group();
+        cubeGroup.add(highlightCubeGroup);
 
         function highlightWinningRun(winner, winningRun) {
             if (!winningRun) return;
+            const winningMaterial = winner === 'RED' ? redWinningMaterial : blueWinningMaterial;
 
-            piecesGroup.children.forEach(sphere => {
-                const { x, y, z } = sphere.userData.originalPosition;
-                if (winningRun.some(coord => coord[0] === x && coord[1] === y && coord[2] === z)) {
-                    sphere.material = winner == 'RED' ? redWinningMaterial : blueWinningMaterial;
+            winningRun.forEach(([x, y, z]) => {
+                const cube = new THREE.Mesh(cubeGeometry, winningMaterial);
+                const piece = piecesGroup.children.find(sphere => 
+                    sphere.userData.originalPosition.x === x && 
+                    sphere.userData.originalPosition.y === y && 
+                    sphere.userData.originalPosition.z === z
+                );
+                if (piece) {
+                    cube.position.copy(piece.position);
+                    highlightCubeGroup.add(cube);
                 }
             });
 
@@ -442,7 +455,6 @@
             // Starting at the default mapping, rotate until we get to the current mapping (cube rotation). This will rotate the game 
             // state to match the rotation the user currently has set
             const targetDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
-            console.log(targetDirectionMapping);
             let directionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
             let count = 0;
             while (!(directionMapping['TOP'] == targetDirectionMapping['TOP'])) {
@@ -463,7 +475,6 @@
                 count += 1;
             }
             while (!(directionMapping['FRONT'] == targetDirectionMapping['FRONT'])) {
-                console.log("ROTATING RIGHT");
                 rotateCube('RIGHT');
                 updateDirectionMapping(directionMapping, 'RIGHT');
             }
