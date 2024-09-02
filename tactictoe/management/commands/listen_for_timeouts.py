@@ -35,9 +35,12 @@ class Command(BaseCommand):
         print(f"Processing expiration for key: {key}")
         game_code = key.split(':')[1]
         redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
-        redis_client.delete(key)
 
         game = get_object_or_404(Game, game_code=game_code)
+
+        if game.completed:
+            redis_client.delete(key)
+            return
 
         winner = game.player_two if game.turn == game.player_one else game.player_one
         loser = game.player_one if game.turn == game.player_one else game.player_two
@@ -53,7 +56,7 @@ class Command(BaseCommand):
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
-            f'game_{game.game_code}',  # Use the same group name as in your consumer
+            f'game_{game.game_code}',
             {
                 'type': 'send_game_update',
                 'game_state': game.game_state,
