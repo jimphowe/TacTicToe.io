@@ -238,17 +238,16 @@
 
     gameSocket.onmessage = function(e) {
         var data = JSON.parse(e.data);
-        console.log("RECEIVED gameSocket msg with data" + JSON.stringify(data));
         updateGameState(JSON.parse(data.game_state));
         playSound("move");
-        if (data.winner) {
-            handleGameOver(data.winner_name, data.elo_change);
+        if (data.winner_id) {
+            handleGameOver(data.winner_name, data.winner_color, data.winning_run, data.elo_change);
         } else {
             syncGameTimers();
         }
     };
 
-    function handleGameOver(winner_name, eloChange) {
+    function handleGameOver(winnerName, winnerColor, winningRun, eloChange) {
         stopTimers();
         if (eloChange > 0) {
             playSound("win");
@@ -256,9 +255,10 @@
         else {
             playSound("lose");
         }
-        var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'));
+        highlightWinningRun(winnerColor, winningRun);
         document.querySelector('.home-button').style.display = 'block';
-        createGameOverUI(winner_name, eloChange, function() {
+        var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'));
+        createGameOverUI(winnerName, eloChange, function() {
             const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
             localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
             startWebSocket();

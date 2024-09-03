@@ -26,9 +26,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         #import ipdb; ipdb.set_trace()
         data = json.loads(text_data)
         game_state = data['game_state']
-        winner = data['winner']
+        winner_id = data['winner_id']
+        winner_color = data['winner_color']
+        winning_run = data['winning_run']
         user = self.scope["user"]
-        winner_name = None if winner == None else user.username
+        winner_name = None if winner_id == None else user.username
         elo_change = data['elo_change']
         turn = data['turn']
 
@@ -38,7 +40,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'send_game_update',
                 'game_state': game_state,
-                'winner': winner,
+                'winner_id': winner_id,
+                'winner_color': winner_color,
+                'winning_run': winning_run,
                 'winner_name': winner_name,
                 'elo_change': elo_change,
                 'turn': turn
@@ -48,17 +52,21 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def send_game_update(self, event):
         # Send message to WebSocket
         elo_change = None
-        winner = event['winner']
+        winner_id = event['winner_id']
+        winner_color = event['winner_color']
+        winning_run = event['winning_run']
         user = self.scope['user']
         winner_name = event['winner_name']
         turn = event['turn']
-        if winner:
-            is_winner = str(user.id) == str(winner)
+        if winner_id:
+            is_winner = str(user.id) == str(winner_id)
             elo_change = event['elo_change'] if is_winner else -1 * int(event['elo_change'])
 
         await self.send(text_data=json.dumps({
             'game_state': event['game_state'],
-            'winner': winner,
+            'winner_id': winner_id,
+            'winner_color': winner_color,
+            'winning_run': winning_run,
             'winner_name': winner_name,
             'elo_change': elo_change,
             'turn': turn

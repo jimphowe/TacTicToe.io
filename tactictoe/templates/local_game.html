@@ -19,8 +19,9 @@
         highlightMaterial = redHighlightMaterial;
     });
 
-    function handleGameOver(winner) {
+    function handleGameOver(winner, winningRun) {
         playSound("win");
+        highlightWinningRun(winner, winningRun);
         createGameOverUI(winner, null, function() {
         location.reload();
     });
@@ -59,7 +60,7 @@
                 localStorage.setItem('player', JSON.stringify(nextPlayer));
                 highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
                 if (data.winner) {
-                    handleGameOver(data.winner);
+                    handleGameOver(data.winner, data.winning_run);
                 }
             }
         })

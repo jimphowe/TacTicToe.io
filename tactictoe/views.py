@@ -87,11 +87,14 @@ def handle_local_move(request):
     request.session['game_state'] = new_game_state
     request.session.save()
     winner = None
+    winning_run = None
     if board.hasWon(Piece.RED):
         winner = 'RED'
+        winning_run = board.winningRun(Piece.RED)
     elif board.hasWon(Piece.BLUE):
         winner = 'BLUE'
-    return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner})
+        winning_run = board.winningRun(Piece.BLUE)
+    return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner, 'winning_run': winning_run})
 
 def singleplayer_setup_view(request):
     template = loader.get_template('singleplayer_setup.html')
@@ -273,10 +276,19 @@ def handle_multiplayer_move(request):
 
         game.game_state = json.dumps(board.getState())
 
-        winner = game.player_one if board.hasWon(p1_color) else game.player_two if board.hasWon(p2_color) else None
+        winner = None
+        winner_color = None
+        winning_run = None
+        if board.hasWon(p1_color):
+            winner = game.player_one
+            winner_color = p1_color.value
+            winning_run = board.winningRun(p1_color)
+        elif board.hasWon(p2_color):
+            winner = game.player_two
+            winner_color = p2_color.value
+            winning_run = board.winningRun(p2_color)
         winner_id = None if winner == None else winner.id
         winner_name = None if winner == None else winner.username
-        # Check if there's a winner
         if winner:
             game.completed = True
             game.completed_at = datetime.now()
@@ -289,7 +301,9 @@ def handle_multiplayer_move(request):
             {
                 'type': 'send_game_update',
                 'game_state': game.game_state,
-                'winner': winner_id,
+                'winner_id': winner_id,
+                'winner_color': winner_color,
+                'winning_run': winning_run,
                 'winner_name': winner_name,
                 'elo_change': game.elo_change,
                 'turn': game.turn.id
