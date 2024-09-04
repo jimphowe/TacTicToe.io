@@ -344,6 +344,7 @@ def handle_resignation(request):
         return
 
     winner = game.player_one if request.user.id == game.player_two.id else game.player_two
+    winner_color = Piece.RED if request.user.id == game.player_two.id else Piece.BLUE
 
     game.completed = True
     game.completed_at = datetime.now()
@@ -356,8 +357,10 @@ def handle_resignation(request):
         {
             'type': 'send_game_update',
             'game_state': game.game_state,
-            'winner': winner.id,
+            'winner_id': winner.id,
+            'winner_color': winner_color.value,
             'winner_name': winner.username,
+            'winning_run': None,
             'elo_change': game.elo_change,
             'turn': game.turn.id
         }
