@@ -129,6 +129,106 @@
         }
         adjustCameraForScreenSize();
 
+        let touchStartX, touchStartY;
+        let touchEndX, touchEndY;
+        let isSwiping = false;
+        let isHolding = false;
+        let holdTimer;
+        const swipeThreshold = 100; // minimum distance for a swipe
+        const holdThreshold = 200; // time in ms to trigger a hold
+
+        renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+        renderer.domElement.addEventListener('touchmove', onTouchMove, false);
+        renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+
+        function onTouchStart(event) {
+            event.preventDefault();
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+            isSwiping = false;
+            isHolding = false;
+
+            // Start the hold timer
+            holdTimer = setTimeout(() => {
+                isHolding = true;
+                highlightPieceUnderTouch(event.touches[0]);
+            }, holdThreshold);
+        }
+
+        function onTouchMove(event) {
+            event.preventDefault();
+            if (event.touches.length > 1) {
+                clearTimeout(holdTimer);
+                return;
+            }
+            
+            touchEndX = event.touches[0].clientX;
+            touchEndY = event.touches[0].clientY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            if (Math.abs(deltaX) > swipeThreshold || Math.abs(deltaY) > swipeThreshold) {
+                // If the touch has moved far enough, it's a swipe
+                clearTimeout(holdTimer);
+                isSwiping = true;
+                unhighlightAllPieces();
+            } else if (isHolding) {
+                // If we're holding, update the highlighted piece
+                highlightPieceUnderTouch(event.touches[0]);
+            }
+        }
+
+        function onTouchEnd(event) {
+            event.preventDefault();
+            clearTimeout(holdTimer);
+            
+            if (!isSwiping && !isHolding) {
+                // It's a quick tap, handle piece placement
+                handleTap(event.changedTouches[0]);
+            } else if (isSwiping) {
+                // It's a swipe, handle cube rotation
+                handleSwipe();
+            }
+            
+            isSwiping = false;
+            isHolding = false;
+        }
+
+        function handleTap(touch) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+            const intersects = raycaster.intersectObjects(clickableSpheres);
+            
+            if (intersects.length > 0) {
+                handlePieceClick(intersects[0].object);
+            }
+        }
+
+        function handleSwipe() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal swipe
+                if (deltaX > 0) {
+                    onKeyDown({ key: 'ArrowRight' });
+                } else {
+                    onKeyDown({ key: 'ArrowLeft' });
+                }
+            } else {
+                // Vertical swipe
+                if (deltaY > 0) {
+                    onKeyDown({ key: 'ArrowDown' });
+                } else {
+                    onKeyDown({ key: 'ArrowUp' });
+                }
+            }
+        }
+
         // Adding lights
         var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
         scene.add(ambientLight);
