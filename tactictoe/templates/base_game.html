@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TacTicToe</title>
     {% load static %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -12,7 +12,13 @@
     <script src="{% static 'js/find_opponent.js' %}"></script>
     <script src="{% static 'js/game_over.js' %}"></script>
     <style>
-        body { margin: 0; }
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden;
+        }
         canvas { 
             display: block; 
             width: 100% !important;
@@ -68,18 +74,60 @@
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas')});
+        var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('myCanvas'), antialias: true});
+        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0xd3d2c0);
         document.body.appendChild(renderer.domElement);
 
         function onWindowResize() {
+            adjustCameraPosition();
+            adjustCameraForScreenSize();
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        adjustCameraPosition();
         window.addEventListener('resize', onWindowResize, false);
+
+        function adjustCameraPosition() {
+            const aspect = window.innerWidth / window.innerHeight;
+            if (aspect < 1) {  // Portrait orientation
+                camera.position.set(10, 6, 4);
+            } else {  // Landscape orientation
+                camera.position.set(7, 4, 3);
+            }
+            camera.lookAt(scene.position);
+        }
+
+        let cameraDistance = 10;
+        const mobileFOV = 85;
+        const desktopFOV = 75;
+
+        function adjustCameraForScreenSize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const isMobile = window.innerWidth <= 768; // Adjust this breakpoint as needed
+
+            if (isMobile) {
+                camera.fov = mobileFOV;
+                if (aspect < 1) { // Portrait
+                    cameraDistance = 14;
+                    camera.position.set(0, 0, cameraDistance);
+                } else { // Landscape
+                    cameraDistance = 12;
+                    camera.position.set(cameraDistance, 0, 0);
+                }
+            } else {
+                camera.fov = desktopFOV;
+                cameraDistance = 10;
+                camera.position.set(7, 4, 3);
+            }
+
+            camera.lookAt(scene.position);
+            camera.updateProjectionMatrix();
+        }
+        adjustCameraForScreenSize();
 
         // Adding lights
         var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
@@ -99,6 +147,13 @@
         const piecesGroup = new THREE.Group();
         cubeGroup.add(boardGroup);
         cubeGroup.add(piecesGroup);
+
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            cubeGroup.position.set(-1.5, 0, 0);
+        } else {
+            cubeGroup.position.set(0, 0, 0);
+        }
 
         function addTube(start, end) {
             var path = new THREE.LineCurve3(new THREE.Vector3(...start), new THREE.Vector3(...end));
@@ -207,9 +262,23 @@
         camera.position.set(7, 4, 3);
         camera.lookAt(scene.position);
 
+        function resizeRenderer() {
+            const canvas = renderer.domElement;
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            const needResize = canvas.width !== width || canvas.height !== height;
+            if (needResize) {
+                renderer.setSize(width, height, false);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            }
+            return needResize;
+        }
+
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
+            resizeRenderer();
             renderer.render(scene, camera);
         }
 
