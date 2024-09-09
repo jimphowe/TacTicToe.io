@@ -257,7 +257,10 @@
         }
         highlightWinningRun(winnerColor, winningRun);
         document.querySelector('.home-button').style.display = 'block';
-        var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'));
+        var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
         createGameOverUI(winnerName, eloChange, function() {
             const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
             localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
