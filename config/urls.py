@@ -2,12 +2,20 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
 from tactictoe.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, get_computer_move, handle_multiplayer_move, handle_resignation, leaderboard_view
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+
+    def form_invalid(self, form):
+        return HttpResponseRedirect(reverse('login') + '?error=1')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home, name='home'),
     path('signup/', signup, name='signup'),
-    path('login/', LoginView.as_view(template_name='login.html'), name='login'),
+    path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
     path('profile/', profile_view, name='profile'),
     path('multiplayer/setup/', multiplayer_setup_view, name='multiplayer_setup_view'),
