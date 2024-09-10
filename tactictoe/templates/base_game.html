@@ -318,26 +318,59 @@
             emissive: 0x333300
         })
 
+        const blueDotMaterial = new THREE.MeshPhongMaterial({ color: 0x5b95e1 });
+        function createDotsSphere() {
+            const sphere = new THREE.Group();
+            const blackSphere = new THREE.Mesh(sphereGeometry, blackMaterial);
+            sphere.add(blackSphere);
+
+            const dotPositions = [
+                [0, 1, 0], [0, -1, 0], [1, 0, 0], 
+                [-1, 0, 0], [0, 0, 1], [0, 0, -1]
+            ];
+
+            dotPositions.forEach(pos => {
+                const dotGeometry = new THREE.SphereGeometry(0.15, 32, 32);
+                const dot = new THREE.Mesh(dotGeometry, blueDotMaterial);
+                
+                // Position the dot on the surface of the sphere
+                const radius = 0.7;  // Matches the radius of the main sphere
+                dot.position.set(pos[0] * radius, pos[1] * radius, pos[2] * radius);
+                
+                // Scale the dot to make it appear as a circle on the surface
+                const scale = 1;
+                dot.scale.set(scale, scale, 0.01);
+                
+                // Rotate the dot to align with the sphere's surface
+                dot.lookAt(0, 0, 0);
+                
+                sphere.add(dot);
+            });
+
+            return sphere;
+        }
+
         var clickableSpheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
         gameState.forEach((layer, x) => {
             layer.forEach((row, y) => {
                 row.forEach((cell, z) => {
-                    var material;
+                    var sphere;
                     switch (cell) {
                         case 'BLACK':
-                            material = blackMaterial;
+                            console.log("making dotsss");
+                            sphere = sphere = createDotsSphere();
+                            //sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
                             break;
                         case 'BLUE':
-                            material = blueMaterial;
+                            sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
                             break;
                         case 'RED':
-                            material = redMaterial;
+                            sphere = new THREE.Mesh(sphereGeometry, redMaterial);
                             break;
                         default:
-                            material = emptyMaterial
+                            sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
                     }
-                    var sphere = new THREE.Mesh(sphereGeometry, material);
                     sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
                     sphere.userData = {
                         position: {x: x, y: y, z: z},

@@ -4,8 +4,9 @@ from enum import Enum
 class Piece(Enum):
     EMPTY = "EMPTY"
     BLACK = "BLACK"
-    BLUE = "BLUE"
     RED = "RED"
+    BLUE = "BLUE"
+    BLOCKER = "BLOCKER"
 
 class Board:
     def __init__(self):
@@ -226,12 +227,12 @@ class Board:
             
     # Makes a move after checking if it is valid
     # If there is a piece in the specified location, it is pushed in the specified direction, along with the piece behind it if one exists 
-    def move(self,x,y,z,dir,player):
+    def move(self,x,y,z,dir,player,isBlocker):
         if player == "RED":
             player = Piece.RED
         elif player == "BLUE":
             player = Piece.BLUE
-        if not self.validMove(x,y,z,dir):
+        if (isBlocker and not self.pieces[x][y][z] == Piece.EMPTY) or not self.validMove(x,y,z,dir):
              exc = f'\nAttempted to make move {(x,y,z,dir)}\nOn board:\n{self.getStatePretty()}'
              print(exc)
              raise ValueError(exc)
