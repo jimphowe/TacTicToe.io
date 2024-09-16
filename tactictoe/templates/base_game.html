@@ -358,9 +358,7 @@
                     var sphere;
                     switch (cell) {
                         case 'BLACK':
-                            console.log("making dotsss");
-                            sphere = sphere = createDotsSphere();
-                            //sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
+                            sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
                             break;
                         case 'BLUE':
                             sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
@@ -601,19 +599,19 @@
             switch (event.key) {
                 case 'ArrowUp':
                 case 'w':
-                    direction = 'UP';
+                    direction = 'DOWN';
                     break;
                 case 'ArrowDown':
                 case 's':
-                    direction = 'DOWN';
+                    direction = 'UP';
                     break;
                 case 'ArrowLeft':
                 case 'a':
-                    direction = 'LEFT';
+                    direction = 'RIGHT';
                     break;
                 case 'ArrowRight':
                 case 'd':
-                    direction = 'RIGHT';
+                    direction = 'LEFT';
                     break;
                 default:
                     return;
@@ -630,15 +628,21 @@
 
         window.addEventListener('keydown', onKeyDown, false);
 
+        let blockerPiece;
+        let isBlockerSelected = false;
+
         function onMouseClick(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
-            var intersects = raycaster.intersectObjects(clickableSpheres, true);
+            var intersects = raycaster.intersectObjects(clickableSpheres.concat(blockerPiece ? [blockerPiece] : []), true);
             if (intersects.length > 0) {
                 var object = intersects[0].object;
-                if (object.userData && object.userData.clickable) {
+                if (object === blockerPiece) {
+                    isBlockerSelected = !isBlockerSelected;
+                    blockerPiece.scale.set(isBlockerSelected ? 0.8 : 0.7, isBlockerSelected ? 0.8 : 0.7, 1);
+                } else if (object.userData && object.userData.clickable) {
                     handlePieceClick(object);
                 }
             }
@@ -835,21 +839,25 @@
             gameState.forEach((layer, x) => {
                 layer.forEach((row, y) => {
                     row.forEach((cell, z) => {
-                        var material;
+                        let sphere;
                         switch (cell) {
                             case "BLACK":
-                                material = blackMaterial;
+                                sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
                                 break;
                             case "BLUE":
-                                material = blueMaterial;
+                                sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
                                 break;
                             case "RED":
-                                material = redMaterial;
+                                sphere = new THREE.Mesh(sphereGeometry, redMaterial);
+                                break;
+                            case "BLOCKER":
+                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                                const dotsSphere = createDotsSphere();
+                                sphere.add(dotsSphere);
                                 break;
                             default:
-                                material = emptyMaterial;
+                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
                         }
-                        var sphere = new THREE.Mesh(sphereGeometry, material);
                         sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
                         sphere.userData = {
                             position: { x: x, y: y, z: z },

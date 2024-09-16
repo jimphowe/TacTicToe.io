@@ -10,6 +10,7 @@
             z-index: 1000;
         }
 </style>
+{% load static %}
 <a href="/" class="btn btn-outline-light home-button">
     <i class="fas fa-home"></i> Home
 </a>
@@ -17,6 +18,27 @@
     const playerColor = '{{ player_color }}';
 
     highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+
+    function createBlockerSprite() {
+        const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+        
+        sprite.scale.set(0.7, 0.7, 0.7);
+        
+        return sprite;
+    }
+
+    function addBlockerPiece() {
+        if (playerColor === 'BLUE') {
+            blockerPiece = createBlockerSprite();
+            blockerPiece.position.set(3, 0, 5);
+            
+            scene.add(blockerPiece);
+        }
+    }
+
+    addBlockerPiece();
 
     document.addEventListener('DOMContentLoaded', (event) => {
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
@@ -44,6 +66,7 @@
             return;
         }
         moving = true;
+        const isBlockerMove = isBlockerSelected;
 
         try {
             const currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
@@ -57,7 +80,8 @@
                 body: JSON.stringify({
                     position: piece.userData.originalPosition,
                     direction: direction,
-                    player: playerColor
+                    player: playerColor,
+                    is_blocker_move: isBlockerMove
                 })
             });
 
@@ -65,17 +89,26 @@
 
             if (data.status == 'error') {
                 playSound("invalid");
-                const row = getRowToJiggle(piece);
-                jigglePieces(row, direction, () => {
-                    isJiggling = false;
-                });
+                if (data.message == 'invalid_move') {
+                    const row = getRowToJiggle(piece);
+                    jigglePieces(row, direction, () => {
+                        isJiggling = false;
+                    });
+                }
+                // else if (data.message == '')
+                
             } else {
                 updateGameState(data.game_state);
                 playSound("move");
 
+                if (isBlockerMove) {
+                    isBlockerSelected = false;
+                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                }
+
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);
-                } else {
+                } else if (!isBlockerMove) {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     const response = await fetch('/singleplayer/computer-move', {
                         method: 'POST',

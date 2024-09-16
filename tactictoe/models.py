@@ -11,9 +11,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(16)
+        self.setupBoard(11)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(16)
+           self.setupBoard(11)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -133,9 +133,12 @@ class Board:
         runs.append([(0,1,1),(1,1,1),(2,1,1)])
 
         return runs
+    
+    def validMove(self,x,y,z,dir,isBlocker):
+       return (isBlocker and self.pieces[x][y][z] == Piece.EMPTY) or self.valid(x,y,z,dir)
 
     # Return true if the specified location is empty, or is pieces can be pushed without pushing a piece out of the board"
-    def validMove(self,x,y,z,dir):
+    def valid(self,x,y,z,dir):
         if not x in range(3) or not y in range(3) or not z in range(3):
               return False
         if x == 1 and y == 1 and z == 1:
@@ -163,7 +166,7 @@ class Board:
           for y in range(3):
             for z in range(3):
               for dir in directions:
-                if self.validMove(x,y,z,dir):
+                if self.validMove(x,y,z,dir,False):
                   moves.append((x,y,z,dir))
         return moves
 
@@ -228,11 +231,13 @@ class Board:
     # Makes a move after checking if it is valid
     # If there is a piece in the specified location, it is pushed in the specified direction, along with the piece behind it if one exists 
     def move(self,x,y,z,dir,player,isBlocker):
-        if player == "RED":
+        if isBlocker:
+           player = Piece.BLOCKER
+        elif player == "RED":
             player = Piece.RED
         elif player == "BLUE":
             player = Piece.BLUE
-        if (isBlocker and not self.pieces[x][y][z] == Piece.EMPTY) or not self.validMove(x,y,z,dir):
+        if (isBlocker and not self.pieces[x][y][z] == Piece.EMPTY) or not self.validMove(x,y,z,dir,isBlocker):
              exc = f'\nAttempted to make move {(x,y,z,dir)}\nOn board:\n{self.getStatePretty()}'
              print(exc)
              raise ValueError(exc)
@@ -333,7 +338,7 @@ class Board:
         y = random.randint(0,2)
         z = random.randint(0,2)
         dir = random.choice(directions)
-        while not self.validMove(x,y,z,dir):
+        while not self.validMove(x,y,z,dir,False):
             x = random.randint(0,2)
             y = random.randint(0,2)
             z = random.randint(0,2)
@@ -347,7 +352,7 @@ class Board:
     # Loops through possible moves and returns if a move wins the game, else returns None
     def getWinInOne(self,player: Piece):
         for (x,y,z,dir) in self.getPossibleMoves():
-          self.move(x,y,z,dir,player)
+          self.move(x,y,z,dir,player,False)
           if self.hasWon(player):
             self.undo()
             return (x,y,z,dir)
@@ -397,7 +402,7 @@ class Board:
         
         for (x, y, z, dir) in self.getPossibleMoves():
             points = 0
-            self.move(x, y, z, dir, player)
+            self.move(x, y, z, dir, player, False)
             if self.getWinInOne(self.otherPlayer(player)) == None:
                 points += 100
             points += self.getTwoInARows(player) * 5
@@ -424,7 +429,7 @@ class Board:
         top_moves = potential_moves[:5]
         for move, _ in top_moves:
             x, y, z, dir = move
-            self.move(x, y, z, dir, player)
+            self.move(x, y, z, dir, player, False)
             if self.getWinInTwo(self.otherPlayer(player)) is None:
                 self.undo()
                 return move
@@ -443,11 +448,11 @@ class Board:
           return winningMove
         potential_moves = []
         for (x,y,z,dir) in self.getPossibleMoves():
-          self.move(x,y,z,dir,player)
+          self.move(x,y,z,dir,player,False)
           if self.getWinInOne(self.otherPlayer(player)) == None:
             winner = True
             for (x2,y2,z2,dir2) in self.getPossibleMoves():
-              self.move(x2,y2,z2,dir2,self.otherPlayer(player))
+              self.move(x2,y2,z2,dir2,self.otherPlayer(player),False)
               if self.getWinInOne(player) == None:
                 winner = False
               self.undo()
@@ -663,6 +668,9 @@ class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
         self.computerColor = Piece.RED if computerColor == 'RED' else Piece.BLUE
+        self.blockerMoveCount = 0
+        self.lastMoveBlocker = False
+        self.difficulty = difficulty
         match(difficulty):
             case 'easy':
                 self.computer = EasyAgent(self.computerColor)
@@ -673,16 +681,45 @@ class GamePlayer:
             case 'expert':
                 self.computer = ExpertAgent(self.computerColor)
 
+    def serialize(self):
+        return json.dumps({
+            'board_state': self.board.getState(),
+            'computer_color': self.computerColor.value,
+            'blocker_move_count': self.blockerMoveCount,
+            'last_move_blocker': self.lastMoveBlocker,
+            'difficulty': self.difficulty
+        })
+    
+    @classmethod
+    def deserialize(cls, serialized_data):
+        data = json.loads(serialized_data)
+        game_player = cls(data['difficulty'], data['computer_color'])
+        game_player.board.setState(data['board_state'])
+        game_player.blockerMoveCount = data['blocker_move_count']
+        game_player.lastMoveBlocker = data['last_move_blocker']
+        return game_player
+
+
     def isOver(self):
         return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.BLUE)
 
     def makeComputerMove(self):
         (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
-        self.board.move(x,y,z,dir,self.computerColor)
+        self.board.move(x,y,z,dir,self.computerColor,False)
 
-    def move(self,x,y,z,dir,player):
-        self.board.move(x,y,z,dir,player)
-    
+    def move(self,x,y,z,dir,player,isBlockerMove):
+        if isBlockerMove:
+           if self.lastMoveBlocker:
+              raise "last_move_blocker"
+           elif self.blockerMoveCount >= 2:
+              raise "max_blocker_moves"
+           self.lastMoveBlocker = True
+           self.blockerMoveCount += 1
+        else:
+           self.lastMoveBlocker = False
+        if not self.board.validMove(x,y,z,dir,isBlockerMove):
+           raise "invalid_move"
+        self.board.move(x,y,z,dir,player,isBlockerMove)
 
 from django.db import models
 from django.contrib.auth.models import User
