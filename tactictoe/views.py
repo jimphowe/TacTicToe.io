@@ -137,8 +137,8 @@ def handle_singleplayer_move(request):
 
     try:
         game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
-    except:
-        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
     
     game_state = game.board.getState()
 
@@ -158,8 +158,6 @@ def handle_singleplayer_move(request):
 @require_http_methods(["POST"])
 def get_computer_move(request):
     data = json.loads(request.body)
-    player = data.get('player')
-    difficulty = data.get('difficulty')
     
     game_player = request.session.get('game_player')
     if not game_player:

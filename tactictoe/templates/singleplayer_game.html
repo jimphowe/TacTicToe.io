@@ -95,16 +95,22 @@
                         isJiggling = false;
                     });
                 }
-                // else if (data.message == '')
-                
+                else if (data.message == 'last_move_blocker') {
+                    showToast("1 blocker per turn");
+                    isBlockerSelected = false;
+                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                }
+                else if (data.message == 'max_blocker_moves') {
+                    showToast("Max blockers placed")
+                    isBlockerSelected = false;
+                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                }
             } else {
                 updateGameState(data.game_state);
                 playSound("move");
 
-                if (isBlockerMove) {
-                    isBlockerSelected = false;
-                    blockerPiece.scale.set(0.7, 0.7, 0.7);
-                }
+                isBlockerSelected = false;
+                blockerPiece.scale.set(0.7, 0.7, 0.7);
 
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);

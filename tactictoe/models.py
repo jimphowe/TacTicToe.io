@@ -135,7 +135,7 @@ class Board:
         return runs
     
     def validMove(self,x,y,z,dir,isBlocker):
-       return (isBlocker and self.pieces[x][y][z] == Piece.EMPTY) or self.valid(x,y,z,dir)
+       return self.pieces[x][y][z] == Piece.EMPTY or (not isBlocker and self.valid(x,y,z,dir))
 
     # Return true if the specified location is empty, or is pieces can be pushed without pushing a piece out of the board"
     def valid(self,x,y,z,dir):
@@ -710,15 +710,15 @@ class GamePlayer:
     def move(self,x,y,z,dir,player,isBlockerMove):
         if isBlockerMove:
            if self.lastMoveBlocker:
-              raise "last_move_blocker"
+              raise Exception("last_move_blocker")
            elif self.blockerMoveCount >= 2:
-              raise "max_blocker_moves"
+              raise Exception("max_blocker_moves")
            self.lastMoveBlocker = True
            self.blockerMoveCount += 1
         else:
            self.lastMoveBlocker = False
         if not self.board.validMove(x,y,z,dir,isBlockerMove):
-           raise "invalid_move"
+           raise Exception("invalid_move")
         self.board.move(x,y,z,dir,player,isBlockerMove)
 
 from django.db import models
