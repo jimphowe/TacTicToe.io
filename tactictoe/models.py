@@ -770,6 +770,9 @@ class Game(models.Model):
     player_one_time_left = models.DurationField(default=timedelta(seconds=180))
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
+
+    blocker_move_count = models.IntegerField(default=0)
+    last_move_blocker = models.BooleanField(default=False)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

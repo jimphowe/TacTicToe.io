@@ -251,7 +251,7 @@ def handle_multiplayer_move(request):
         try:
             board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': e}, status=403)
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
 
         game_key = f"game:{game_code}"
         now = timezone.now()
