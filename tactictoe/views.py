@@ -235,6 +235,7 @@ def handle_multiplayer_move(request):
     game_code = data.get('game_code')
     position = data.get('position')
     direction = data.get('direction')
+    isBlockerMove = data.get('is_blocker_move')
 
     p1_color = Piece.RED
     p2_color = Piece.BLUE
@@ -243,13 +244,17 @@ def handle_multiplayer_move(request):
         game = get_object_or_404(Game, game_code=game_code)
 
         if request.user.id != game.turn.id:
-            return JsonResponse({'status': 'error', 'message': 'Not Your Turn'}, status=403)
+            return JsonResponse({'status': 'error', 'message': 'not_your_turn'}, status=403)
 
-        board = Board()
-        board.setState(json.loads(game.game_state))
         player = p1_color if request.user.id == game.player_one.id else p2_color
         try:
-            board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
+            game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
+            if isBlockerMove:
+                game.save()
+                return JsonResponse({
+                    'status': 'success',
+                    'game_state': game.game_state
+                })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
 
@@ -267,7 +272,8 @@ def handle_multiplayer_move(request):
             game.turn = game.player_one
         game.last_move_time = now
 
-        game.game_state = json.dumps(board.getState())
+        board = Board()
+        board.setState(json.loads(game.game_state))
 
         winner = None
         winner_color = None

@@ -694,7 +694,7 @@ class GamePlayer:
     def deserialize(cls, serialized_data):
         data = json.loads(serialized_data)
         game_player = cls(data['difficulty'], data['computer_color'])
-        game_player.board.setState(data['board_state'])
+        game_player.board.setState(json.loads(data['board_state']))
         game_player.blockerMoveCount = data['blocker_move_count']
         game_player.lastMoveBlocker = data['last_move_blocker']
         return game_player
@@ -802,6 +802,23 @@ class Game(models.Model):
         )
         game.save()
         return game
+    
+    def move(self, x, y, z, dir, player, isBlockerMove):
+        board = Board()
+        board.setState(json.loads(self.game_state))
+        if isBlockerMove:
+           if self.last_move_blocker:
+              raise Exception("last_move_blocker")
+           elif self.blocker_move_count >= 2:
+              raise Exception("max_blocker_moves")
+           self.last_move_blocker = True
+           self.blocker_move_count += 1
+        else:
+           self.last_move_blocker = False
+        if not board.validMove(x,y,z,dir,isBlockerMove):
+           raise Exception("invalid_move")
+        board.move(x,y,z,dir,player,isBlockerMove)
+        self.game_state = json.dumps(board.getState())
 
     def __str__(self):
         return f"{self.player_one.username} vs {self.player_two.username} on {self.created_at.strftime('%Y-%m-%d')}"

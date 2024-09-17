@@ -70,7 +70,7 @@
         border: none;
     }
 </style>
-
+{% load static %}
 <div class="top-bar">
     <div class="player-info">
         <div class="player-name-elo">
@@ -132,6 +132,23 @@
         });
     });
 
+    function createBlockerSprite() {
+        const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+        
+        sprite.scale.set(0.7, 0.7, 0.7);
+        
+        return sprite;
+    }
+
+    function addBlockerPiece() {
+        blockerPiece = createBlockerSprite();
+        blockerPiece.position.set(3, 0, 5);
+        
+        scene.add(blockerPiece);
+    }
+
     const myTimerElement = document.getElementById('myTimer');
     const opponentTimerElement = document.getElementById('opponentTimer');
 
@@ -181,6 +198,7 @@
             }
             else {
                 highlightMaterial = blueHighlightMaterial;
+                addBlockerPiece();
                 myTimeLeft = parseInt(data.player_two_time_left);
                 opponentTimeLeft = parseInt(data.player_one_time_left);
             }
@@ -293,6 +311,7 @@
     function handlePieceClick(piece) {
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         const direction = sideToDirection(currentDirectionMapping['BACK']);
+        const isBlockerMove = isBlockerSelected;
         fetch('/multiplayer/move', {
             method: 'POST',
             headers: {
@@ -302,22 +321,33 @@
             body: JSON.stringify({
                 game_code: '{{ game_code }}',
                 position: piece.userData.originalPosition,
-                direction: direction
+                direction: direction,
+                is_blocker_move: isBlockerMove
             })
         })
         .then(response => response.json())
         .then(data => {
             if (data.status == 'error') {
                 switch(data.message) {
-                    case 'Invalid Move':
+                    case 'invalid_move':
                         playSound("invalid");
                         const row = getRowToJiggle(piece);
                         jigglePieces(row, direction, () => {
                             isJiggling = false;
                         });
                         break;
-                    case 'Not Your Turn':
+                    case 'not_your_turn':
                         showToast("Not Your Turn");
+                        break;
+                    case 'last_move_blocker':
+                        showToast("1 blocker per turn");
+                        isBlockerSelected = false;
+                        blockerPiece.scale.set(0.7, 0.7, 0.7);
+                        break;
+                    case 'max_blocker_moves':
+                        showToast("Max blockers placed")
+                        isBlockerSelected = false;
+                        blockerPiece.scale.set(0.7, 0.7, 0.7);
                         break;
                     default:
                         showToast("Unexpected Error");
@@ -327,6 +357,10 @@
                 updateGameState(JSON.parse(data.game_state));
                 playSound("move");
                 syncGameTimers();
+                if (isBlockerMove) {
+                    isBlockerSelected = false;
+                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                }
             }
         })
         .catch(error => {
