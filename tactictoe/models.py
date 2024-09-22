@@ -694,11 +694,10 @@ class GamePlayer:
     def deserialize(cls, serialized_data):
         data = json.loads(serialized_data)
         game_player = cls(data['difficulty'], data['computer_color'])
-        game_player.board.setState(json.loads(data['board_state']))
+        game_player.board.setState(data['board_state'])
         game_player.blockerMoveCount = data['blocker_move_count']
         game_player.lastMoveBlocker = data['last_move_blocker']
         return game_player
-
 
     def isOver(self):
         return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.BLUE)

@@ -53,7 +53,7 @@ def local_game_view(request):
     template = loader.get_template('local_game.html')
     game = GamePlayer('easy', 'RED')
 
-    request.session['game_state'] = game.board.getState()
+    request.session['game_player'] = game.serialize()
 
     context = {
         'game_state': json.dumps(game.board.getState())
@@ -64,37 +64,36 @@ def local_game_view(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def handle_local_move(request):
-    # Parse the position from the POST data
     data = json.loads(request.body)
     position = data.get('position')
     direction = data.get('direction')
     player = data.get('player')
+    isBlockerMove = data.get('is_blocker_move')
     
-    game_state = request.session.get('game_state')
-    if not game_state:
+    game_player = request.session.get('game_player')
+    if not game_player:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
 
-    game = GamePlayer('easy', 'RED')
-    board = game.board
-    
-    board.setState(game_state)
+    game = GamePlayer.deserialize(game_player)
 
     try:
-        board.move(position.get('x'),position.get('y'),position.get('z'),direction,player)
-    except:
-        return JsonResponse({'status': 'error', 'message': 'Invalid Move'}, status=403)
-    new_game_state = board.getState()
-    request.session['game_state'] = new_game_state
+        game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
+    
+    game_state = game.board.getState()
+    
+    request.session['game_player'] = game.serialize()
     request.session.save()
     winner = None
     winning_run = None
-    if board.hasWon(Piece.RED):
+    if game.board.hasWon(Piece.RED):
         winner = 'RED'
-        winning_run = board.winningRun(Piece.RED)
-    elif board.hasWon(Piece.BLUE):
+        winning_run = game.board.winningRun(Piece.RED)
+    elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
-        winning_run = board.winningRun(Piece.BLUE)
-    return JsonResponse({'status': 'success', 'position': position, 'game_state': new_game_state, 'winner': winner, 'winning_run': winning_run})
+        winning_run = game.board.winningRun(Piece.BLUE)
+    return JsonResponse({'status': 'success', 'position': position, 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
 
 def singleplayer_setup_view(request):
     template = loader.get_template('singleplayer_setup.html')

@@ -30,19 +30,18 @@
     }
 
     function addBlockerPiece() {
-        if (playerColor === 'BLUE') {
-            blockerPiece = createBlockerSprite();
-            blockerPiece.position.set(3, 0, 5);
-            
-            scene.add(blockerPiece);
+        blockerPiece = createBlockerSprite();
+        blockerPiece.position.set(3, 0, 5);
+        scene.add(blockerPiece);
+        if (playerColor !== 'BLUE') {
+            blockerPiece.visible = false;
         }
     }
-
-    addBlockerPiece();
 
     document.addEventListener('DOMContentLoaded', (event) => {
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
+        addBlockerPiece();
     });
 
     function handleGameOver(winner, winningRun) {
@@ -57,7 +56,6 @@
         location.reload();
     });
     }
-
 
     let moving = false;
 

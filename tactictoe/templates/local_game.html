@@ -10,13 +10,37 @@
             z-index: 1000;
         }
 </style>
+{% load static %}
 <a href="/" class="btn btn-outline-light home-button">
     <i class="fas fa-home"></i> Home
 </a>
 <script>
+    function createBlockerSprite() {
+        const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+        
+        sprite.scale.set(0.7, 0.7, 0.7);
+        sprite.position.set(3, 0, 5);
+        sprite.visible = false;
+        
+        return sprite;
+    }
+
+    function addBlockerPiece() {
+        blockerPiece = createBlockerSprite();
+        blockerPiece.position.set(3, 0, 5);
+        blockerPiece.visible = false;
+        
+        scene.add(blockerPiece);
+    }
+
+    
+
     document.addEventListener('DOMContentLoaded', (event) => {
         localStorage.setItem('player', JSON.stringify('RED'));
         highlightMaterial = redHighlightMaterial;
+        addBlockerPiece();
     });
 
     function handleGameOver(winner, winningRun) {
@@ -27,10 +51,20 @@
     });
     }
 
+    function updateBlockerVisibility(player) {
+        if (player === 'BLUE') {
+            isBlockerSelected = false;
+            blockerPiece.visible = true;
+        } else {
+            blockerPiece.visible = false;
+        }
+    }
+
     function handlePieceClick(piece) {
         currentPlayer = JSON.parse(localStorage.getItem('player'));
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         const direction = sideToDirection(currentDirectionMapping['BACK']);
+        const isBlockerMove = isBlockerSelected;
         fetch('/local/move', {
             method: 'POST',
             headers: {
@@ -41,26 +75,42 @@
                 position: piece.userData.originalPosition,
                 direction: direction,
                 player: currentPlayer,
-                difficulty: '{{ difficulty|safe }}'
+                difficulty: '{{ difficulty|safe }}',
+                is_blocker_move: isBlockerMove
             })
         })
         .then(response => response.json())
         .then(data => {
             if (data.status == 'error') {
                 playSound("invalid");
-                const row = getRowToJiggle(piece);
-                jigglePieces(row, direction, () => {
-                    isJiggling = false;
-                });
+                if (data.message == 'invalid_move') {
+                    const row = getRowToJiggle(piece);
+                    jigglePieces(row, direction, () => {
+                        isJiggling = false;
+                    });
+                }
+                else if (data.message == 'last_move_blocker') {
+                    showToast("1 blocker per turn");
+                    isBlockerSelected = false;
+                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                }
+                else if (data.message == 'max_blocker_moves') {
+                    showToast("Max blockers placed")
+                    isBlockerSelected = false;
+                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                }
             }
             else {
                 playSound("move");
                 updateGameState(data.game_state);
-                const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
-                localStorage.setItem('player', JSON.stringify(nextPlayer));
-                highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
-                if (data.winner) {
-                    handleGameOver(data.winner, data.winning_run);
+                if (!isBlockerMove) {
+                    const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
+                    localStorage.setItem('player', JSON.stringify(nextPlayer));
+                    highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+                    updateBlockerVisibility(nextPlayer);
+                    if (data.winner) {
+                        handleGameOver(data.winner, data.winning_run);
+                    }
                 }
             }
         })
