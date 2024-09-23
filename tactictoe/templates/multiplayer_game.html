@@ -132,23 +132,6 @@
         });
     });
 
-    function createBlockerSprite() {
-        const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
-        const material = new THREE.SpriteMaterial({ map: texture });
-        const sprite = new THREE.Sprite(material);
-        
-        sprite.scale.set(0.7, 0.7, 0.7);
-        
-        return sprite;
-    }
-
-    function addBlockerPiece() {
-        blockerPiece = createBlockerSprite();
-        blockerPiece.position.set(3, 0, 5);
-        
-        scene.add(blockerPiece);
-    }
-
     const myTimerElement = document.getElementById('myTimer');
     const opponentTimerElement = document.getElementById('opponentTimer');
 
@@ -341,13 +324,11 @@
                         break;
                     case 'last_move_blocker':
                         showToast("1 blocker per turn");
-                        isBlockerSelected = false;
-                        blockerPiece.scale.set(0.7, 0.7, 0.7);
+                        unselectBlocker();
                         break;
                     case 'max_blocker_moves':
                         showToast("Max blockers placed")
-                        isBlockerSelected = false;
-                        blockerPiece.scale.set(0.7, 0.7, 0.7);
+                        unselectBlocker();
                         break;
                     default:
                         showToast("Unexpected Error");
@@ -358,8 +339,7 @@
                 playSound("move");
                 syncGameTimers();
                 if (isBlockerMove) {
-                    isBlockerSelected = false;
-                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                    unselectBlocker();
                 }
             }
         })

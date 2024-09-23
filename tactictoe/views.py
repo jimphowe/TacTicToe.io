@@ -137,6 +137,7 @@ def handle_singleplayer_move(request):
     try:
         game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
     except Exception as e:
+        print(e)
         return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
     
     game_state = game.board.getState()

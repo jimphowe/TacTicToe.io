@@ -19,29 +19,13 @@
 
     highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
 
-    function createBlockerSprite() {
-        const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
-        const material = new THREE.SpriteMaterial({ map: texture });
-        const sprite = new THREE.Sprite(material);
-        
-        sprite.scale.set(0.7, 0.7, 0.7);
-        
-        return sprite;
-    }
-
-    function addBlockerPiece() {
-        blockerPiece = createBlockerSprite();
-        blockerPiece.position.set(3, 0, 5);
-        scene.add(blockerPiece);
-        if (playerColor !== 'BLUE') {
-            blockerPiece.visible = false;
-        }
-    }
-
     document.addEventListener('DOMContentLoaded', (event) => {
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         addBlockerPiece();
+        if (playerColor !== 'BLUE') {
+            blockerGroup.visible = false;
+        }
     });
 
     function handleGameOver(winner, winningRun) {
@@ -86,6 +70,7 @@
             const data = await response.json();
 
             if (data.status == 'error') {
+                console.log(data.message);
                 playSound("invalid");
                 if (data.message == 'invalid_move') {
                     const row = getRowToJiggle(piece);
@@ -95,20 +80,17 @@
                 }
                 else if (data.message == 'last_move_blocker') {
                     showToast("1 blocker per turn");
-                    isBlockerSelected = false;
-                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                    unselectBlocker();
                 }
                 else if (data.message == 'max_blocker_moves') {
                     showToast("Max blockers placed")
-                    isBlockerSelected = false;
-                    blockerPiece.scale.set(0.7, 0.7, 0.7);
+                    unselectBlocker();
                 }
             } else {
                 updateGameState(data.game_state);
                 playSound("move");
 
-                isBlockerSelected = false;
-                blockerPiece.scale.set(0.7, 0.7, 0.7);
+                unselectBlocker();
 
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);

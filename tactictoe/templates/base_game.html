@@ -129,6 +129,47 @@
         }
         adjustCameraForScreenSize();
 
+        function createBoxSprite() {
+            const normalTexture = new THREE.TextureLoader().load("{% static 'images/blocker_background.png' %}");
+            const selectedTexture = new THREE.TextureLoader().load("{% static 'images/blocker_background_selected.png' %}");
+            const material = new THREE.SpriteMaterial({ map: normalTexture });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(1, 1, 1);
+            sprite.normalTexture = normalTexture;
+            sprite.selectedTexture = selectedTexture;
+            return sprite;
+        }
+
+        function createBlockerSprite() {
+            const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(0.7, 0.7, 0.7);
+            return sprite;
+        }
+
+        let blockerGroup;
+        function addBlockerPiece() {
+            const isMobile = window.innerWidth <= 768;
+
+            boxSprite = createBoxSprite();
+            blockerPiece = createBlockerSprite();
+            blockerGroup = new THREE.Group();
+            blockerGroup.add(boxSprite);
+            blockerGroup.add(blockerPiece);
+
+            if (isMobile) {
+                blockerPiece.position.set(5, -1, 0);
+                boxSprite.position.set(5, -1, 0);
+            }
+            else {
+                blockerPiece.position.set(2, 0, 5);
+                boxSprite.position.set(2, 0, 4.99);
+            }
+            
+            scene.add(blockerGroup);
+        }
+
         let touchStartX, touchStartY;
         let touchEndX, touchEndY;
         let isSwiping = false;
@@ -201,10 +242,20 @@
             const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
             
             raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-            const intersects = raycaster.intersectObjects(clickableSpheres);
-            
+            var intersects = raycaster.intersectObjects(clickableSpheres.concat(blockerPiece ? [blockerPiece] : []), true);
             if (intersects.length > 0) {
-                handlePieceClick(intersects[0].object);
+                var object = intersects[0].object;
+                if (object === blockerPiece) {
+                    isBlockerSelected = !isBlockerSelected;
+                    if (isBlockerSelected) {
+                        selectBlocker();
+                    }
+                    else {
+                        unselectBlocker();
+                    }
+                } else if (object.userData && object.userData.clickable) {
+                    handlePieceClick(object);
+                }
             }
         }
 
@@ -213,24 +264,22 @@
             const deltaY = touchEndY - touchStartY;
             
             if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                // Horizontal swipe
                 if (deltaX > 0) {
-                    onKeyDown({ key: 'ArrowRight' });
-                } else {
                     onKeyDown({ key: 'ArrowLeft' });
+                } else {
+                    onKeyDown({ key: 'ArrowRight' });
                 }
             } else {
-                // Vertical swipe
                 if (deltaY > 0) {
-                    onKeyDown({ key: 'ArrowDown' });
-                } else {
                     onKeyDown({ key: 'ArrowUp' });
+                } else {
+                    onKeyDown({ key: 'ArrowDown' });
                 }
             }
         }
 
         // Adding lights
-        var ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        var ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(ambientLight);
         var directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
         directionalLight.position.set(1, 1, 1);
@@ -629,7 +678,22 @@
         window.addEventListener('keydown', onKeyDown, false);
 
         let blockerPiece;
+        let boxSprite;
         let isBlockerSelected = false;
+
+        function unselectBlocker() {
+            isBlockerSelected = false;
+            blockerPiece.scale.set(0.7,0.7,0.7);
+            boxSprite.material.map = boxSprite.normalTexture;
+            boxSprite.material.needsUpdate = true;
+        }
+
+        function selectBlocker() {
+            isBlockerSelected = true;
+            blockerPiece.scale.set(0.85,0.85,0.85);
+            boxSprite.material.map = boxSprite.selectedTexture;
+            boxSprite.material.needsUpdate = true;
+        }
 
         function onMouseClick(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -641,7 +705,12 @@
                 var object = intersects[0].object;
                 if (object === blockerPiece) {
                     isBlockerSelected = !isBlockerSelected;
-                    blockerPiece.scale.set(isBlockerSelected ? 0.8 : 0.7, isBlockerSelected ? 0.8 : 0.7, 1);
+                    if (isBlockerSelected) {
+                        selectBlocker();
+                    }
+                    else {
+                        unselectBlocker();
+                    }
                 } else if (object.userData && object.userData.clickable) {
                     handlePieceClick(object);
                 }
@@ -886,6 +955,35 @@
                     return side
             }
         }
+
+        // ON SCREEN CONSOLE
+        // let onScreenConsole;
+        // function initOnScreenConsole() {
+        //     onScreenConsole = document.createElement('div');
+        //     onScreenConsole.style.position = 'fixed';
+        //     onScreenConsole.style.bottom = '0';
+        //     onScreenConsole.style.left = '0';
+        //     onScreenConsole.style.right = '0';
+        //     onScreenConsole.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        //     onScreenConsole.style.color = 'white';
+        //     onScreenConsole.style.padding = '10px';
+        //     onScreenConsole.style.fontFamily = 'monospace';
+        //     onScreenConsole.style.fontSize = '12px';
+        //     onScreenConsole.style.maxHeight = '30%';
+        //     onScreenConsole.style.overflowY = 'auto';
+        //     onScreenConsole.style.zIndex = '9999';
+        //     document.body.appendChild(onScreenConsole);
+
+        //     onScreenConsole.innerHTML = 'On-screen console initialized.<br>';
+        // }
+        // console.log = function() {
+        //     const msg = Array.from(arguments).join(' ');
+        //     if (onScreenConsole) {
+        //         onScreenConsole.innerHTML += msg + '<br>';
+        //         onScreenConsole.scrollTop = onScreenConsole.scrollHeight;
+        //     }
+        // }
+        // initOnScreenConsole();
     </script>
     {% block scripts %}{% endblock %}
 </body>
