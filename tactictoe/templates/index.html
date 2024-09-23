@@ -10,12 +10,39 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
         body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
             background-color: #121212;
             color: #fff;
         }
+        .main-content {
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .main-content .container {
+            width: 100%;
+        }
         .navbar {
             background-color: #222;
+        }
+        .navbar .container-fluid {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar .ms-auto {
+            margin-left: auto;
         }
         .btn-custom {
             background-color: #333;
@@ -36,6 +63,7 @@
         }
         .btn-group {
             max-width: 300px;
+            width: 100%;
             margin: 0 auto;
         }
         .dropdown-menu {
@@ -51,57 +79,51 @@
         }
     </style>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">TacTicToe</a>
-            {% if user.is_authenticated %}
             <div class="ms-auto">
-                <div class="dropdown">
-                    <button class="btn btn-custom dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                        {{ user.username }}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                        <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                        <li>
-                            <form action="{% url 'logout' %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="dropdown-item">Logout</button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
+                {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <button class="btn btn-custom dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ user.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                            <li><a class="dropdown-item" href="/profile">Profile</a></li>
+                            <li>
+                                <form action="{% url 'logout' %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="/login" class="btn btn-custom me-2">Login</a>
+                    <a href="/signup" class="btn btn-custom">Sign Up</a>
+                {% endif %}
             </div>
-            {% else %}
-            <div class="ms-auto">
-                <a href="/login" class="btn btn-custom me-2">Login</a>
-                <a href="/signup" class="btn btn-custom">Sign Up</a>
-            </div>
-            {% endif %}
         </div>
     </nav>
 
-    <div class="container my-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <canvas id="myCanvas" class="mb-4"></canvas>
-                <div class="d-grid gap-3 btn-group">
-                    <a href="/singleplayer/setup" class="btn btn-lg btn-custom rounded">
-                        <i class="fas fa-user me-2"></i>SinglePlayer
-                    </a>
-                    <a href="/multiplayer/setup" class="btn btn-lg btn-custom rounded">
-                        <i class="fas fa-users me-2"></i>MultiPlayer
-                    </a>
-                    <a href="/leaderboard" class="btn btn-lg btn-custom rounded">
-                        <i class="fas fa-trophy me-2"></i>Leaderboard
-                    </a>
-                    <a href="/player_guide" class="btn btn-lg btn-custom rounded">
-                        <i class="fas fa-book me-2"></i>How to Play
-                    </a>
-                </div>
-            </div>
+    <main class="main-content">
+        <div class="d-grid gap-3 btn-group">
+            <a href="/singleplayer/setup" class="btn btn-lg btn-custom rounded">
+                <i class="fas fa-user me-2"></i>SinglePlayer
+            </a>
+            <a href="/multiplayer/setup" class="btn btn-lg btn-custom rounded">
+                <i class="fas fa-users me-2"></i>MultiPlayer
+            </a>
+            </br>
+            <a href="/leaderboard" class="btn btn-lg btn-custom rounded">
+                <i class="fas fa-trophy me-2"></i>Leaderboard
+            </a>
+            <a href="/player_guide" class="btn btn-lg btn-custom rounded">
+                <i class="fas fa-book me-2"></i>How to Play
+            </a>
         </div>
-    </div>
+    </main>
 
     <footer class="footer mt-auto py-3">
         <div class="container text-center">
