@@ -779,7 +779,7 @@ class GamePlayer:
         if isBlockerMove:
            if self.lastMoveBlocker:
               raise Exception("last_move_blocker")
-           elif self.blockerMoveCount >= 2:
+           elif self.blockerMoveCount >= 3:
               raise Exception("max_blocker_moves")
            self.lastMoveBlocker = True
            self.blockerMoveCount += 1
