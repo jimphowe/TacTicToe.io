@@ -158,7 +158,7 @@ class Board:
         else:
               return False
         
-    # Returns a liist of all valid moves in the current board state
+    # Returns a list of all valid moves in the current board state
     def getPossibleMoves(self):
         directions = ['UP','DOWN','LEFT','RIGHT','FRONT','BACK']
         moves = []
@@ -166,7 +166,7 @@ class Board:
           for y in range(3):
             for z in range(3):
               for dir in directions:
-                if self.validMove(x,y,z,dir,False):
+                if self.valid(x,y,z,dir):
                   moves.append((x,y,z,dir))
         return moves
 
@@ -228,6 +228,76 @@ class Board:
               self.pieces[x][y+1][z] = self.pieces[x][y+2][z]
               self.pieces[x][y+2][z] = Piece.EMPTY
             
+    def moveAI(self,x,y,z,dir,player):
+        if player == "RED":
+            player = Piece.RED
+        elif player == "BLUE":
+            player = Piece.BLUE
+        if (self.pieces[x][y][z] == Piece.EMPTY):
+                self.pieces[x][y][z] = player
+                self.moveHistory.append((x,y,z,dir,0))
+        else:
+            if dir == 'UP':
+                if (self.pieces[x][y][z-1] == Piece.EMPTY):
+                    self.pieces[x][y][z-1] = self.pieces[x][y][z]
+                    self.pieces[x][y][z] = player
+                    self.moveHistory.append((x,y,z,dir,1))
+                else:
+                    self.pieces[x][y][z-2] = self.pieces[x][y][z-1]
+                    self.pieces[x][y][z-1] = self.pieces[x][y][z]
+                    self.pieces[x][y][z] = player
+                    self.moveHistory.append((x,y,z,dir,2))
+            elif dir == 'DOWN':
+                  if (self.pieces[x][y][z+1] == Piece.EMPTY):
+                      self.pieces[x][y][z+1] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,1))
+                  else:
+                      self.pieces[x][y][z+2] = self.pieces[x][y][z+1]
+                      self.pieces[x][y][z+1] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,2))
+            elif dir == 'LEFT':
+                  if (self.pieces[x-1][y][z] == Piece.EMPTY):
+                      self.pieces[x-1][y][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,1))
+                  else:
+                      self.pieces[x-2][y][z] = self.pieces[x-1][y][z]
+                      self.pieces[x-1][y][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,2))
+            elif dir == 'RIGHT':
+                  if (self.pieces[x+1][y][z] == Piece.EMPTY):
+                      self.pieces[x+1][y][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,1))
+                  else:
+                      self.pieces[x+2][y][z] = self.pieces[x+1][y][z]
+                      self.pieces[x+1][y][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,2))
+            elif dir == 'FRONT':
+                  if (self.pieces[x][y-1][z] == Piece.EMPTY):
+                      self.pieces[x][y-1][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,1))
+                  else:
+                      self.pieces[x][y-2][z] = self.pieces[x][y-1][z]
+                      self.pieces[x][y-1][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,2))
+            elif dir == 'BACK':
+                  if (self.pieces[x][y+1][z] == Piece.EMPTY):
+                      self.pieces[x][y+1][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,1))
+                  else:
+                      self.pieces[x][y+2][z] = self.pieces[x][y+1][z]
+                      self.pieces[x][y+1][z] = self.pieces[x][y][z]
+                      self.pieces[x][y][z] = player
+                      self.moveHistory.append((x,y,z,dir,2))
+
     # Makes a move after checking if it is valid
     # If there is a piece in the specified location, it is pushed in the specified direction, along with the piece behind it if one exists 
     def move(self,x,y,z,dir,player,isBlocker):
@@ -352,7 +422,7 @@ class Board:
     # Loops through possible moves and returns if a move wins the game, else returns None
     def getWinInOne(self,player: Piece):
         for (x,y,z,dir) in self.getPossibleMoves():
-          self.move(x,y,z,dir,player,False)
+          self.moveAI(x,y,z,dir,player)
           if self.hasWon(player):
             self.undo()
             return (x,y,z,dir)
@@ -364,7 +434,7 @@ class Board:
     def getDefendingMove(self,player: Piece):
         potential_moves = []
         for (x,y,z,dir) in self.getPossibleMoves():
-          self.move(x,y,z,dir,player)
+          self.moveAI(x,y,z,dir,player)
           if self.getWinInOne(self.otherPlayer(player)) == None:
             potential_moves.append((x,y,z,dir))
           self.undo()
@@ -374,10 +444,9 @@ class Board:
     
     def getGoodDefendingMove(self, player: Piece):
         potential_moves = []
-        
         for (x, y, z, dir) in self.getPossibleMoves():
             points = 0
-            self.move(x, y, z, dir, player)
+            self.moveAI(x, y, z, dir, player)
             if self.getWinInOne(self.otherPlayer(player)) == None:
                 points += 100
             points += self.getTwoInARows(player) * 4
@@ -402,7 +471,7 @@ class Board:
         
         for (x, y, z, dir) in self.getPossibleMoves():
             points = 0
-            self.move(x, y, z, dir, player, False)
+            self.moveAI(x, y, z, dir, player)
             if self.getWinInOne(self.otherPlayer(player)) == None:
                 points += 100
             points += self.getTwoInARows(player) * 5
@@ -429,7 +498,7 @@ class Board:
         top_moves = potential_moves[:5]
         for move, _ in top_moves:
             x, y, z, dir = move
-            self.move(x, y, z, dir, player, False)
+            self.moveAI(x,y,z,dir,player)
             if self.getWinInTwo(self.otherPlayer(player)) is None:
                 self.undo()
                 return move
@@ -448,11 +517,11 @@ class Board:
           return winningMove
         potential_moves = []
         for (x,y,z,dir) in self.getPossibleMoves():
-          self.move(x,y,z,dir,player,False)
+          self.moveAI(x,y,z,dir,player)
           if self.getWinInOne(self.otherPlayer(player)) == None:
             winner = True
             for (x2,y2,z2,dir2) in self.getPossibleMoves():
-              self.move(x2,y2,z2,dir2,self.otherPlayer(player),False)
+              self.moveAI(x2,y2,z2,dir2,self.otherPlayer(player))
               if self.getWinInOne(player) == None:
                 winner = False
               self.undo()
@@ -493,7 +562,7 @@ class Board:
         best_so_far = 4
         for (x, y, z, dir) in self.getPossibleMoves():
             if (x, y, z) in corners:
-                self.move(x,y,z,dir,player)
+                self.moveAI(x,y,z,dir,player)
                 non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
                                        if self.pieces[i][j][k] != Piece.EMPTY)
                 if (non_empty_neighbors > best_so_far) and (non_empty_neighbors % 2 == 0):
@@ -704,7 +773,7 @@ class GamePlayer:
 
     def makeComputerMove(self):
         (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
-        self.board.move(x,y,z,dir,self.computerColor,False)
+        self.board.moveAI(x,y,z,dir,self.computerColor)
 
     def move(self,x,y,z,dir,player,isBlockerMove):
         if isBlockerMove:
