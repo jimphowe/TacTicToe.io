@@ -16,6 +16,8 @@
 </a>
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {
+        const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
+        localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         localStorage.setItem('player', JSON.stringify('RED'));
         highlightMaterial = redHighlightMaterial;
         addBlockerPiece();
