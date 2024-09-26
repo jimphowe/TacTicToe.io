@@ -623,6 +623,8 @@ class Board:
         for run in self.winningRuns:
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return run
+        if player == Piece.BLUE and self.hasWon(player):
+            return [(x,y,z) for x in range(3) for y in range(3) for z in range(3) if self.pieces[x][y][z] == player]
         return None
     
     def getSimpleDefendingMove(self,player: Piece):
@@ -779,7 +781,7 @@ class GamePlayer:
         if isBlockerMove:
            if self.lastMoveBlocker:
               raise Exception("last_move_blocker")
-           elif self.blockerMoveCount >= 3:
+           elif self.blockerMoveCount >= 2:
               raise Exception("max_blocker_moves")
            self.lastMoveBlocker = True
            self.blockerMoveCount += 1

@@ -286,6 +286,7 @@ def handle_multiplayer_move(request):
             winner = game.player_two
             winner_color = p2_color.value
             winning_run = board.winningRun(p2_color)
+            import ipdb; ipdb.set_trace()
         winner_id = None if winner == None else winner.id
         winner_name = None if winner == None else winner.username
         if winner:
