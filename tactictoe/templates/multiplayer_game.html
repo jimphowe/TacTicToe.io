@@ -201,24 +201,27 @@
         const startTime = Date.now();
 
         function updateTimer() {
-            const now = Date.now();
-            const elapsedTime = Math.floor((now - startTime) / 1000);
+            const now = Date.now()+200;
+            const elapsedTime = (now - startTime) / 1000;
 
             if (currentTurnId == myId) {
                 const newTimeLeft = Math.max(0, myTimeLeft - elapsedTime);
-                myTimerElement.textContent = formatTime(newTimeLeft);
                 if (newTimeLeft <= 0) {
                     clearInterval(myInterval);
                     myTimeLeft = 0;
                     myTimerElement.textContent = '00:00';
+                    handleTimeOut();
+                } else {
+                    myTimerElement.textContent = formatTime(Math.ceil(newTimeLeft));
                 }
             } else {
                 const newTimeLeft = Math.max(0, opponentTimeLeft - elapsedTime);
-                opponentTimerElement.textContent = formatTime(newTimeLeft);
                 if (newTimeLeft <= 0) {
                     clearInterval(opponentInterval);
                     opponentTimeLeft = 0;
                     opponentTimerElement.textContent = '00:00';
+                } else {
+                    opponentTimerElement.textContent = formatTime(Math.ceil(newTimeLeft));
                 }
             }
         }
@@ -226,9 +229,9 @@
         updateTimer();
 
         if (currentTurnId == myId) {
-            myInterval = setInterval(updateTimer, 1000);
+            myInterval = setInterval(updateTimer, 100);
         } else {
-            opponentInterval = setInterval(updateTimer, 1000);
+            opponentInterval = setInterval(updateTimer, 100);
         }
     }
 
@@ -250,6 +253,7 @@
 
     function handleGameOver(winnerName, winnerColor, winningRun, eloChange) {
         stopTimers();
+        syncGameTimers();
         if (eloChange > 0) {
             playSound("win");
         }

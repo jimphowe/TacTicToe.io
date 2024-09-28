@@ -157,8 +157,6 @@ def handle_singleplayer_move(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def get_computer_move(request):
-    data = json.loads(request.body)
-    
     game_player = request.session.get('game_player')
     if not game_player:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)

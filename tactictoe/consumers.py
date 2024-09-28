@@ -3,7 +3,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        #import ipdb; ipdb.set_trace()
         self.game_code = self.scope['url_route']['kwargs']['game_code']
         self.game_group_name = f'game_{self.game_code}'
 
@@ -16,7 +15,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         # Leave game group
-        #import ipdb; ipdb.set_trace()
         await self.channel_layer.group_discard(
             self.game_group_name,
             self.channel_name

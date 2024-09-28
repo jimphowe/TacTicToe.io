@@ -6,7 +6,7 @@ import redis
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from tactictoe.models import EloRating, Game
+from tactictoe.models import EloRating, Game, Piece
 
 from django.db import transaction
 from django.conf import settings
@@ -44,6 +44,7 @@ class Command(BaseCommand):
 
         winner = game.player_two if game.turn == game.player_one else game.player_one
         loser = game.player_one if game.turn == game.player_one else game.player_two
+        winner_color = Piece.BLUE if game.turn == game.player_one else Piece.RED
         if loser == game.player_one:
             game.player_one_time_left = '0 second'
         else:
@@ -60,7 +61,9 @@ class Command(BaseCommand):
             {
                 'type': 'send_game_update',
                 'game_state': game.game_state,
-                'winner': winner.id,
+                'winner_id': winner.id,
+                'winner_color': winner_color.value,
+                'winning_run': None,
                 'winner_name': winner.username,
                 'elo_change': game.elo_change,
                 'turn': game.turn.id
