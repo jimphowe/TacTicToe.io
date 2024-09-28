@@ -210,7 +210,6 @@
                     clearInterval(myInterval);
                     myTimeLeft = 0;
                     myTimerElement.textContent = '00:00';
-                    handleTimeOut();
                 } else {
                     myTimerElement.textContent = formatTime(Math.ceil(newTimeLeft));
                 }
