@@ -7,6 +7,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 from tactictoe.models import EloRating, Game, Piece
+from tactictoe.elo_utils import update_elo_ratings
 
 from django.db import transaction
 from django.conf import settings
@@ -53,7 +54,7 @@ class Command(BaseCommand):
         game.completed = True
         game.completed_at = datetime.now()
         game.winner = winner
-        game.elo_change = self.update_elo_ratings(game.game_type, game.player_one, game.player_two, game.turn)
+        game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
@@ -71,41 +72,3 @@ class Command(BaseCommand):
         )
 
         game.save()
-
-    def update_elo_ratings(self, game_type, player_one, player_two, winner):
-        p1_profile = player_one.profile
-        p2_profile = player_two.profile
-
-        # Get or create EloRating objects for both players
-        p1_elo, _ = EloRating.objects.get_or_create(user_profile=p1_profile, game_type=game_type)
-        p2_elo, _ = EloRating.objects.get_or_create(user_profile=p2_profile, game_type=game_type)
-
-        average_elo = (p1_elo.rating + p2_elo.rating) / 2
-        k_factor = self.calculate_k_factor(average_elo)
-
-        # Calculate expected scores
-        expected_p1 = 1 / (1 + 10 ** ((p2_elo.rating - p1_elo.rating) / 400))
-        expected_p2 = 1 - expected_p1
-
-        # Calculate Elo changes
-        elo_change_p1 = round(k_factor * (1 - expected_p1) if winner == player_one else -k_factor * expected_p1, 0)
-        elo_change_p2 = round(k_factor * (1 - expected_p2) if winner == player_two else -k_factor * expected_p2, 0)
-
-        # Update ratings
-        with transaction.atomic():
-            p1_elo.rating += elo_change_p1
-            p2_elo.rating += elo_change_p2
-            p1_elo.save()
-            p2_elo.save()
-
-        return elo_change_p1 if winner == player_one else elo_change_p2
-    
-    def calculate_k_factor(self, average_elo):
-        if average_elo <= 1500:
-            return 40
-        elif average_elo <= 1800:
-            return 30
-        elif average_elo <= 2100:
-            return 20
-        else:
-            return 15
