@@ -464,31 +464,32 @@ class Board:
         return potential_moves[0][0]
     
     def getBestDefendingMove(self, player: Piece):
-        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-                  (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
-        middles = [(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)]
+        opponent = self.otherPlayer(player)
+        corners = frozenset((0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+                       (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2))
+        middles = frozenset((1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2))
         potential_moves = []
         
         for (x, y, z, dir) in self.getPossibleMoves():
             points = 0
             self.moveAI(x, y, z, dir, player)
-            if self.getWinInOne(self.otherPlayer(player)) == None:
+            if self.getWinInOne(opponent) == None:
                 points += 100
             points += self.getTwoInARows(player) * 5
             neighbors = self.neighbor_positions(x, y, z)
             non_empty_neighbors = sum(1 for i, j, k in neighbors
                                        if self.pieces[i][j][k] != Piece.EMPTY)
             for (i,j,k) in neighbors:
-               if self.pieces[i][j][k] == self.otherPlayer(player):
+               if self.pieces[i][j][k] == opponent:
                   points += 6
-            if self.pieces[x][y][z] == self.otherPlayer(player):
+            if self.pieces[x][y][z] == opponent:
                points += 15
             if non_empty_neighbors == 6:
                points += 10
-            if (x,y,z) in corners:
-               points += 2
             if (x,y,z) in middles:
-               points += 1
+               points += 2
+            if (x,y,z) in corners:
+               points -= 1
             potential_moves.append(((x, y, z, dir), points))
             self.undo()
 
@@ -532,50 +533,22 @@ class Board:
           return random.choice(potential_moves)
         return None
     
-    # Returns a random move which is either a corner or middle (not along the edge)
-    def getGoodStartMove(self,player: Piece):
-        # Define corners and middle positions
+    # Returns a random move which is either a middle or edge
+    def getGoodStartMove(self):
+        # Define corner positions
         corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
                   (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
-        middles = [(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)]
         
-        # Collect valid moves from corners and middles
+        # Collect valid moves from middles and edges
         potential_moves = []
         for (x, y, z, dir) in self.getPossibleMoves():
-            if (x, y, z) in corners or (x, y, z) in middles:
+            if not (x, y, z) in corners:
                 potential_moves.append((x, y, z, dir))
 
-        # Randomly select one of the valid moves if any
+        # Randomly select one of the valid moves
         if potential_moves:
             return random.choice(potential_moves)
         return None
-
-    # If there is a corner move which would 'lock' the piece in place (two pieces on every side), make it
-    # Otherwise, if there is a corner move which would leave 5 of 7 spaces of the 3 edges going through the corner, make it
-    # Otherwise, if there is a middle move which would 'lock' the piece in place (two pieces behind it, none directly next to it), make it
-    # Otherwise, return getGoodStartMove
-    def getBestStartMove(self,player: Piece):
-        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-               (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
-        
-        best_moves = []
-        best_so_far = 4
-        for (x, y, z, dir) in self.getPossibleMoves():
-            if (x, y, z) in corners:
-                self.moveAI(x,y,z,dir,player)
-                non_empty_neighbors = sum(1 for i, j, k in self.neighbor_positions(x, y, z)
-                                       if self.pieces[i][j][k] != Piece.EMPTY)
-                if (non_empty_neighbors > best_so_far) and (non_empty_neighbors % 2 == 0):
-                    best_so_far = non_empty_neighbors
-                    best_moves = [(x, y, z, dir)]
-                elif non_empty_neighbors == best_so_far:
-                    best_moves.append((x, y, z, dir))
-                self.undo()
-
-        # Randomly select one of the best moves if any
-        if best_moves:
-            return random.choice(best_moves)
-        return self.getGoodStartMove(player)
 
     def neighbor_positions(self, x, y, z):
         neighbors = []
@@ -636,7 +609,6 @@ class Board:
               if self.pieces[i][j][k] == self.otherPlayer(player):
                 return((x,y,z,dir))
        
-    
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
     def __init__(self,player):
@@ -660,7 +632,7 @@ class MediumAgent:
 
     def getMove(self, board: Board, move_num):
         if move_num == 0:
-           return board.getGoodStartMove(self.player)
+           return board.getGoodStartMove()
         winningMove = board.getWinInOne(self.player)
         if winningMove:
           return winningMove
@@ -677,7 +649,7 @@ class HardAgent:
 
     def getMove(self, board: Board, move_num):  
         if move_num == 0:
-           return board.getGoodStartMove(self.player)
+           return board.getGoodStartMove()
         elif move_num == 1:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
@@ -781,7 +753,7 @@ class GamePlayer:
         if isBlockerMove:
            if self.lastMoveBlocker:
               raise Exception("last_move_blocker")
-           elif self.blockerMoveCount >= 2:
+           if self.blockerMoveCount >= 4:
               raise Exception("max_blocker_moves")
            self.lastMoveBlocker = True
            self.blockerMoveCount += 1
@@ -879,7 +851,7 @@ class Game(models.Model):
         if isBlockerMove:
            if self.last_move_blocker:
               raise Exception("last_move_blocker")
-           elif self.blocker_move_count >= 2:
+           if self.blocker_move_count >= 4:
               raise Exception("max_blocker_moves")
            self.last_move_blocker = True
            self.blocker_move_count += 1
