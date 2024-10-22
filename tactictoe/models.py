@@ -465,9 +465,9 @@ class Board:
     
     def getBestDefendingMove(self, player: Piece):
         opponent = self.otherPlayer(player)
-        corners = frozenset((0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-                       (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2))
-        middles = frozenset((1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2))
+        corners = frozenset([(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+                       (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)])
+        middles = frozenset([(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)])
         potential_moves = []
         
         for (x, y, z, dir) in self.getPossibleMoves():
