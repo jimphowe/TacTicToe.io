@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tactictoe.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, get_computer_move, handle_multiplayer_move, handle_resignation, leaderboard_view
+from tactictoe.views import home, signup, profile_view, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_multiplayer_move, handle_resignation, leaderboard_view
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
@@ -31,7 +31,8 @@ urlpatterns = [
     path('singleplayer/setup/', singleplayer_setup_view, name='singleplayer_setup_view'),
     path('singleplayer/play/', singleplayer_game_view, name='singleplayer_view'),    
     path('singleplayer/player-move', handle_singleplayer_move, name='handle_singleplayer_move'),
-    path('singleplayer/computer-move', get_computer_move, name='get_computer_move'),
+    path('singleplayer/computer-blocker-move', handle_computer_blocker_move, name='handle_computer_blocker_move'),
+    path('singleplayer/computer-move', handle_computer_move, name='get_computer_move'),
     path('local/play/', local_game_view, name='local_game_view'),
     path('local/move', handle_local_move, name='handle_local_move'),
     path('leaderboard/', leaderboard_view, name='leaderboard'),

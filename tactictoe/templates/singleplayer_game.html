@@ -95,26 +95,35 @@
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);
                 } else if (!isBlockerMove) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    const response = await fetch('/singleplayer/computer-move', {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const blockerResponse = await fetch('/singleplayer/computer-blocker-move', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            difficulty: '{{ difficulty|safe }}',
-                            player: playerColor
-                        })
+                        }
                     });
 
-                    const data = await response.json();
-
-                    updateGameState(data.game_state);
+                    const blockerData = await blockerResponse.json();
+                    updateGameState(blockerData.game_state);
                     playSound("move");
 
-                    if (data.winner) {
-                        handleGameOver(data.winner, data.winning_run);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const moveResponse = await fetch('/singleplayer/computer-move', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    });
+
+                    const moveData = await moveResponse.json();
+
+                    updateGameState(moveData.game_state);
+                    playSound("move");
+
+                    if (moveData.winner) {
+                        handleGameOver(moveData.winner, moveData.winning_run);
                     }
                 }
             }

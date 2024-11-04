@@ -153,17 +153,36 @@ def handle_singleplayer_move(request):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
     return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def handle_computer_blocker_move(request):
+    game_player = request.session.get('game_player')
+    if not game_player:
+        return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
+    
+    game = GamePlayer.deserialize(game_player)
+    game.makeComputerMove(isBlockerMove=True)
+    
+    game_state = game.board.getState()
+    request.session['game_player'] = game.serialize()
+    request.session.save()
+    
+    return JsonResponse({
+        'status': 'success',
+        'game_state': game_state
+    })
     
 @csrf_exempt
 @require_http_methods(["POST"])
-def get_computer_move(request):
+def handle_computer_move(request):
     game_player = request.session.get('game_player')
     if not game_player:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
 
     game = GamePlayer.deserialize(game_player)
 
-    game.makeComputerMove()
+    game.makeComputerMove(isBlockerMove=False)
     game_state = game.board.getState()
     request.session['game_player'] = game.serialize()
     request.session.save()
@@ -302,7 +321,7 @@ def handle_multiplayer_move(request):
                 'winner_color': winner_color,
                 'winning_run': winning_run,
                 'winner_name': winner_name,
-                'elo_change': game.elo_change,
+                'elo_change': game.elo_change, 
                 'turn': game.turn.id
             }
         )

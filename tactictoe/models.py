@@ -169,6 +169,22 @@ class Board:
                 if self.valid(x,y,z,dir):
                   moves.append((x,y,z,dir))
         return moves
+    
+    def spotToValidDir(self,x,y,z):
+        directions = ['UP','DOWN','LEFT','RIGHT','FRONT','BACK']
+        for dir in directions:
+           if self.valid(x,y,z,dir):
+              return (x,y,z,dir)
+    
+    def getPossibleBlockerMoves(self):
+        moves = []
+        for x in range(3):
+          for y in range(3):
+            for z in range(3):
+              if self.pieces[x][y][z] == Piece.EMPTY:
+                if not (x,y,z) == (1,1,1):
+                  moves.append((x,y,z))
+        return [self.spotToValidDir(x,y,z) for (x,y,z) in moves]
 
     def undo(self):
       if self.moveHistory == []:
@@ -608,6 +624,10 @@ class Board:
             for (i,j,k) in neighbors:
               if self.pieces[i][j][k] == self.otherPlayer(player):
                 return((x,y,z,dir))
+              
+    def getRandomBlockerMove(self):
+        possibleMoves = self.getPossibleBlockerMoves()
+        return random.choice(possibleMoves)
        
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
@@ -623,6 +643,9 @@ class EasyAgent:
         if simpleDefendingMove:
             return simpleDefendingMove
         return board.getRandomMove(self.player)
+    
+    def getBlockerMove(self, board: Board):
+       return board.getRandomBlockerMove()
         
 # Returns a winning move if one exists, otherwise a move preventing the opponent from 
 # winning if one exists, otherwise a random move
@@ -642,6 +665,9 @@ class MediumAgent:
             return defendingMove
           else:
             return board.getRandomMove(self.player)
+          
+    def getBlockerMove(self, board: Board):
+       return board.getRandomBlockerMove()
           
 class HardAgent:
     def __init__(self,player):
@@ -674,6 +700,9 @@ class HardAgent:
                 return defendingMove
               else:
                 return board.getRandomMove(self.player)
+        
+    def getBlockerMove(self, board: Board):
+       return board.getRandomBlockerMove()
 
 class ExpertAgent:
     def __init__(self,player):
@@ -706,6 +735,9 @@ class ExpertAgent:
                 return defendingMove
               else:
                 return board.getRandomMove(self.player)
+              
+    def getBlockerMove(self, board: Board):
+       return board.getRandomBlockerMove()
     
 class GamePlayer:
     def __init__(self, difficulty, computerColor):
@@ -745,9 +777,13 @@ class GamePlayer:
     def isOver(self):
         return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.BLUE)
 
-    def makeComputerMove(self):
-        (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
-        self.board.moveAI(x,y,z,dir,self.computerColor)
+    def makeComputerMove(self,isBlockerMove):
+        if isBlockerMove:
+           (x,y,z,dir) = self.computer.getBlockerMove(self.board)
+           self.board.move(x,y,z,dir,Piece.BLOCKER,True)
+        else:
+           (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
+           self.board.moveAI(x,y,z,dir,self.computerColor)
 
     def move(self,x,y,z,dir,player,isBlockerMove):
         if isBlockerMove:
