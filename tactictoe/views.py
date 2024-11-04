@@ -162,16 +162,28 @@ def handle_computer_blocker_move(request):
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
     
     game = GamePlayer.deserialize(game_player)
-    game.makeComputerMove(isBlockerMove=True)
+
+    if game.computerColor != Piece.BLUE or game.blockerMoveCount >= 4:
+        return JsonResponse({
+            'status': 'forbidden',
+            'message': 'Computer cannot place blocker'
+        })
     
-    game_state = game.board.getState()
-    request.session['game_player'] = game.serialize()
-    request.session.save()
-    
-    return JsonResponse({
-        'status': 'success',
-        'game_state': game_state
-    })
+    try:
+        game.makeComputerMove(isBlockerMove=True)
+        game_state = game.board.getState()
+        request.session['game_player'] = game.serialize()
+        request.session.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'game_state': game_state
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=403)
     
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -195,7 +207,6 @@ def handle_computer_move(request):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
     return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
-
 
 from django.shortcuts import render, get_object_or_404
 from .models import Game

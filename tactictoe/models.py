@@ -780,6 +780,7 @@ class GamePlayer:
     def makeComputerMove(self,isBlockerMove):
         if isBlockerMove:
            (x,y,z,dir) = self.computer.getBlockerMove(self.board)
+           self.blockerMoveCount += 1
            self.board.move(x,y,z,dir,Piece.BLOCKER,True)
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
