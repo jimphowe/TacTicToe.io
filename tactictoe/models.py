@@ -645,7 +645,7 @@ class EasyAgent:
         return board.getRandomMove(self.player)
     
     def getBlockerMove(self, board: Board):
-       return board.getRandomBlockerMove()
+       return None
         
 # Returns a winning move if one exists, otherwise a move preventing the opponent from 
 # winning if one exists, otherwise a random move
@@ -779,9 +779,11 @@ class GamePlayer:
 
     def makeComputerMove(self,isBlockerMove):
         if isBlockerMove:
-           (x,y,z,dir) = self.computer.getBlockerMove(self.board)
-           self.blockerMoveCount += 1
-           self.board.move(x,y,z,dir,Piece.BLOCKER,True)
+           move = self.computer.getBlockerMove(self.board)
+           if move:
+            (x,y,z,dir) = move
+            self.blockerMoveCount += 1
+            self.board.move(x,y,z,dir,Piece.BLOCKER,True)
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
            self.board.moveAI(x,y,z,dir,self.computerColor)
