@@ -95,20 +95,22 @@
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);
                 } else if (!isBlockerMove) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const blockerResponse = await fetch('/singleplayer/computer-blocker-move', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    });
+                    if (playerColor == "RED") {
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        const blockerResponse = await fetch('/singleplayer/computer-blocker-move', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
 
-                    const blockerData = await blockerResponse.json();
-                    updateGameState(blockerData.game_state);
-                    playSound("move");
+                        const blockerData = await blockerResponse.json();
+                        updateGameState(blockerData.game_state);
+                        playSound("move");
+                    }
 
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                     const moveResponse = await fetch('/singleplayer/computer-move', {
                         method: 'POST',
                         headers: {

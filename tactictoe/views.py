@@ -106,7 +106,7 @@ def singleplayer_game_view(request):
     computerColor = 'RED' if firstPlayer == 'computer' else 'BLUE'
     game = GamePlayer(difficulty, computerColor)
     if firstPlayer == 'computer':
-        game.makeComputerMove()
+        game.makeComputerMove(False)
 
     request.session['game_player'] = game.serialize()
     
@@ -246,55 +246,53 @@ from django.conf import settings
 redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0) # TODO handle setup better?
 
 @csrf_exempt
-@require_http_methods(["POST"]) 
+@require_http_methods(["POST"])
 def handle_multiplayer_move(request):
     data = json.loads(request.body)
     game_code = data.get('game_code')
     position = data.get('position')
     direction = data.get('direction')
     isBlockerMove = data.get('is_blocker_move')
-
+    
     p1_color = Piece.RED
     p2_color = Piece.BLUE
-
+    
     with transaction.atomic():
         game = get_object_or_404(Game, game_code=game_code)
-
+        
         if request.user.id != game.turn.id:
             return JsonResponse({'status': 'error', 'message': 'not_your_turn'}, status=403)
-
+        
         player = p1_color if request.user.id == game.player_one.id else p2_color
+        
         try:
-            game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
-            if isBlockerMove:
-                game.save()
-                return JsonResponse({
-                    'status': 'success',
-                    'game_state': game.game_state
-                })
+            game.move(position.get('x'), position.get('y'), position.get('z'), direction, player, isBlockerMove)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
 
         game_key = f"game:{game_code}"
         now = timezone.now()
-        if game.turn == game.player_one:
-            game.player_one_time_left -= now - game.last_move_time
-            redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
-            redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
-            game.turn = game.player_two
-        else:
-            game.player_two_time_left -= now - game.last_move_time
-            redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
-            redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
-            game.turn = game.player_one
-        game.last_move_time = now
+        
+        if not isBlockerMove:
+            if game.turn == game.player_one:
+                game.player_one_time_left -= now - game.last_move_time
+                redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+                redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+                game.turn = game.player_two
+            else:
+                game.player_two_time_left -= now - game.last_move_time
+                redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+                redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+                game.turn = game.player_one
+            game.last_move_time = now
 
         board = Board()
         board.setState(json.loads(game.game_state))
-
+        
         winner = None
         winner_color = None
         winning_run = None
+        
         if board.hasWon(p1_color):
             winner = game.player_one
             winner_color = p1_color.value
@@ -303,8 +301,10 @@ def handle_multiplayer_move(request):
             winner = game.player_two
             winner_color = p2_color.value
             winning_run = board.winningRun(p2_color)
+            
         winner_id = None if winner == None else winner.id
         winner_name = None if winner == None else winner.username
+        
         if winner:
             game.completed = True
             game.completed_at = datetime.now()
@@ -321,13 +321,15 @@ def handle_multiplayer_move(request):
                 'winner_color': winner_color,
                 'winning_run': winning_run,
                 'winner_name': winner_name,
-                'elo_change': game.elo_change, 
-                'turn': game.turn.id
+                'elo_change': game.elo_change,
+                'turn': game.turn.id,
+                'is_blocker_move': isBlockerMove,
+                'move_player_id': request.user.id
             }
         )
         
         game.save()
-
+        
         return JsonResponse({
             'status': 'success',
             'game_state': game.game_state
