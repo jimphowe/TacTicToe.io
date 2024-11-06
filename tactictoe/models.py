@@ -694,7 +694,7 @@ class HardAgent:
 
     def getMove(self, board: Board, move_num):  
         if move_num == 0:
-           return board.getGoodStartMove()
+           return board.getBestDefendingMove(self.player)
         elif move_num == 1:
           winInTwo = board.getWinInTwo(self.player)
           if winInTwo:
