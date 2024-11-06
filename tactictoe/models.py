@@ -628,6 +628,25 @@ class Board:
     def getRandomBlockerMove(self):
         possibleMoves = self.getPossibleBlockerMoves()
         return random.choice(possibleMoves)
+    
+    def getBetterBlockerMove(self, player: Piece):
+      defending_move = self.getDefendingMove(player)
+      if defending_move:
+          return self.getRandomBlockerMove()
+          
+      for blocker_move in self.getPossibleBlockerMoves():
+          (x,y,z,dir) = blocker_move
+          self.moveAI(x, y, z, dir, Piece.BLOCKER)
+          
+          defending_move = self.getDefendingMove(player)
+          
+          if defending_move:
+              self.undo()
+              return blocker_move
+          self.undo()
+
+      return self.getRandomBlockerMove()
+               
        
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
@@ -702,7 +721,7 @@ class HardAgent:
                 return board.getRandomMove(self.player)
         
     def getBlockerMove(self, board: Board):
-       return board.getRandomBlockerMove()
+       return board.getBetterBlockerMove(self.player)
 
 class ExpertAgent:
     def __init__(self,player):
@@ -737,7 +756,7 @@ class ExpertAgent:
                 return board.getRandomMove(self.player)
               
     def getBlockerMove(self, board: Board):
-       return board.getRandomBlockerMove()
+       return board.getBetterBlockerMove(self.player)
     
 class GamePlayer:
     def __init__(self, difficulty, computerColor):
