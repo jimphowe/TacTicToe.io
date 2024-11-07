@@ -163,7 +163,7 @@ def handle_computer_blocker_move(request):
     
     game = GamePlayer.deserialize(game_player)
 
-    if game.computerColor != Piece.BLUE or game.blockerMoveCount >= 4:
+    if game.computerColor != Piece.BLUE or game.blockerMoveCount >= 4 or json.loads(game_player).get('difficulty') == 'easy':
         return JsonResponse({
             'status': 'forbidden',
             'message': 'Computer cannot place blocker'
