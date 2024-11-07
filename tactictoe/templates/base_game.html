@@ -93,9 +93,9 @@
 
         function adjustCameraPosition() {
             const aspect = window.innerWidth / window.innerHeight;
-            if (aspect < 1) {  // Portrait orientation
+            if (aspect < 1) {
                 camera.position.set(10, 6, 4);
-            } else {  // Landscape orientation
+            } else {
                 camera.position.set(7, 4, 3);
             }
             camera.lookAt(scene.position);
@@ -887,6 +887,15 @@
                 } else {
                     cubeGroup.quaternion.copy(endQuaternion);
                     totalRotation.multiply(endQuaternion);
+
+                    if (lastIntersected) {
+                        const fakeEvent = new MouseEvent('mousemove', {
+                            clientX: (mouse.x + 1) * window.innerWidth / 2,
+                            clientY: (-mouse.y + 1) * window.innerHeight / 2
+                        });
+                        onMouseMove(fakeEvent);
+                    }
+
                     if (callback) callback();
                 }
 
