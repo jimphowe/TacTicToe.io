@@ -639,8 +639,9 @@ class Board:
           self.moveAI(x, y, z, dir, Piece.BLOCKER)
           
           defending_move = self.getDefendingMove(player)
+          winning_move = self.getWinInOne(player)
           
-          if defending_move:
+          if defending_move or winning_move:
               self.undo()
               return blocker_move
           self.undo()
