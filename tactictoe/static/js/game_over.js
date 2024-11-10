@@ -3,8 +3,6 @@ function createGameOverUI(winner, eloChange, buttonAction) {
         return;
     }
     window.removeEventListener('click', onMouseClick);
-    window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseout', onMouseOut);
 
     let message = 'Game Over! ' + winner + ' wins!';
 
