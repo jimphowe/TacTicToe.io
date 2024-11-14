@@ -6,7 +6,8 @@ class Piece(Enum):
     BLACK = "BLACK"
     RED = "RED"
     BLUE = "BLUE"
-    BLOCKER = "BLOCKER"
+    BLUE_BLOCKER = "BLUE_BLOCKER"
+    RED_BLOCKER = "RED_BLOCKER"
 
 class Board:
     def __init__(self):
@@ -318,7 +319,10 @@ class Board:
     # If there is a piece in the specified location, it is pushed in the specified direction, along with the piece behind it if one exists 
     def move(self,x,y,z,dir,player,isBlocker):
         if isBlocker:
-           player = Piece.BLOCKER
+           if player == "RED":
+              player = Piece.RED_BLOCKER
+           else:
+              player = Piece.BLUE_BLOCKER
         elif player == "RED":
             player = Piece.RED
         elif player == "BLUE":
@@ -636,7 +640,7 @@ class Board:
           
       for blocker_move in self.getPossibleBlockerMoves():
           (x,y,z,dir) = blocker_move
-          self.moveAI(x, y, z, dir, Piece.BLOCKER)
+          self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
           
           defending_move = self.getDefendingMove(player)
           winning_move = self.getWinInOne(player)
@@ -807,9 +811,10 @@ class GamePlayer:
             (x,y,z,dir) = move
             if self.computer_color == Piece.RED:
                self.red_blocker_count += 1
+               self.board.move(x,y,z,dir,Piece.RED_BLOCKER,True)
             else:
                self.blue_blocker_count += 1
-            self.board.move(x,y,z,dir,Piece.BLOCKER,True)
+               self.board.move(x,y,z,dir,Piece.BLUE_BLOCKER,True)
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color))
            self.board.moveAI(x,y,z,dir,self.computer_color)

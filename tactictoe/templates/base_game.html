@@ -367,8 +367,9 @@
             emissive: 0x333300
         })
 
+        const redDotMaterial = new THREE.MeshPhongMaterial({ color: 0xdf7053 });
         const blueDotMaterial = new THREE.MeshPhongMaterial({ color: 0x5b95e1 });
-        function createDotsSphere() {
+        function createDotsSphere(color) {
             const sphere = new THREE.Group();
             const blackSphere = new THREE.Mesh(sphereGeometry, blackMaterial);
             sphere.add(blackSphere);
@@ -380,7 +381,13 @@
 
             dotPositions.forEach(pos => {
                 const dotGeometry = new THREE.SphereGeometry(0.15, 32, 32);
-                const dot = new THREE.Mesh(dotGeometry, blueDotMaterial);
+                let dot;
+                if (color == "blue") {
+                    dot = new THREE.Mesh(dotGeometry, blueDotMaterial);
+                }
+                else {
+                    dot = new THREE.Mesh(dotGeometry, redDotMaterial);
+                }
                 
                 // Position the dot on the surface of the sphere
                 const radius = 0.7;  // Matches the radius of the main sphere
@@ -928,10 +935,15 @@
                             case "RED":
                                 sphere = new THREE.Mesh(sphereGeometry, redMaterial);
                                 break;
-                            case "BLOCKER":
+                            case "BLUE_BLOCKER":
                                 sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                                const dotsSphere = createDotsSphere();
-                                sphere.add(dotsSphere);
+                                const blueDotsSphere = createDotsSphere('blue');
+                                sphere.add(blueDotsSphere);
+                                break;
+                            case "RED_BLOCKER":
+                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                                const redDotsSphere = createDotsSphere('red');
+                                sphere.add(redDotsSphere);
                                 break;
                             default:
                                 sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
