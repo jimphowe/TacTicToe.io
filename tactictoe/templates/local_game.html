@@ -33,12 +33,8 @@
     }
 
     function updateBlockerVisibility(player) {
-        if (player === 'BLUE') {
-            isBlockerSelected = false;
-            blockerGroup.visible = true;
-        } else {
-            blockerGroup.visible = false;
-        }
+        isBlockerSelected = false;
+        blockerGroup.visible = true;
     }
 
     function handlePieceClick(piece) {
@@ -87,7 +83,7 @@
                     const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
                     localStorage.setItem('player', JSON.stringify(nextPlayer));
                     highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
-                    updateBlockerVisibility(nextPlayer);
+                    updateBlockerVisibility();
                     if (data.winner) {
                         handleGameOver(data.winner, data.winning_run);
                     }

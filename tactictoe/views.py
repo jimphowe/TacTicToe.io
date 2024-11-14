@@ -163,7 +163,7 @@ def handle_computer_blocker_move(request):
     
     game = GamePlayer.deserialize(game_player)
 
-    if game.computerColor != Piece.BLUE or game.blockerMoveCount >= 4 or json.loads(game_player).get('difficulty') == 'easy':
+    if (game.computer_color == Piece.BLUE and game.blue_blocker_count >= 3) or (game.computer_color == Piece.RED and game.red_blocker_count >= 3) or json.loads(game_player).get('difficulty') == 'easy':
         return JsonResponse({
             'status': 'forbidden',
             'message': 'Computer cannot place blocker'
@@ -612,4 +612,5 @@ def get_timers(request, game_code):
         'player_one_id': game.player_one.id,
         'current_turn_id': game.turn.id,
         'is_game_over': game.completed,
+        'move_count': game.move_count,
     })

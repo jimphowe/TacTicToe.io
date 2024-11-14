@@ -83,9 +83,7 @@
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         addBlockerPiece();
-        if (playerColor !== 'BLUE') {
-            blockerGroup.visible = false;
-        }
+        blockerGroup.visible = false;
     });
 
     function handleGameOver(winner, winningRun) {
@@ -130,7 +128,6 @@
             const data = await response.json();
 
             if (data.status == 'error') {
-                console.log(data.message);
                 playSound("invalid");
                 if (data.message == 'invalid_move') {
                     const row = getRowToJiggle(piece);
@@ -193,6 +190,8 @@
                     if (moveData.winner) {
                         handleGameOver(moveData.winner, moveData.winning_run);
                     }
+
+                    blockerGroup.visible = true;
                 }
             }
         } catch (error) {

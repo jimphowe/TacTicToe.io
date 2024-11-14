@@ -176,6 +176,9 @@
             }
             if (myId == data.player_one_id) {
                 highlightMaterial = redHighlightMaterial;
+                if (data.move_count > 0) {
+                    addBlockerPiece();
+                }
                 myTimeLeft = parseInt(data.player_one_time_left);
                 opponentTimeLeft = parseInt(data.player_two_time_left);
             }

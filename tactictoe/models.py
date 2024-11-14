@@ -762,26 +762,28 @@ class ExpertAgent:
 class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
-        self.computerColor = Piece.RED if computerColor == 'RED' else Piece.BLUE
-        self.blockerMoveCount = 0
-        self.lastMoveBlocker = False
+        self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
+        self.red_blocker_count = 0
+        self.blue_blocker_count = 0
+        self.last_move_blocker = False
         self.difficulty = difficulty
         match(difficulty):
             case 'easy':
-                self.computer = EasyAgent(self.computerColor)
+                self.computer = EasyAgent(self.computer_color)
             case 'medium':
-                self.computer = MediumAgent(self.computerColor)
+                self.computer = MediumAgent(self.computer_color)
             case 'hard':
-                self.computer = HardAgent(self.computerColor)
+                self.computer = HardAgent(self.computer_color)
             case 'expert':
-                self.computer = ExpertAgent(self.computerColor)
+                self.computer = ExpertAgent(self.computer_color)
 
     def serialize(self):
         return json.dumps({
             'board_state': self.board.getState(),
-            'computer_color': self.computerColor.value,
-            'blocker_move_count': self.blockerMoveCount,
-            'last_move_blocker': self.lastMoveBlocker,
+            'computer_color': self.computer_color.value,
+            'red_blocker_count': self.red_blocker_count,
+            'blue_blocker_count': self.blue_blocker_count,
+            'last_move_blocker': self.last_move_blocker,
             'difficulty': self.difficulty
         })
     
@@ -790,8 +792,9 @@ class GamePlayer:
         data = json.loads(serialized_data)
         game_player = cls(data['difficulty'], data['computer_color'])
         game_player.board.setState(data['board_state'])
-        game_player.blockerMoveCount = data['blocker_move_count']
-        game_player.lastMoveBlocker = data['last_move_blocker']
+        game_player.red_blocker_count = data['red_blocker_count']
+        game_player.blue_blocker_count = data['blue_blocker_count']
+        game_player.last_move_blocker = data['last_move_blocker']
         return game_player
 
     def isOver(self):
@@ -802,22 +805,30 @@ class GamePlayer:
            move = self.computer.getBlockerMove(self.board)
            if move:
             (x,y,z,dir) = move
-            self.blockerMoveCount += 1
+            if self.computer_color == Piece.RED:
+               self.red_blocker_count += 1
+            else:
+               self.blue_blocker_count += 1
             self.board.move(x,y,z,dir,Piece.BLOCKER,True)
         else:
-           (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computerColor))
-           self.board.moveAI(x,y,z,dir,self.computerColor)
+           (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color))
+           self.board.moveAI(x,y,z,dir,self.computer_color)
 
     def move(self,x,y,z,dir,player,isBlockerMove):
         if isBlockerMove:
-           if self.lastMoveBlocker:
+           if self.last_move_blocker:
               raise Exception("last_move_blocker")
-           if self.blockerMoveCount >= 4:
-              raise Exception("max_blocker_moves")
-           self.lastMoveBlocker = True
-           self.blockerMoveCount += 1
+           if player == Piece.RED.value:
+              if self.red_blocker_count >= 3:
+                 raise Exception("max_blocker_moves")
+              self.red_blocker_count += 1
+           else:
+              if self.blue_blocker_count >= 3:
+                 raise Exception("max_blocker_moves")
+              self.blue_blocker_count += 1
+           self.last_move_blocker = True
         else:
-           self.lastMoveBlocker = False
+           self.last_move_blocker = False
         if not self.board.validMove(x,y,z,dir,isBlockerMove):
            raise Exception("invalid_move")
         self.board.move(x,y,z,dir,player,isBlockerMove)
@@ -864,6 +875,7 @@ class Game(models.Model):
     # Game state and status
     game_state = models.JSONField(default=list)
     turn = models.ForeignKey(User, on_delete=models.CASCADE)
+    move_count = models.IntegerField(default=0)
     completed = models.BooleanField(default=False)
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
     elo_change = models.IntegerField(default=None, null=True)
@@ -872,7 +884,8 @@ class Game(models.Model):
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
 
-    blocker_move_count = models.IntegerField(default=0)
+    red_blocker_count = models.IntegerField(default=0)
+    blue_blocker_count = models.IntegerField(default=0)
     last_move_blocker = models.BooleanField(default=False)
     
     # Timestamps
@@ -910,15 +923,23 @@ class Game(models.Model):
         if isBlockerMove:
            if self.last_move_blocker:
               raise Exception("last_move_blocker")
-           if self.blocker_move_count >= 4:
-              raise Exception("max_blocker_moves")
+           if player == Piece.RED:
+                if self.move_count < 1:
+                    raise Exception("red_first_move")
+                if self.red_blocker_count >= 3:
+                    raise Exception("max_blocker_moves")
+                self.red_blocker_count += 1
+           else:
+                if self.blue_blocker_count >= 3:
+                    raise Exception("max_blocker_moves")
+                self.blue_blocker_count += 1
            self.last_move_blocker = True
-           self.blocker_move_count += 1
         else:
            self.last_move_blocker = False
         if not board.validMove(x,y,z,dir,isBlockerMove):
            raise Exception("invalid_move")
         board.move(x,y,z,dir,player,isBlockerMove)
+        self.move_count += 1
         self.game_state = json.dumps(board.getState())
 
     def __str__(self):
