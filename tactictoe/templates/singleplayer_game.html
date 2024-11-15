@@ -83,7 +83,12 @@
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         addBlockerPiece();
-        blockerGroup.visible = false;
+        if (playerColor === 'RED') {
+            blockerGroup.visible = false;
+        }
+        else {
+            blockerGroup.visible = true;
+        }
     });
 
     function handleGameOver(winner, winningRun) {

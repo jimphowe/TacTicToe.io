@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(11)
+        self.setupBoard(9)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(11)
+           self.setupBoard(9)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -811,10 +811,10 @@ class GamePlayer:
             (x,y,z,dir) = move
             if self.computer_color == Piece.RED:
                self.red_blocker_count += 1
-               self.board.move(x,y,z,dir,Piece.RED_BLOCKER,True)
+               self.board.move(x,y,z,dir,"RED",True)
             else:
                self.blue_blocker_count += 1
-               self.board.move(x,y,z,dir,Piece.BLUE_BLOCKER,True)
+               self.board.move(x,y,z,dir,"BLUE",True)
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color))
            self.board.moveAI(x,y,z,dir,self.computer_color)

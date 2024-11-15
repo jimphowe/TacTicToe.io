@@ -141,7 +141,7 @@
         }
 
         function createBlockerSprite() {
-            const texture = new THREE.TextureLoader().load("{% static 'images/blocker.png' %}");
+            const texture = new THREE.TextureLoader().load("{% static 'images/blue_blocker.png' %}");
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
             sprite.scale.set(0.7, 0.7, 0.7);
