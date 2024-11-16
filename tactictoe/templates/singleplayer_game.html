@@ -82,11 +82,12 @@
         
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
-        addBlockerPiece();
         if (playerColor === 'RED') {
+            addBlockerPiece("red");
             blockerGroup.visible = false;
         }
         else {
+            addBlockerPiece("blue");
             blockerGroup.visible = true;
         }
     });

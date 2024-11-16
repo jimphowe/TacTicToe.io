@@ -140,8 +140,14 @@
             return sprite;
         }
 
-        function createBlockerSprite() {
-            const texture = new THREE.TextureLoader().load("{% static 'images/blue_blocker.png' %}");
+        function createBlockerSprite(color) {
+            let texture;
+            if (color == "red") {
+                texture = new THREE.TextureLoader().load("{% static 'images/red_blocker.png' %}");
+            }
+            else {
+                texture = new THREE.TextureLoader().load("{% static 'images/blue_blocker.png' %}");
+            }
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
             sprite.scale.set(0.7, 0.7, 0.7);
@@ -149,11 +155,18 @@
         }
 
         let blockerGroup;
-        function addBlockerPiece() {
+        function addBlockerPiece(color) {
+            if (blockerGroup) {
+                scene.remove(blockerGroup);
+                blockerGroup = null;
+                blockerPiece = null;
+                boxSprite = null;
+            }
+
             const isMobile = window.innerWidth <= 768;
 
             boxSprite = createBoxSprite();
-            blockerPiece = createBlockerSprite();
+            blockerPiece = createBlockerSprite(color);
             blockerGroup = new THREE.Group();
             blockerGroup.add(boxSprite);
             blockerGroup.add(blockerPiece);
@@ -161,13 +174,14 @@
             if (isMobile) {
                 blockerPiece.position.set(4.5, -1, 1.5);
                 boxSprite.position.set(4.5, -1, 1.49);
-            }
-            else {
+            } else {
                 blockerPiece.position.set(2, 0, 5);
                 boxSprite.position.set(2, 0, 4.99);
             }
             
             scene.add(blockerGroup);
+            
+            isBlockerSelected = false;
         }
 
         let touchStartX, touchStartY;

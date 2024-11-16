@@ -20,7 +20,7 @@
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         localStorage.setItem('player', JSON.stringify('RED'));
         highlightMaterial = redHighlightMaterial;
-        addBlockerPiece();
+        addBlockerPiece("red");
         blockerGroup.visible = false;
     });
 
@@ -30,11 +30,6 @@
         createGameOverUI(winner, null, function() {
         location.reload();
     });
-    }
-
-    function updateBlockerVisibility(player) {
-        isBlockerSelected = false;
-        blockerGroup.visible = true;
     }
 
     function handlePieceClick(piece) {
@@ -81,9 +76,10 @@
                 unselectBlocker();
                 if (!isBlockerMove) {
                     const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
+                    addBlockerPiece(nextPlayer.toLowerCase());
+                    blockerGroup.visible = true
                     localStorage.setItem('player', JSON.stringify(nextPlayer));
                     highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
-                    updateBlockerVisibility();
                     if (data.winner) {
                         handleGameOver(data.winner, data.winning_run);
                     }
