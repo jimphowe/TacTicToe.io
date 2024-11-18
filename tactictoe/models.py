@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(9)
+        self.setupBoard(11)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(9)
+           self.setupBoard(11)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -319,13 +319,13 @@ class Board:
     # If there is a piece in the specified location, it is pushed in the specified direction, along with the piece behind it if one exists 
     def move(self,x,y,z,dir,player,isBlocker):
         if isBlocker:
-           if player == "RED":
+           if player == Piece.RED:
               player = Piece.RED_BLOCKER
            else:
               player = Piece.BLUE_BLOCKER
-        elif player == "RED":
+        elif player == Piece.RED:
             player = Piece.RED
-        elif player == "BLUE":
+        elif player == Piece.BLUE:
             player = Piece.BLUE
         if (isBlocker and not self.pieces[x][y][z] == Piece.EMPTY) or not self.validMove(x,y,z,dir,isBlocker):
              exc = f'\nAttempted to make move {(x,y,z,dir)}\nOn board:\n{self.getStatePretty()}'
@@ -811,10 +811,10 @@ class GamePlayer:
             (x,y,z,dir) = move
             if self.computer_color == Piece.RED:
                self.red_blocker_count += 1
-               self.board.move(x,y,z,dir,"RED",True)
+               self.board.move(x,y,z,dir,Piece.RED,True)
             else:
                self.blue_blocker_count += 1
-               self.board.move(x,y,z,dir,"BLUE",True)
+               self.board.move(x,y,z,dir,Piece.BLUE,True)
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color))
            self.board.moveAI(x,y,z,dir,self.computer_color)
@@ -823,7 +823,7 @@ class GamePlayer:
         if isBlockerMove:
            if self.last_move_blocker:
               raise Exception("last_move_blocker")
-           if player == Piece.RED.value:
+           if player == Piece.RED:
               if self.red_blocker_count >= 3:
                  raise Exception("max_blocker_moves")
               self.red_blocker_count += 1

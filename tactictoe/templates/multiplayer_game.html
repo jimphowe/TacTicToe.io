@@ -116,6 +116,7 @@
     document.addEventListener('DOMContentLoaded', (event) => {
         reapplyRotations();
         checkGameState();
+        updateBlockerWidget(gameState);
     });
 
     window.addEventListener('beforeunload', function (e) {

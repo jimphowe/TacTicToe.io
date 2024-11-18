@@ -61,6 +61,16 @@ def local_game_view(request):
 
     return HttpResponse(template.render(context, request))
 
+def parsePiece(piece):
+    if piece == "RED":
+        return Piece.RED
+    if piece == "BLUE":
+        return Piece.BLUE
+    if piece == "RED_BLOCKER":
+        return Piece.RED_BLOCKER
+    if piece == "BLUE_BLOCKER":
+        return Piece.BLUE_BLOCKER
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def handle_local_move(request):
@@ -77,7 +87,7 @@ def handle_local_move(request):
     game = GamePlayer.deserialize(game_player)
 
     try:
-        game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
+        game.move(position.get('x'),position.get('y'),position.get('z'),direction,parsePiece(player),isBlockerMove)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
     
@@ -135,7 +145,7 @@ def handle_singleplayer_move(request):
     game = GamePlayer.deserialize(game_player)
 
     try:
-        game.move(position.get('x'),position.get('y'),position.get('z'),direction,player,isBlockerMove)
+        game.move(position.get('x'),position.get('y'),position.get('z'),direction,parsePiece(player),isBlockerMove)
     except Exception as e:
         print(e)
         return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
@@ -152,7 +162,12 @@ def handle_singleplayer_move(request):
     elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
-    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
+    return JsonResponse({
+        'status': 'success',
+        'game_state': game_state,
+        'winner': winner,
+        'winning_run': winning_run
+    })
 
 @csrf_exempt
 @require_http_methods(["POST"])

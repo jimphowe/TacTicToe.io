@@ -203,6 +203,7 @@
         } catch (error) {
             const indicatorRoot = document.getElementById('computer-move-indicator-root');
             ReactDOM.render(null, indicatorRoot);
+            console.log(error);
             showToast("Unexpected Error");
         } finally {
             moving = false;
