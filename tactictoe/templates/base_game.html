@@ -73,6 +73,7 @@
         let isJiggling = false;
         let ROTATION_DURATION = 600;
         const isMobile = window.innerWidth <= 768;
+        let playerColor = '{{ player_color }}';
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -130,59 +131,6 @@
             camera.updateProjectionMatrix();
         }
         adjustCameraForScreenSize();
-
-        function createBoxSprite() {
-            const normalTexture = new THREE.TextureLoader().load("{% static 'images/blocker_background.png' %}");
-            const selectedTexture = new THREE.TextureLoader().load("{% static 'images/blocker_background_selected.png' %}");
-            const material = new THREE.SpriteMaterial({ map: normalTexture });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(1, 1, 1);
-            sprite.normalTexture = normalTexture;
-            sprite.selectedTexture = selectedTexture;
-            return sprite;
-        }
-
-        function createBlockerSprite(color) {
-            let texture;
-            if (color == "red") {
-                texture = new THREE.TextureLoader().load("{% static 'images/red_blocker.png' %}");
-            }
-            else {
-                texture = new THREE.TextureLoader().load("{% static 'images/blue_blocker.png' %}");
-            }
-            const material = new THREE.SpriteMaterial({ map: texture });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(0.7, 0.7, 0.7);
-            return sprite;
-        }
-
-        let blockerGroup;
-        function addBlockerPiece(color) {
-            if (blockerGroup) {
-                scene.remove(blockerGroup);
-                blockerGroup = null;
-                blockerPiece = null;
-                boxSprite = null;
-            }
-
-            boxSprite = createBoxSprite();
-            blockerPiece = createBlockerSprite(color);
-            blockerGroup = new THREE.Group();
-            blockerGroup.add(boxSprite);
-            blockerGroup.add(blockerPiece);
-
-            if (isMobile) {
-                blockerPiece.position.set(4.5, -1, 1.5);
-                boxSprite.position.set(4.5, -1, 1.49);
-            } else {
-                blockerPiece.position.set(2, 0, 5);
-                boxSprite.position.set(2, 0, 4.99);
-            }
-            
-            scene.add(blockerGroup);
-            
-            isBlockerSelected = false;
-        }
 
         let touchStartX, touchStartY;
         let touchEndX, touchEndY;
@@ -255,18 +203,10 @@
             const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
             
             raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-            var intersects = raycaster.intersectObjects(clickableSpheres.concat(blockerPiece ? [blockerPiece] : []), true);
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
             if (intersects.length > 0) {
                 var object = intersects[0].object;
-                if (object === blockerPiece) {
-                    isBlockerSelected = !isBlockerSelected;
-                    if (isBlockerSelected) {
-                        selectBlocker();
-                    }
-                    else {
-                        unselectBlocker();
-                    }
-                } else if (object.userData && object.userData.clickable) {
+                if (object.userData && object.userData.clickable) {
                     handlePieceClick(object);
                 }
             }
@@ -461,7 +401,7 @@
                 top: 120px;
                 left: 20px;
                 width: 300px;
-                pointer-events: none;
+                pointer-events: auto;
             `;
             
             const styleElement = document.createElement('style');
@@ -508,6 +448,36 @@
                 .blocker-icon.filled {
                     opacity: 1;
                 }
+                .blocker-select {
+                    margin-top: 16px;
+                    text-align: center;
+                    cursor: pointer;
+                }
+                .blocker-background {
+                    width: 80px;
+                    height: 80px;
+                    margin: 0 auto;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                    position: relative;
+                }
+                .blocker-background.selected {
+                    background-image: url("{% static 'images/blocker_background_selected.png' %}");
+                }
+                .blocker-background:not(.selected) {
+                    background-image: url("{% static 'images/blocker_background.png' %}");
+                }
+                .blocker-piece {
+                    width: 60px;
+                    height: 60px;
+                    position: absolute;
+                    top: 10px;          
+                    left: 10px;         
+                    pointer-events: none;
+                }
             `;
             container.appendChild(styleElement);
 
@@ -543,11 +513,32 @@
                             </svg>
                         </div>
                     </div>
+                    <div id="blocker-select" class="blocker-select">
+                        <div class="blocker-background">
+                            <img src="{% static 'images/red_blocker.png' %}" class="blocker-piece" id="red-blocker">
+                            <img src="{% static 'images/blue_blocker.png' %}" class="blocker-piece" id="blue-blocker">
+                        </div>
+                    </div>
                 </div>
             `;
 
             document.body.appendChild(container);
             blockerWidget = container;
+
+            // Add click handler for the blocker select
+            const blockerSelect = document.querySelector('.blocker-select');
+            const blockerBackground = blockerSelect.querySelector('.blocker-background');
+
+            blockerSelect.addEventListener('click', () => {
+                isBlockerSelected = !isBlockerSelected;
+                if (isBlockerSelected) {
+                    blockerBackground.classList.add('selected');
+                } else {
+                    blockerBackground.classList.remove('selected');
+                }
+            });
+
+            updateBlockerWidget(gameState);
         }
 
         // Initialize Raycaster
@@ -583,13 +574,13 @@
         //--------------END-----Scene Setup-----END-----------------------------------------
 
         // To be overriden by single, multiplayer
-        function handleGameOver(winner, elo_change) {
-            console.error("handleGameOver function not implemented.");
-        }
+        // function handleGameOver(winner, elo_change) {
+        //     console.error("handleGameOver function not implemented.");
+        // }
 
-        function handlePieceClick(piece) {
-            console.error("handlePieceClick function not implemented.");
-        }
+        // function handlePieceClick(piece) {
+        //     console.error("handlePieceClick function not implemented.");
+        // }
 
         function playSound(soundType) {
             const sound = document.getElementById(soundType + "Sound");
@@ -793,41 +784,17 @@
 
         window.addEventListener('keydown', onKeyDown, false);
 
-        let blockerPiece;
-        let boxSprite;
         let isBlockerSelected = false;
-
-        function unselectBlocker() {
-            isBlockerSelected = false;
-            blockerPiece.scale.set(0.7,0.7,0.7);
-            boxSprite.material.map = boxSprite.normalTexture;
-            boxSprite.material.needsUpdate = true;
-        }
-
-        function selectBlocker() {
-            isBlockerSelected = true;
-            blockerPiece.scale.set(0.85,0.85,0.85);
-            boxSprite.material.map = boxSprite.selectedTexture;
-            boxSprite.material.needsUpdate = true;
-        }
 
         function onMouseClick(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
-            var intersects = raycaster.intersectObjects(clickableSpheres.concat(blockerPiece ? [blockerPiece] : []), true);
+            var intersects = raycaster.intersectObjects(clickableSpheres, true);
             if (intersects.length > 0) {
                 var object = intersects[0].object;
-                if (object === blockerPiece) {
-                    isBlockerSelected = !isBlockerSelected;
-                    if (isBlockerSelected) {
-                        selectBlocker();
-                    }
-                    else {
-                        unselectBlocker();
-                    }
-                } else if (object.userData && object.userData.clickable) {
+                if (object.userData && object.userData.clickable) {
                     handlePieceClick(object);
                 }
             }
@@ -1055,6 +1022,13 @@
                     icon.classList.remove('filled');
                 }
             });
+
+            // Show the correct blocker piece based on player color
+            const redBlocker = document.getElementById('red-blocker');
+            const blueBlocker = document.getElementById('blue-blocker');
+            
+            redBlocker.style.display = playerColor === 'RED' ? 'block' : 'none';
+            blueBlocker.style.display = playerColor === 'BLUE' ? 'block' : 'none';
         }
 
         function updateGameState(gameState) {
@@ -1108,6 +1082,8 @@
             if (blockerWidget) {
                 updateBlockerWidget(gameState);
             }
+
+            highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
 
             // Re-render the scene
             reapplyRotations();

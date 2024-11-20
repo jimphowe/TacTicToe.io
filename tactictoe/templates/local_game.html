@@ -20,8 +20,6 @@
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         localStorage.setItem('player', JSON.stringify('RED'));
         highlightMaterial = redHighlightMaterial;
-        addBlockerPiece("red");
-        blockerGroup.visible = false;
     });
 
     function handleGameOver(winner, winningRun) {
@@ -63,27 +61,27 @@
                 }
                 else if (data.message == 'last_move_blocker') {
                     showToast("1 blocker per turn");
-                    unselectBlocker();
                 }
                 else if (data.message == 'max_blocker_moves') {
                     showToast("Max blockers placed")
-                    unselectBlocker();
                 }
             }
             else {
-                playSound("move");
-                updateGameState(data.game_state);
-                unselectBlocker();
-                if (!isBlockerMove) {
+                if (isBlockerMove) {
+                    isBlockerSelected = false;
+                    const blockerBackground = document.querySelector('.blocker-background');
+                    blockerBackground.classList.remove('selected');
+                }
+                else {
                     const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
-                    addBlockerPiece(nextPlayer.toLowerCase());
-                    blockerGroup.visible = true
+                    playerColor = nextPlayer;
                     localStorage.setItem('player', JSON.stringify(nextPlayer));
-                    highlightMaterial = (nextPlayer === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
                     if (data.winner) {
                         handleGameOver(data.winner, data.winning_run);
                     }
                 }
+                playSound("move");
+                updateGameState(data.game_state);
             }
         })
         .catch(error => {

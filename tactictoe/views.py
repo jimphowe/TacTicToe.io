@@ -56,7 +56,8 @@ def local_game_view(request):
     request.session['game_player'] = game.serialize()
 
     context = {
-        'game_state': json.dumps(game.board.getState())
+        'game_state': json.dumps(game.board.getState()),
+        'player_color': 'RED'
     }
 
     return HttpResponse(template.render(context, request))
@@ -228,6 +229,7 @@ from .models import Game
 
 def multiplayer_game_view(request, game_code):
     game = get_object_or_404(Game, game_code=game_code)
+    player_color = 'RED' if request.user == game.player_one else 'BLUE'
 
     rapid_elo_subquery = EloRating.objects.filter(
         user_profile=OuterRef('pk'),
@@ -249,11 +251,11 @@ def multiplayer_game_view(request, game_code):
         opponent_profile = player_one_profile
 
     context = {
+        'player_color': player_color,
         'game_code': game.game_code,
         'game_state': game.game_state,
         'player_one': game.player_one,
         'player_two': game.player_two,
-        'is_player_one': game.player_one == request.user,
         'is_player_turn': game.turn == request.user,
         'player_name': player_profile.user.username,
         'player_elo': player_profile.rapid_elo,

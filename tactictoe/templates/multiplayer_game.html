@@ -177,15 +177,11 @@
             }
             if (myId == data.player_one_id) {
                 highlightMaterial = redHighlightMaterial;
-                if (data.move_count > 0) {
-                    addBlockerPiece("red");
-                }
                 myTimeLeft = parseInt(data.player_one_time_left);
                 opponentTimeLeft = parseInt(data.player_two_time_left);
             }
             else {
                 highlightMaterial = blueHighlightMaterial;
-                addBlockerPiece("blue");
                 myTimeLeft = parseInt(data.player_two_time_left);
                 opponentTimeLeft = parseInt(data.player_one_time_left);
             }
@@ -333,11 +329,9 @@
                         break;
                     case 'last_move_blocker':
                         showToast("1 blocker per turn");
-                        unselectBlocker();
                         break;
                     case 'max_blocker_moves':
                         showToast("Max blockers placed")
-                        unselectBlocker();
                         break;
                     default:
                         showToast("Unexpected Error");
@@ -345,8 +339,11 @@
             }
             else {
                 syncGameTimers();
+
                 if (isBlockerMove) {
-                    unselectBlocker();
+                    isBlockerSelected = false;
+                    const blockerBackground = document.querySelector('.blocker-background');
+                    blockerBackground.classList.remove('selected');
                 }
             }
         })
