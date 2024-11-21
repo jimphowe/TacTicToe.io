@@ -309,7 +309,6 @@
             opacity: 0.0,
             depthWrite: false
         });
-        let highlightMaterial;
         var redHighlightMaterial = new THREE.MeshPhongMaterial({
             color: 0xdf7053,
             emissive: 0x333300
@@ -318,7 +317,7 @@
             color: 0x5b95e1,
             emissive: 0x333300
         })
-
+        let highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
         const redDotMaterial = new THREE.MeshPhongMaterial({ color: 0xdf7053 });
         const blueDotMaterial = new THREE.MeshPhongMaterial({ color: 0x5b95e1 });
         function createDotsSphere(color) {
@@ -478,7 +477,32 @@
                     left: 10px;         
                     pointer-events: none;
                 }
-            `;
+                .blocker-x-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 80px;
+                    height: 80px;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    z-index: 1000;
+                }
+
+                .blocker-x-overlay.show {
+                    opacity: 1;
+                }
+
+                .blocker-x-overlay svg {
+                    width: 100%;
+                    height: 100%;
+                }
+
+                .blocker-x-overlay line {
+                    stroke: #ef4444;
+                    stroke-width: 6;
+                    stroke-linecap: round;
+                }`;
             container.appendChild(styleElement);
 
             container.innerHTML += `
@@ -517,6 +541,12 @@
                         <div class="blocker-background">
                             <img src="{% static 'images/red_blocker.png' %}" class="blocker-piece" id="red-blocker">
                             <img src="{% static 'images/blue_blocker.png' %}" class="blocker-piece" id="blue-blocker">
+                            <div class="blocker-x-overlay" id="blockerXOverlay">
+                                <svg viewBox="0 0 80 80">
+                                    <line x1="20" y1="20" x2="60" y2="60"/>
+                                    <line x1="60" y1="20" x2="20" y2="60"/>
+                                </svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -528,13 +558,16 @@
             // Add click handler for the blocker select
             const blockerSelect = document.querySelector('.blocker-select');
             const blockerBackground = blockerSelect.querySelector('.blocker-background');
+            const xOverlay = document.getElementById('blockerXOverlay');
 
             blockerSelect.addEventListener('click', () => {
-                isBlockerSelected = !isBlockerSelected;
-                if (isBlockerSelected) {
-                    blockerBackground.classList.add('selected');
-                } else {
-                    blockerBackground.classList.remove('selected');
+                if (!xOverlay.classList.contains('show')) {
+                    isBlockerSelected = !isBlockerSelected;
+                    if (isBlockerSelected) {
+                        blockerBackground.classList.add('selected');
+                    } else {
+                        blockerBackground.classList.remove('selected');
+                    }
                 }
             });
 
@@ -572,15 +605,6 @@
         animate();
 
         //--------------END-----Scene Setup-----END-----------------------------------------
-
-        // To be overriden by single, multiplayer
-        // function handleGameOver(winner, elo_change) {
-        //     console.error("handleGameOver function not implemented.");
-        // }
-
-        // function handlePieceClick(piece) {
-        //     console.error("handlePieceClick function not implemented.");
-        // }
 
         function playSound(soundType) {
             const sound = document.getElementById(soundType + "Sound");
@@ -993,17 +1017,18 @@
 
             let redCount = 0;
             let blueCount = 0;
-            
+            let moveCount = 0;
+
             gameState.forEach(layer => {
                 layer.forEach(row => {
                     row.forEach(cell => {
                         if (cell === 'RED_BLOCKER') redCount++;
                         if (cell === 'BLUE_BLOCKER') blueCount++;
+                        if (cell === 'RED' || cell === 'BLUE') moveCount++;
                     });
                 });
             });
 
-            // Update red blockers
             const redIcons = document.querySelectorAll('#red-blockers .blocker-icon');
             redIcons.forEach((icon, index) => {
                 if (index < redCount) {
@@ -1013,7 +1038,6 @@
                 }
             });
 
-            // Update blue blockers
             const blueIcons = document.querySelectorAll('#blue-blockers .blocker-icon');
             blueIcons.forEach((icon, index) => {
                 if (index < blueCount) {
@@ -1026,9 +1050,16 @@
             // Show the correct blocker piece based on player color
             const redBlocker = document.getElementById('red-blocker');
             const blueBlocker = document.getElementById('blue-blocker');
+            const xOverlay = document.getElementById('blockerXOverlay');
             
             redBlocker.style.display = playerColor === 'RED' ? 'block' : 'none';
             blueBlocker.style.display = playerColor === 'BLUE' ? 'block' : 'none';
+
+            if (playerColor === 'RED' && moveCount === 0) {
+                xOverlay.classList.add('show');
+            } else {
+                xOverlay.classList.remove('show');
+            }
         }
 
         function updateGameState(gameState) {
