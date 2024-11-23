@@ -435,7 +435,7 @@
                 white-space: nowrap;
             }
 
-            .player-color {
+            .player-color-icon {
                 width: 20px;
                 height: 20px;
                 border-radius: 50%;
@@ -445,7 +445,7 @@
             .red { background-color: #ef4444; }
             .blue { background-color: #3b82f6; }
 
-            .player-name {
+            .player-color-text {
                 font-size: 18px;
                 min-width: 60px;
             }
@@ -540,7 +540,7 @@
                     gap: 16px;
                 }
 
-                .player-info {
+                .player-blocker-info {
                     flex: 1;
                 }
 
@@ -573,10 +573,10 @@
             container.innerHTML += `
             <div class="blocker-widget">
                 <div class="blocker-widget-content">
-                    <div class="player-info">
+                    <div class="player-blocker-info">
                         <div class="player-row">
-                            <div class="player-color red"></div>
-                            <span class="player-name">Red</span>
+                            <div class="player-color-icon red"></div>
+                            <span class="player-color-text">Red</span>
                             <div class="blocker-icons" id="red-blockers">
                                 <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
@@ -590,8 +590,8 @@
                             </div>
                         </div>
                         <div class="player-row">
-                            <div class="player-color blue"></div>
-                            <span class="player-name">Blue</span>
+                            <div class="player-color-icon blue"></div>
+                            <span class="player-color-text">Blue</span>
                             <div class="blocker-icons" id="blue-blockers">
                                 <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>

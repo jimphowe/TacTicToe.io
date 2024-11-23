@@ -76,12 +76,12 @@
                     const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
                     playerColor = nextPlayer;
                     localStorage.setItem('player', JSON.stringify(nextPlayer));
-                    if (data.winner) {
-                        handleGameOver(data.winner, data.winning_run);
-                    }
                 }
                 playSound("move");
                 updateGameState(data.game_state);
+                if (data.winner) {
+                    handleGameOver(data.winner, data.winning_run);
+                }
             }
         })
         .catch(error => {
