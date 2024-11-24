@@ -186,7 +186,11 @@ def handle_computer_blocker_move(request):
         })
     
     try:
-        game.makeComputerMove(isBlockerMove=True)
+        move = game.makeComputerMove(isBlockerMove=True)
+        if move == None:
+            return JsonResponse({
+                'status': 'empty',
+            })
         game_state = game.board.getState()
         request.session['game_player'] = game.serialize()
         request.session.save()

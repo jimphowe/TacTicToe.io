@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(12)
+        self.setupBoard(11)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(12)
+           self.setupBoard(11)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -633,6 +633,14 @@ class Board:
         possibleMoves = self.getPossibleBlockerMoves()
         return random.choice(possibleMoves)
     
+    def getMediumBlockerMove(self, player: Piece):
+      if player == Piece.BLUE:
+         return self.getRandomBlockerMove()
+      else:
+         if random.random() < 0.5:
+            return self.getRandomBlockerMove()
+         return None
+    
     def getBetterBlockerMove(self, player: Piece):
       if player == Piece.BLUE:
         defending_move = self.getDefendingMove(player)
@@ -730,7 +738,7 @@ class HardAgent:
             return winningMove
           else:
             winInTwo = board.getWinInTwo(self.player)
-            if winInTwo:
+            if winInTwo and (random.random() < 0.5 or self.player == Piece.BLUE):
               return winInTwo
             else:
               defendingMove = board.getGoodDefendingMove(self.player)
@@ -740,7 +748,7 @@ class HardAgent:
                 return board.getRandomMove(self.player)
         
     def getBlockerMove(self, board: Board):
-       return board.getBetterBlockerMove(self.player)
+       return board.getMediumBlockerMove(self.player)
 
 class ExpertAgent:
     def __init__(self,player):
@@ -829,9 +837,13 @@ class GamePlayer:
             else:
                self.blue_blocker_count += 1
                self.board.move(x,y,z,dir,Piece.BLUE,True)
+            return move
+           else:
+              return None
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color))
            self.board.moveAI(x,y,z,dir,self.computer_color)
+           return (x,y,z,dir)
 
     def move(self,x,y,z,dir,player,isBlockerMove):
         if isBlockerMove:
