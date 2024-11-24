@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(11)
+        self.setupBoard(12)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(11)
+           self.setupBoard(12)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -634,23 +634,37 @@ class Board:
         return random.choice(possibleMoves)
     
     def getBetterBlockerMove(self, player: Piece):
-      defending_move = self.getDefendingMove(player)
-      if defending_move:
-          return self.getRandomBlockerMove()
-          
-      for blocker_move in self.getPossibleBlockerMoves():
-          (x,y,z,dir) = blocker_move
-          self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
-          
-          defending_move = self.getDefendingMove(player)
-          winning_move = self.getWinInOne(player)
-          
-          if defending_move or winning_move:
+      if player == Piece.BLUE:
+        defending_move = self.getDefendingMove(player)
+        if defending_move:
+            return self.getRandomBlockerMove()
+        for blocker_move in self.getPossibleBlockerMoves():
+            (x,y,z,dir) = blocker_move
+            self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
+            
+            defending_move = self.getDefendingMove(player)
+            winning_move = self.getWinInOne(player)
+            
+            if defending_move or winning_move:
+                self.undo()
+                return blocker_move
+            self.undo()
+        return self.getRandomBlockerMove()
+      else:
+        opWinningMove = self.getWinInOne(self.otherPlayer(player))
+        defendingMove = self.getDefendingMove(player)
+        if opWinningMove:
+          for blocker_move in self.getPossibleBlockerMoves():
+            (x,y,z,dir) = blocker_move
+            self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
+
+            if self.getWinInOne(self.otherPlayer(player)) == None or (defendingMove == None and self.getDefendingMove(player) != None):
               self.undo()
               return blocker_move
-          self.undo()
-
-      return self.getRandomBlockerMove()
+            self.undo()
+        return None
+          
+            
                
        
 # Returns a winning move if one exists, otherwise picks a random move
