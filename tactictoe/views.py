@@ -190,10 +190,20 @@ def handle_computer_blocker_move(request):
         game_state = game.board.getState()
         request.session['game_player'] = game.serialize()
         request.session.save()
+        winner = None
+        winning_run = None
+        if game.board.hasWon(Piece.RED):
+            winner = 'RED'
+            winning_run = game.board.winningRun(Piece.RED)
+        elif game.board.hasWon(Piece.BLUE):
+            winner = 'BLUE'
+            winning_run = game.board.winningRun(Piece.BLUE)
         
         return JsonResponse({
             'status': 'success',
-            'game_state': game_state
+            'game_state': game_state,
+            'winner': winner,
+            'winning_run': winning_run
         })
     except Exception as e:
         return JsonResponse({

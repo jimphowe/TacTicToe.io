@@ -161,33 +161,37 @@
                     const blockerData = await blockerResponse.json();
 
                     if (blockerData.winner) {
-                        handleGameOver(blockerData.winner, blockerData.winning_run);
-                    }
-
-                    if (blockerData.status === 'success') {
                         await new Promise(resolve => setTimeout(resolve, 1500));
                         updateGameState(blockerData.game_state);
                         playSound("move");
+                        handleGameOver(blockerData.winner, blockerData.winning_run);
                     }
-
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    const moveResponse = await fetch('/singleplayer/computer-move', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
+                    else {
+                        if (blockerData.status === 'success') {
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            updateGameState(blockerData.game_state);
+                            playSound("move");
                         }
-                    });
 
-                    const moveData = await moveResponse.json();
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        const moveResponse = await fetch('/singleplayer/computer-move', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
 
-                    ReactDOM.render(null, indicatorRoot);
+                        const moveData = await moveResponse.json();
 
-                    updateGameState(moveData.game_state);
-                    playSound("move");
+                        ReactDOM.render(null, indicatorRoot);
 
-                    if (moveData.winner) {
-                        handleGameOver(moveData.winner, moveData.winning_run);
+                        updateGameState(moveData.game_state);
+                        playSound("move");
+
+                        if (moveData.winner) {
+                            handleGameOver(moveData.winner, moveData.winning_run);
+                        }
                     }
                 }
             }
