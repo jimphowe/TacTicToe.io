@@ -74,6 +74,7 @@
         let ROTATION_DURATION = 600;
         const isMobile = window.innerWidth <= 768;
         let playerColor = '{{ player_color }}';
+        let gameOver = false;
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -135,10 +136,7 @@
         let touchStartX, touchStartY;
         let touchEndX, touchEndY;
         let isSwiping = false;
-        let isHolding = false;
-        let holdTimer;
         const swipeThreshold = 80; // minimum distance for a swipe
-        const holdThreshold = 200; // time in ms to trigger a hold
 
         renderer.domElement.addEventListener('touchstart', onTouchStart, false);
         renderer.domElement.addEventListener('touchmove', onTouchMove, false);
@@ -149,20 +147,10 @@
             touchStartX = event.touches[0].clientX;
             touchStartY = event.touches[0].clientY;
             isSwiping = false;
-            isHolding = false;
-
-            holdTimer = setTimeout(() => {
-                isHolding = true;
-                highlightPieceUnderTouch(event.touches[0]);
-            }, holdThreshold);
         }
 
         function onTouchMove(event) {
             event.preventDefault();
-            if (event.touches.length > 1) {
-                clearTimeout(holdTimer);
-                return;
-            }
             
             touchEndX = event.touches[0].clientX;
             touchEndY = event.touches[0].clientY;
@@ -171,30 +159,22 @@
             const deltaY = touchEndY - touchStartY;
             
             if (Math.abs(deltaX) > swipeThreshold || Math.abs(deltaY) > swipeThreshold) {
-                // If the touch has moved far enough, it's a swipe
-                clearTimeout(holdTimer);
                 isSwiping = true;
-                unhighlightAllPieces();
-            } else if (isHolding) {
-                // If we're holding, update the highlighted piece
-                highlightPieceUnderTouch(event.touches[0]);
             }
         }
 
         function onTouchEnd(event) {
             event.preventDefault();
-            clearTimeout(holdTimer);
             
-            if (!isSwiping && !isHolding) {
-                // It's a quick tap, handle piece placement
-                handleTap(event.changedTouches[0]);
-            } else if (isSwiping) {
-                // It's a swipe, handle cube rotation
+            if (!isSwiping) {
+                if (!gameOver) {
+                    handleTap(event.changedTouches[0]);
+                }
+            } else {
                 handleSwipe();
             }
             
             isSwiping = false;
-            isHolding = false;
         }
 
         function handleTap(touch) {

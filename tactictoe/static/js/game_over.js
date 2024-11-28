@@ -2,6 +2,7 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     if (winner == null) {
         return;
     }
+    gameOver = true;
     window.removeEventListener('click', onMouseClick);
 
     let message = 'Game Over! ' + winner + ' wins!';
