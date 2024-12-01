@@ -49,6 +49,75 @@
         .toast.show {
             opacity: 1;
         }
+
+        .rotation-controls {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .rotation-button {
+            position: absolute;
+            padding: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            pointer-events: auto;
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .rotation-button {
+                display: block;
+            }
+        }
+
+        .rotation-button svg {
+            width: 40px;
+            height: 40px;
+            fill: #FFD700;
+            transition: fill 0.2s;
+        }
+
+        .rotation-button:hover svg {
+            fill: #DAA520;
+        }
+
+        .rotate-up {
+            top: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .rotate-down {
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .rotate-left {
+            left: 32px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .rotate-right {
+            right: 32px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .rotate-down svg {
+            transform: rotate(180deg);
+        }
+
+        .rotate-left svg {
+            transform: rotate(-90deg);
+        }
+
+        .rotate-right svg {
+            transform: rotate(90deg);
+        }
     </style>
 </head>
 <body>
@@ -67,6 +136,31 @@
         <div id="invalidMoveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             Invalid Move
         </div>
+    </div>
+    <div class="rotation-controls">
+        <button class="rotation-button rotate-up" aria-label="Rotate up" data-direction="up">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2 L3 14 L21 14 Z"></path>
+          </svg>
+        </button>
+        
+        <button class="rotation-button rotate-down" aria-label="Rotate down" data-direction="down">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2 L3 14 L21 14 Z"></path>
+          </svg>
+        </button>
+        
+        <button class="rotation-button rotate-left" aria-label="Rotate left" data-direction="left">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2 L3 14 L21 14 Z"></path>
+          </svg>
+        </button>
+        
+        <button class="rotation-button rotate-right" aria-label="Rotate right" data-direction="right">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2 L3 14 L21 14 Z"></path>
+          </svg>
+        </button>
     </div>
     <script>
         let isRotating = false;
@@ -104,6 +198,51 @@
                 camera.position.set(7, 4, 3);
             }
             camera.lookAt(scene.position);
+        }
+
+        document.querySelectorAll('.rotation-button').forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                
+                const direction = button.dataset.direction;
+                let rotationDirection;
+
+                switch (direction) {
+                    case 'up':
+                        rotationDirection = 'DOWN';
+                        break;
+                    case 'down':
+                        rotationDirection = 'UP';
+                        break;
+                    case 'left':
+                        rotationDirection = 'RIGHT';
+                        break;
+                    case 'right':
+                        rotationDirection = 'LEFT';
+                        break;
+                    default:
+                        return;
+                }
+
+                handleRotation(rotationDirection);
+            });
+        });
+
+        function handleRotation(direction) {
+            if (isRotating) {
+                return;
+            }
+
+            isRotating = true;
+
+            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            updateDirectionMapping(directionMapping, direction);
+            localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
+            updatePieceLocations(direction);
+
+            animateRotation(direction, () => {
+                isRotating = false;
+            });
         }
 
         let cameraDistance = 10;
@@ -821,10 +960,7 @@
         window.addEventListener('mouseout', onMouseOut, false);
 
         function onKeyDown(event) {
-            if (isRotating) return;
-
             let direction;
-
             switch (event.key) {
                 case 'ArrowUp':
                 case 'w':
@@ -845,14 +981,7 @@
                 default:
                     return;
             }
-            isRotating = true;
-            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
-            updateDirectionMapping(directionMapping, direction);
-            localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
-            updatePieceLocations(direction);
-            animateRotation(direction, () => {
-                isRotating = false;
-            });
+            handleRotation(direction);
         }
 
         window.addEventListener('keydown', onKeyDown, false);
