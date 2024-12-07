@@ -23,34 +23,37 @@
     });
 
     function handleGameOver(winner, winningRun) {
-        playSound("win");
         highlightWinningRun(winner, winningRun);
+        playSound("win");
         createGameOverUI(winner, null, function() {
-        location.reload();
-    });
+            location.reload();
+        });
     }
 
-    function handlePieceClick(piece) {
+    async function handlePieceClick(piece) {
         currentPlayer = JSON.parse(localStorage.getItem('player'));
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         const direction = sideToDirection(currentDirectionMapping['BACK']);
         const isBlockerMove = isBlockerSelected;
-        fetch('/local/move', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                position: piece.userData.originalPosition,
-                direction: direction,
-                player: currentPlayer,
-                difficulty: '{{ difficulty|safe }}',
-                is_blocker_move: isBlockerMove
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+
+        try {
+            const response = await fetch('/local/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    position: piece.userData.originalPosition,
+                    direction: direction,
+                    player: currentPlayer,
+                    difficulty: '{{ difficulty|safe }}',
+                    is_blocker_move: isBlockerMove
+                })
+            });
+
+            const data = await response.json();
+
             if (data.status == 'error') {
                 playSound("invalid");
                 if (data.message == 'invalid_move') {
@@ -65,29 +68,28 @@
                 else if (data.message == 'max_blocker_moves') {
                     showToast("Max blockers placed")
                 }
-            }
-            else {
+            } else {
                 if (isBlockerMove) {
                     isBlockerSelected = false;
                     const blockerBackground = document.querySelector('.blocker-background');
                     blockerBackground.classList.remove('selected');
-                }
-                else {
+                } else {
                     const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
                     playerColor = nextPlayer;
                     localStorage.setItem('player', JSON.stringify(nextPlayer));
                 }
+
+                await updateGameState(data.game_state);
                 playSound("move");
-                updateGameState(data.game_state);
+
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);
                 }
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
             showToast("Unexpected Error");
-        });
+        }
     }
 </script>
 {% endblock %}

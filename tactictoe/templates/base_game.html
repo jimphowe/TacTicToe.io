@@ -427,6 +427,8 @@
         let isRotating = false;
         let isJiggling = false;
         let ROTATION_DURATION = 600;
+        let rotationLastFinished = Date.now();
+        const ROTATION_BUFFER = 60;
         const isMobile = window.innerWidth <= 768;
         let playerColor = '{{ player_color }}';
         let gameOver = false;
@@ -489,10 +491,14 @@
         });
 
         function handleRotation(direction) {
-            if (isRotating) {
+            console.log(`Rotation requested - isRotating: ${isRotating}, timeSinceLastRotation: ${Date.now() - rotationLastFinished}ms`);
+
+            if (isRotating || (Date.now() - rotationLastFinished < ROTATION_BUFFER)) {
+                console.log('Rotation blocked');
                 return;
             }
 
+            console.log('Starting new rotation');
             isRotating = true;
 
             const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
@@ -502,6 +508,8 @@
 
             animateRotation(direction, () => {
                 isRotating = false;
+                rotationLastFinished = Date.now();
+                console.log('Rotation complete');
             });
         }
 
@@ -857,6 +865,17 @@
 
         function highlightWinningRun(winner, winningRun) {
             if (!winningRun) return;
+
+            console.log(`Highlight attempt - isRotating: ${isRotating}`);
+    
+            if (isRotating) {
+                console.log('Rotation in progress, delaying highlight');
+                setTimeout(() => highlightWinningRun(winner, winningRun), 40);
+                return;
+            }
+
+            console.log('Placing highlights now');
+
             const winningMaterial = winner === 'RED' ? redWinningMaterial : blueWinningMaterial;
 
             winningRun.forEach(([x, y, z]) => {
@@ -873,6 +892,8 @@
             });
 
             renderer.render(scene, camera);
+
+            console.log('Highlights placed');
         }
 
         function jigglePieces(row, direction, callback) {
@@ -1271,62 +1292,80 @@
 
         function updateGameState(gameState) {
             if (isRotating) {
-                setTimeout(() => updateGameState(gameState), 50);
-                return;
-            }
-            cubeGroup.quaternion.set(0, 0, 0, 1);
-            while (piecesGroup.children.length > 0) {
-                piecesGroup.remove(piecesGroup.children[0]);
-            }
-            gameState.forEach((layer, x) => {
-                layer.forEach((row, y) => {
-                    row.forEach((cell, z) => {
-                        let sphere;
-                        switch (cell) {
-                            case "BLACK":
-                                sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
-                                break;
-                            case "BLUE":
-                                sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
-                                break;
-                            case "RED":
-                                sphere = new THREE.Mesh(sphereGeometry, redMaterial);
-                                break;
-                            case "BLUE_BLOCKER":
-                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                                const blueDotsSphere = createDotsSphere('blue');
-                                sphere.add(blueDotsSphere);
-                                break;
-                            case "RED_BLOCKER":
-                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                                const redDotsSphere = createDotsSphere('red');
-                                sphere.add(redDotsSphere);
-                                break;
-                            default:
-                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                return new Promise(resolve => {
+                    const checkRotation = () => {
+                        if (!isRotating) {
+                            performUpdate();
+                            resolve();
+                        } else {
+                            requestAnimationFrame(checkRotation);
                         }
-                        sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
-                        sphere.userData = {
-                            position: { x: x, y: y, z: z },
-                            originalPosition: { x: x, y: y, z: z },
-                            clickable: (y === 0)
-                        };
+                    };
+                    checkRotation();
+                });
+            } else {
+                performUpdate();
+                return Promise.resolve();
+            }
 
-                        piecesGroup.add(sphere);
+            function performUpdate() {
+                // Clear existing pieces
+                while (piecesGroup.children.length > 0) {
+                    piecesGroup.remove(piecesGroup.children[0]);
+                }
+                
+                cubeGroup.quaternion.set(0, 0, 0, 1);
+
+                // Add new pieces
+                gameState.forEach((layer, x) => {
+                    layer.forEach((row, y) => {
+                        row.forEach((cell, z) => {
+                            let sphere;
+                            switch (cell) {
+                                case "BLACK":
+                                    sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
+                                    break;
+                                case "BLUE":
+                                    sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
+                                    break;
+                                case "RED":
+                                    sphere = new THREE.Mesh(sphereGeometry, redMaterial);
+                                    break;
+                                case "BLUE_BLOCKER":
+                                    sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                                    const blueDotsSphere = createDotsSphere('blue');
+                                    sphere.add(blueDotsSphere);
+                                    break;
+                                case "RED_BLOCKER":
+                                    sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                                    const redDotsSphere = createDotsSphere('red');
+                                    sphere.add(redDotsSphere);
+                                    break;
+                                default:
+                                    sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                            }
+                            sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
+                            sphere.userData = {
+                                position: { x: x, y: y, z: z },
+                                originalPosition: { x: x, y: y, z: z },
+                                clickable: (y === 0)
+                            };
+
+                            piecesGroup.add(sphere);
+                        });
                     });
                 });
-            });
 
-            if (blockerWidget) {
-                updateBlockerWidget(gameState);
+                if (blockerWidget) {
+                    updateBlockerWidget(gameState);
+                }
+
+                highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+
+                reapplyRotations();
+                updateClickableSpheres();
+                renderer.render(scene, camera);
             }
-
-            highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
-
-            // Re-render the scene
-            reapplyRotations();
-            updateClickableSpheres();
-            renderer.render(scene, camera);
         }
 
         function sideToDirection(side) {
