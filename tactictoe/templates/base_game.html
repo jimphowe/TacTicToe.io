@@ -151,10 +151,10 @@
         /* Blocker styles */
 
         .blocker-widget {
-            position: absolute;
+            position: fixed;
             background-color: rgba(15, 23, 42, 0.9);
             border-radius: 12px;
-            padding: 16px 24px;
+            padding: 36px 16px;
             color: #fff;
             font-family: system-ui, -apple-system, sans-serif;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -171,14 +171,6 @@
             }
         }
 
-        @media (min-width: 769px) {
-            .blocker-widget {
-                top: 150px;
-                left: 20px;
-                width: 300px;
-            }
-        }
-
         .blocker-widget-content {
             display: flex;
             flex-direction: column;
@@ -188,9 +180,11 @@
         .player-row {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
             margin: 8px 0;
             white-space: nowrap;
+            width: 100%;
         }
 
         .player-color-icon {
@@ -228,6 +222,8 @@
         .blocker-select {
             text-align: center;
             cursor: pointer;
+            width: fit-content; /* Limit width to content */
+            margin: 0 auto; /* Keep it centered */
         }
 
         .blocker-background {
@@ -238,8 +234,28 @@
             background-repeat: no-repeat;
             background-position: center;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: filter 0.2s ease;
             position: relative;
+        }
+
+        .blocker-widget-header {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 28px 0;
+            text-align: center;
+        }
+
+        @media (min-width: 769px) {
+            .blocker-widget {
+                top: 50%;
+                left: 60px;
+                transform: translateY(-50%);
+                width: 280px;
+            }
+
+            .blocker-background {
+                margin: 20px auto 0;
+            }
         }
 
         .blocker-background.selected {
@@ -248,6 +264,12 @@
 
         .blocker-background:not(.selected) {
             background-image: url("/static/images/blocker_background.png");
+        }
+
+        @media (min-width: 769px) {
+            .blocker-background:hover {
+                filter: brightness(0.8);
+            }
         }
 
         .blocker-piece {
@@ -289,7 +311,12 @@
         /* Mobile Styles */
         @media (max-width: 768px) {
             .blocker-widget {
-                padding: 12px 16px;
+                padding: 20px 28px 20px;
+            }
+            
+            .blocker-widget-header {
+                font-size: 16px;
+                margin: 0 0 8px 0;
             }
 
             .blocker-widget-content {
@@ -299,7 +326,10 @@
             }
 
             .player-blocker-info {
-                flex: 1;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
 
             .blocker-select {
@@ -326,6 +356,11 @@
             .player-row {
                 margin: 4px 0;
             }
+
+            .blocker-icons {
+                margin-right: 16px;  /* Add some space between the icons and the blocker selector */
+                margin-left: -16px;
+            }
         }
     </style>
 </head>
@@ -346,6 +381,7 @@
         </div>
     </div>
     <div class="blocker-widget">
+        <h3 class="blocker-widget-header">Blocker Pieces</h3>
         <div class="blocker-widget-content">
             <div class="player-blocker-info">
                 <div class="player-row">
