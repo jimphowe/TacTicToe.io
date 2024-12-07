@@ -19,7 +19,6 @@
             width: 100%; 
             height: 100%; 
             overflow: hidden;
-            background-color: #d3d2c0;
         }
         .game-container {
             position: relative;
@@ -28,6 +27,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: #d3d2c0;
         }
 
         .canvas-container {
@@ -42,7 +42,7 @@
             .canvas-container {
                 width: min(100vh, 100vw);
                 height: min(100vh, 100vw);
-                transform: translateY(-15%);
+                transform: translateY(-20%);
             }
         }
 
@@ -527,14 +527,10 @@
         });
 
         function handleRotation(direction) {
-            console.log(`Rotation requested - isRotating: ${isRotating}, timeSinceLastRotation: ${Date.now() - rotationLastFinished}ms`);
-
             if (isRotating || (Date.now() - rotationLastFinished < ROTATION_BUFFER)) {
-                console.log('Rotation blocked');
                 return;
             }
 
-            console.log('Starting new rotation');
             isRotating = true;
 
             const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
@@ -545,7 +541,6 @@
             animateRotation(direction, () => {
                 isRotating = false;
                 rotationLastFinished = Date.now();
-                console.log('Rotation complete');
             });
         }
 
@@ -647,6 +642,39 @@
                     onKeyDown({ key: 'ArrowDown' });
                 }
             }
+        }
+
+        let neutralPiecesHidden = false;
+
+        function toggleNeutralPiecesVisibility() {
+            neutralPiecesHidden = !neutralPiecesHidden;
+            applyNeutralPiecesVisibility();
+        }
+
+        function applyNeutralPiecesVisibility() {
+            const opacity = neutralPiecesHidden ? 0.5 : 1.0;
+            
+            piecesGroup.children.forEach(sphere => {
+                const pos = sphere.userData.originalPosition;
+                const pieceType = gameState[pos.x][pos.y][pos.z];
+                
+                if (pieceType === 'BLACK' || pieceType === 'RED_BLOCKER' || pieceType === 'BLUE_BLOCKER') {
+                    if (sphere.children.length > 0) {
+                        const dotsSphere = sphere.children[0];
+                        dotsSphere.children[0].material.opacity = opacity;
+                        dotsSphere.children[0].material.transparent = opacity < 1.0;
+                        for (let i = 1; i < dotsSphere.children.length; i++) {
+                            dotsSphere.children[i].material.opacity = opacity;
+                            dotsSphere.children[i].material.transparent = opacity < 1.0;
+                        }
+                    } else if (pieceType === 'BLACK') {
+                        sphere.material.opacity = opacity;
+                        sphere.material.transparent = opacity < 1.0;
+                    }
+                }
+            });
+            
+            renderer.render(scene, camera);
         }
 
         // Adding lights
@@ -901,16 +929,11 @@
 
         function highlightWinningRun(winner, winningRun) {
             if (!winningRun) return;
-
-            console.log(`Highlight attempt - isRotating: ${isRotating}`);
     
             if (isRotating) {
-                console.log('Rotation in progress, delaying highlight');
                 setTimeout(() => highlightWinningRun(winner, winningRun), 40);
                 return;
             }
-
-            console.log('Placing highlights now');
 
             const winningMaterial = winner === 'RED' ? redWinningMaterial : blueWinningMaterial;
 
@@ -928,8 +951,6 @@
             });
 
             renderer.render(scene, camera);
-
-            console.log('Highlights placed');
         }
 
         function jigglePieces(row, direction, callback) {
@@ -1062,6 +1083,9 @@
                 case 'd':
                     direction = 'LEFT';
                     break;
+                case 'v':
+                    toggleNeutralPiecesVisibility();
+                    return;
                 default:
                     return;
             }
@@ -1326,7 +1350,7 @@
             }
         }
 
-        function updateGameState(gameState) {
+        function updateGameState(newGameState) {
             if (isRotating) {
                 return new Promise(resolve => {
                     const checkRotation = () => {
@@ -1345,14 +1369,14 @@
             }
 
             function performUpdate() {
-                // Clear existing pieces
+                gameState = JSON.parse(JSON.stringify(newGameState));
+
                 while (piecesGroup.children.length > 0) {
                     piecesGroup.remove(piecesGroup.children[0]);
                 }
                 
                 cubeGroup.quaternion.set(0, 0, 0, 1);
 
-                // Add new pieces
                 gameState.forEach((layer, x) => {
                     layer.forEach((row, y) => {
                         row.forEach((cell, z) => {
