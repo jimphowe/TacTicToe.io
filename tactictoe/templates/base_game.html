@@ -19,9 +19,35 @@
             width: 100%; 
             height: 100%; 
             overflow: hidden;
+            background-color: #d3d2c0;
         }
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: min(90vh, 90vw);
+            height: min(90vh, 90vw);
+            max-width: 100%;
+            max-height: 100vh;
+        }
+
+        @media (max-width: 768px) {
+            .canvas-container {
+                width: min(100vh, 100vw);
+                height: min(100vh, 100vw);
+                transform: translateY(-15%);
+            }
+        }
+
         canvas { 
-            display: block; 
+            display: block;
             width: 100% !important;
             height: 100% !important;
         }
@@ -51,8 +77,11 @@
         }
 
         .rotation-controls {
-            position: fixed;
-            inset: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             pointer-events: none;
         }
 
@@ -84,26 +113,26 @@
         }
 
         .rotate-up {
-            top: 32px;
-            left: 50%;
+            top: 35px; 
+            left: 53%;
             transform: translateX(-50%);
         }
 
         .rotate-down {
-            bottom: 32px;
-            left: 50%;
+            bottom: -10px;
+            left: 53%;
             transform: translateX(-50%);
         }
 
         .rotate-left {
-            left: 32px;
-            top: 50%;
+            left: 20px;
+            top: 55%;
             transform: translateY(-50%);
         }
 
         .rotate-right {
-            right: 32px;
-            top: 50%;
+            right: 0;
+            top: 55%;
             transform: translateY(-50%);
         }
 
@@ -130,6 +159,7 @@
             font-family: system-ui, -apple-system, sans-serif;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             pointer-events: auto;
+            z-index: 1000;
         }
 
         @media (max-width: 768px) {
@@ -143,7 +173,7 @@
 
         @media (min-width: 769px) {
             .blocker-widget {
-                top: 120px;
+                top: 150px;
                 left: 20px;
                 width: 300px;
             }
@@ -310,7 +340,6 @@
     <!-- Coin_C_09 by cabled_mess -- https://freesound.org/s/350876/ -- License: Creative Commons 0 -->
     <audio id="invalidSound" src="{% static 'sounds/invalid.wav' %}" preload="auto"></audio>
     <!-- GASP_UI_Reject.wav by Rob_Marion -- https://freesound.org/s/542040/ -- License: Creative Commons 0 -->
-    <canvas id="myCanvas"></canvas>
     <div id="toast-container">
         <div id="invalidMoveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             Invalid Move
@@ -364,30 +393,35 @@
             </div>
         </div>
     </div>
-    <div class="rotation-controls">
-        <button class="rotation-button rotate-up" aria-label="Rotate up" data-direction="up">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2 L3 14 L21 14 Z"></path>
-          </svg>
-        </button>
-        
-        <button class="rotation-button rotate-down" aria-label="Rotate down" data-direction="down">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2 L3 14 L21 14 Z"></path>
-          </svg>
-        </button>
-        
-        <button class="rotation-button rotate-left" aria-label="Rotate left" data-direction="left">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2 L3 14 L21 14 Z"></path>
-          </svg>
-        </button>
-        
-        <button class="rotation-button rotate-right" aria-label="Rotate right" data-direction="right">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2 L3 14 L21 14 Z"></path>
-          </svg>
-        </button>
+    <div class="game-container">
+        <div class="canvas-container">
+            <canvas id="myCanvas"></canvas>
+            <div class="rotation-controls">
+                <button class="rotation-button rotate-up" aria-label="Rotate up" data-direction="up">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2 L3 14 L21 14 Z"></path>
+                    </svg>
+                </button>
+                
+                <button class="rotation-button rotate-down" aria-label="Rotate down" data-direction="down">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2 L3 14 L21 14 Z"></path>
+                    </svg>
+                </button>
+                
+                <button class="rotation-button rotate-left" aria-label="Rotate left" data-direction="left">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2 L3 14 L21 14 Z"></path>
+                    </svg>
+                </button>
+                
+                <button class="rotation-button rotate-right" aria-label="Rotate right" data-direction="right">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2 L3 14 L21 14 Z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
     <script>
         let isRotating = false;
@@ -404,7 +438,6 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0xd3d2c0);
-        document.body.appendChild(renderer.domElement);
 
         function onWindowResize() {
             adjustCameraPosition();
@@ -472,8 +505,8 @@
             });
         }
 
-        let cameraDistance = 10;
-        const mobileFOV = 85;
+        let cameraDistance;
+        const mobileFOV = 60;
         const desktopFOV = 75;
 
         function adjustCameraForScreenSize() {
@@ -481,13 +514,8 @@
 
             if (isMobile) {
                 camera.fov = mobileFOV;
-                if (aspect < 1) { // Portrait
-                    cameraDistance = 14;
-                    camera.position.set(0, 0, cameraDistance);
-                } else { // Landscape
-                    cameraDistance = 12;
-                    camera.position.set(cameraDistance, 0, 0);
-                }
+                cameraDistance = 14;
+                camera.position.set(0, 0, cameraDistance);
             } else {
                 camera.fov = desktopFOV;
                 cameraDistance = 10;
@@ -922,8 +950,9 @@
         var lastIntersected = null;
 
         function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
 
@@ -987,8 +1016,10 @@
         let isBlockerSelected = false;
 
         function onMouseClick(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
             raycaster.setFromCamera(mouse, camera);
 
             var intersects = raycaster.intersectObjects(clickableSpheres, true);
