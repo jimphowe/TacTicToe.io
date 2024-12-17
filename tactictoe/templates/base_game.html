@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TacTicToe</title>
     {% load static %}
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/examples/js/renderers/CSS3DRenderer.js"></script>
@@ -12,6 +14,8 @@
     <script src="{% static 'js/utils.js' %}"></script>
     <script src="{% static 'js/find_opponent.js' %}"></script>
     <script src="{% static 'js/game_over.js' %}"></script>
+    <script src="{% static 'js/icons.js' %}"></script>
+    <script src="{% static 'js/components/SettingsPanel.js' %}"></script>
     <style>
         body, html { 
             margin: 0; 
@@ -429,6 +433,7 @@
             </div>
         </div>
     </div>
+    <div id="settings-panel-root"></div>
     <div class="game-container">
         <div class="canvas-container">
             <canvas id="myCanvas"></canvas>
@@ -497,6 +502,13 @@
             }
             camera.lookAt(scene.position);
         }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const settingsRoot = document.getElementById('settings-panel-root');
+            if (settingsRoot) {
+                ReactDOM.render(React.createElement(window.SettingsPanel), settingsRoot);
+            }
+        });
 
         document.querySelectorAll('.rotation-button').forEach(button => {
             button.addEventListener('click', (event) => {
