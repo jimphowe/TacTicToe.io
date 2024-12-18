@@ -904,7 +904,14 @@
 
         //--------------END-----Scene Setup-----END-----------------------------------------
 
+        window.soundsMuted = false;
+
+        window.toggleSoundsMuted = function(muted) {
+            window.soundsMuted = muted;
+        };
+
         function playSound(soundType) {
+            if (window.soundsMuted) return;
             const sound = document.getElementById(soundType + "Sound");
             if (sound) {
                 sound.play();
