@@ -6,6 +6,9 @@
     <title>TacTicToe</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    {% load static %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>  
+    <script src="{% static 'js/utils.js' %}"></script> 
     <style>
         body {
             background-color: #121212;
@@ -85,6 +88,28 @@
         .tab-content.active {
             display: block;
         }
+        .settings-group {
+            background-color: #424242;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .form-control-color {
+            width: 100px;
+            height: 40px;
+            padding: 3px;
+            border: none;
+            background: none;
+        }
+
+        .color-value {
+            font-family: monospace;
+            color: #999;
+        }
+
+        .alert {
+            transition: opacity 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -137,33 +162,113 @@
                             </div>
                         </div>
 
-                        <!-- Settings tab -->
+                        <!-- Settings tab content -->
                         <div id="settings" class="tab-content">
-                            <h2>Settings</h2>
-                            <p>Settings content will go here.</p>
+                            <div class="profile-header">
+                                <h2>Game Appearance</h2>
+                            </div>
+                            <div class="p-4">
+                                <div class="settings-group mb-4">
+                                    <label for="backgroundColor" class="form-label">Background Color</label>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <input type="color" class="form-control form-control-color" 
+                                            id="backgroundColor" value="{{ user_profile.background_color }}"
+                                            title="Choose background color">
+                                        <span class="color-value">{{ user_profile.background_color }}</span>
+                                    </div>
+                                </div>
+                                <div class="settings-group mb-4">
+                                    <label for="boardColor" class="form-label">Board Color</label>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <input type="color" class="form-control form-control-color" 
+                                            id="boardColor" value="{{ user_profile.board_color }}"
+                                            title="Choose board color">
+                                        <span class="color-value">{{ user_profile.board_color }}</span>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <button class="btn btn-primary me-2" onclick="saveColors()">Save Changes</button>
+                                    <button class="btn btn-secondary" onclick="resetColors()">Reset to Default</button>
+                                </div>
+                                <div id="settingsMessage" class="alert mt-3" style="display: none;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
     <script>
         function switchTab(tabId) {
-            // Update tab buttons
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active');
             });
             event.currentTarget.classList.add('active');
 
-            // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             document.getElementById(tabId).classList.add('active');
         }
-    </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        function saveColors() {
+            const backgroundColor = document.getElementById('backgroundColor').value;
+            const boardColor = document.getElementById('boardColor').value;
+            
+            fetch('/save_colors/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    background_color: backgroundColor,
+                    board_color: boardColor
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageEl = document.getElementById('settingsMessage');
+                messageEl.style.display = 'block';
+                if (data.status === 'success') {
+                    messageEl.className = 'alert alert-success mt-3';
+                    messageEl.textContent = 'Settings saved successfully!';
+                    document.querySelectorAll('.color-value')[0].textContent = backgroundColor;
+                    document.querySelectorAll('.color-value')[1].textContent = boardColor;
+                } else {
+                    messageEl.className = 'alert alert-danger mt-3';
+                    messageEl.textContent = 'Error saving settings';
+                }
+                setTimeout(() => {
+                    messageEl.style.opacity = '0';
+                    setTimeout(() => {
+                        messageEl.style.display = 'none';
+                        messageEl.style.opacity = '1';
+                    }, 300);
+                }, 3000);
+            });
+        }
+
+        function resetColors() {
+            const defaultColors = {
+                backgroundColor: '#d3d2c0',
+                boardColor: '#edd8a8'
+            };
+            
+            document.getElementById('backgroundColor').value = defaultColors.backgroundColor;
+            document.getElementById('boardColor').value = defaultColors.boardColor;
+            
+            saveColors();
+        }
+
+        // Update color value display when picker changes
+        document.getElementById('backgroundColor').addEventListener('input', function(e) {
+            document.querySelectorAll('.color-value')[0].textContent = e.target.value;
+        });
+
+        document.getElementById('boardColor').addEventListener('input', function(e) {
+            document.querySelectorAll('.color-value')[1].textContent = e.target.value;
+        });
+    </script> 
 </body>
 </html>

@@ -31,7 +31,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #d3d2c0;
+            background-color: var(--game-background-color, #d3d2c0);
         }
 
         .canvas-container {
@@ -480,7 +480,7 @@
         let blockerWidget = null;
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0xd3d2c0);
+        // renderer.setClearColor(0xd3d2c0);
 
         function onWindowResize() {
             adjustCameraPosition();
@@ -721,7 +721,21 @@
             boardGroup.add(mesh);
         }
         
-        var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xedd8a8});
+        {% if user.is_authenticated %}
+            var backgroundColor = '{{ user.profile.background_color }}';
+            var boardColor = '{{ user.profile.board_color }}';
+        {% else %}
+            var backgroundColor = '#d3d2c0';
+            var boardColor = '#edd8a8';
+        {% endif %}
+
+        console.log(backgroundColor);
+
+        document.documentElement.style.setProperty('--game-background-color', backgroundColor);
+        renderer.setClearColor(backgroundColor);
+        tubeMaterial = new THREE.MeshPhongMaterial({ color: boardColor });
+
+        // var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xedd8a8});
         var edgePaths = [
             new THREE.Vector3(-3, -3, -3),
             new THREE.Vector3(3, -3, -3),

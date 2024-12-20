@@ -37,6 +37,18 @@ def profile_view(request):
     template = loader.get_template('profile.html')
     return HttpResponse(template.render(context, request))
 
+@require_http_methods(["POST"])
+def save_colors(request):
+    try:
+        data = json.loads(request.body)
+        profile = request.user.profile
+        profile.background_color = data['background_color']
+        profile.board_color = data['board_color']
+        profile.save()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
 def player_guide(request):
     template = loader.get_template('player_guide.html')
     return HttpResponse(template.render({}, request))

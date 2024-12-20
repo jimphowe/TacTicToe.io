@@ -870,6 +870,8 @@ from django.contrib.auth.models import User
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     is_paid_account = models.BooleanField(default=False)
+    background_color = models.CharField(max_length=7, default='#d3d2c0')
+    board_color = models.CharField(max_length=7, default='#edd8a8')
 
     def __str__(self):
         return self.user.username
