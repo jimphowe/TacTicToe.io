@@ -135,6 +135,34 @@ class Board:
 
         return runs
     
+    # Assumes that the move is valid
+    def count_pieces_pushed(self, x, y, z, dir):
+      if self.pieces[x][y][z] == Piece.EMPTY:
+          return 0
+          
+      count = 1
+      
+      if dir == 'UP':
+          if self.pieces[x][y][z-1] != Piece.EMPTY:
+              count += 1
+      elif dir == 'DOWN':
+          if self.pieces[x][y][z+1] != Piece.EMPTY:
+              count += 1
+      elif dir == 'LEFT':
+          if self.pieces[x-1][y][z] != Piece.EMPTY:
+              count += 1
+      elif dir == 'RIGHT':
+          if self.pieces[x+1][y][z] != Piece.EMPTY:
+              count += 1
+      elif dir == 'FRONT':
+          if self.pieces[x][y-1][z] != Piece.EMPTY:
+              count += 1
+      elif dir == 'BACK':
+          if self.pieces[x][y+1][z] != Piece.EMPTY:
+              count += 1
+              
+      return count
+    
     def validMove(self,x,y,z,dir,isBlocker):
        return self.pieces[x][y][z] == Piece.EMPTY or (not isBlocker and self.valid(x,y,z,dir))
 
@@ -160,7 +188,7 @@ class Board:
               return False
         
     # Returns a list of all valid moves in the current board state
-    def getPossibleMoves(self):
+    def getPossibleMoves(self,available_power):
         directions = ['UP','DOWN','LEFT','RIGHT','FRONT','BACK']
         moves = []
         for x in range(3):
@@ -168,6 +196,9 @@ class Board:
             for z in range(3):
               for dir in directions:
                 if self.valid(x,y,z,dir):
+                  pieces_needed = self.count_pieces_pushed(x,y,z,dir)
+                  if pieces_needed > available_power:
+                      continue
                   moves.append((x,y,z,dir))
         return moves
     
@@ -420,156 +451,11 @@ class Board:
         gameState += "         \\| " + displayStr[self.pieces[0][0][2]] + "  " + displayStr[self.pieces[1][0][2]] + "  " + displayStr[self.pieces[2][0][2]] + " |\n"
         gameState += "           ---------------------+\n\n"
         return gameState
-
-    # Returns a random valid move in the given board
-    def getRandomMove(self,player: Piece):
-        directions = ['UP','DOWN','LEFT','RIGHT','FRONT','BACK']
-        x = random.randint(0,2)
-        y = random.randint(0,2)
-        z = random.randint(0,2)
-        dir = random.choice(directions)
-        while not self.validMove(x,y,z,dir,False):
-            x = random.randint(0,2)
-            y = random.randint(0,2)
-            z = random.randint(0,2)
-            dir = random.choice(directions)
-        return (x,y,z,dir)
     
     # Returns the other player color. Red -> Blue. Blue -> Red
     def otherPlayer(self,player: Piece):
         return Piece.RED if player == Piece.BLUE else Piece.BLUE
-
-    # Loops through possible moves and returns if a move wins the game, else returns None
-    def getWinInOne(self,player: Piece):
-        for (x,y,z,dir) in self.getPossibleMoves():
-          self.moveAI(x,y,z,dir,player)
-          if self.hasWon(player):
-            self.undo()
-            return (x,y,z,dir)
-          self.undo()
-        return None
     
-    # Loops through possible moves and returns a move which prevents the opponent from winning 
-    # If there are multiple, picks one at random. If none exist returns None
-    def getDefendingMove(self,player: Piece):
-        potential_moves = []
-        for (x,y,z,dir) in self.getPossibleMoves():
-          self.moveAI(x,y,z,dir,player)
-          if self.getWinInOne(self.otherPlayer(player)) == None:
-            potential_moves.append((x,y,z,dir))
-          self.undo()
-        if potential_moves:
-          return random.choice(potential_moves)
-        return None
-    
-    def getGoodDefendingMove(self, player: Piece):
-        potential_moves = []
-        for (x, y, z, dir) in self.getPossibleMoves():
-            points = 0
-            self.moveAI(x, y, z, dir, player)
-            if self.getWinInOne(self.otherPlayer(player)) == None:
-                points += 100
-            points += self.getTwoInARows(player) * 4
-            if self.pieces[x][y][z] == self.otherPlayer(player):
-               points += 10
-            neighbors = self.neighbor_positions(x, y, z)
-            for (i,j,k) in neighbors:
-               if self.pieces[i][j][k] == self.otherPlayer(player):
-                  points += 3
-            potential_moves.append(((x, y, z, dir), points))
-            self.undo()
-
-        potential_moves.sort(key=lambda move: move[1], reverse=True)
-
-        return potential_moves[0][0]
-    
-    def getBestDefendingMove(self, player: Piece):
-        opponent = self.otherPlayer(player)
-        corners = frozenset([(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-                       (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)])
-        middles = frozenset([(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)])
-        potential_moves = []
-        
-        for (x, y, z, dir) in self.getPossibleMoves():
-            points = 0
-            self.moveAI(x, y, z, dir, player)
-            if self.getWinInOne(opponent) == None:
-                points += 100
-            points += self.getTwoInARows(player) * 5
-            neighbors = self.neighbor_positions(x, y, z)
-            non_empty_neighbors = sum(1 for i, j, k in neighbors
-                                       if self.pieces[i][j][k] != Piece.EMPTY)
-            for (i,j,k) in neighbors:
-               if self.pieces[i][j][k] == opponent:
-                  points += 6
-            if self.pieces[x][y][z] == opponent:
-               points += 15
-            if non_empty_neighbors == 6:
-               points += 10
-            if (x,y,z) in middles:
-               points += 2
-            if (x,y,z) in corners:
-               points -= 1
-            potential_moves.append(((x, y, z, dir), points))
-            self.undo()
-
-        potential_moves.sort(key=lambda move: move[1], reverse=True)
-
-        # Check top 5 moves for getWinInTwo condition
-        top_moves = potential_moves[:5]
-        for move, _ in top_moves:
-            x, y, z, dir = move
-            self.moveAI(x,y,z,dir,player)
-            if self.getWinInTwo(self.otherPlayer(player)) is None:
-                self.undo()
-                return move
-            self.undo()
-
-        if potential_moves:
-            return potential_moves[0][0]
-        return None
-
-    # Loops through possible moves and for each one examines all possible opponent moves.
-    # If there are any moves which allow the given player to win after any opponent move, 
-    # return one at random. Otherwise, return None
-    def getWinInTwo(self,player: Piece):
-        winningMove = self.getWinInOne(player)
-        if winningMove:
-          return winningMove
-        potential_moves = []
-        for (x,y,z,dir) in self.getPossibleMoves():
-          self.moveAI(x,y,z,dir,player)
-          if self.getWinInOne(self.otherPlayer(player)) == None:
-            winner = True
-            for (x2,y2,z2,dir2) in self.getPossibleMoves():
-              self.moveAI(x2,y2,z2,dir2,self.otherPlayer(player))
-              if self.getWinInOne(player) == None:
-                winner = False
-              self.undo()
-            if winner:
-              potential_moves.append((x,y,z,dir))
-          self.undo()
-        if potential_moves:
-          return random.choice(potential_moves)
-        return None
-    
-    # Returns a random move which is either a middle or edge
-    def getGoodStartMove(self):
-        # Define corner positions
-        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-                  (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
-        
-        # Collect valid moves from middles and edges
-        potential_moves = []
-        for (x, y, z, dir) in self.getPossibleMoves():
-            if not (x, y, z) in corners:
-                potential_moves.append((x, y, z, dir))
-
-        # Randomly select one of the valid moves
-        if potential_moves:
-            return random.choice(potential_moves)
-        return None
-
     def neighbor_positions(self, x, y, z):
         neighbors = []
         for i in range(3):
@@ -620,13 +506,154 @@ class Board:
             return [(x,y,z) for x in range(3) for y in range(3) for z in range(3) if self.pieces[x][y][z] == player]
         return None
     
-    def getSimpleDefendingMove(self,player: Piece):
-        for (x, y, z, dir) in self.getPossibleMoves():
-            if self.pieces[x][y][z] == self.otherPlayer(player):
+    # Returns a random valid move in the given board
+    def getRandomMove(self, player: Piece, power_dict):
+      possible_moves = self.getPossibleMoves(power_dict[player.value])
+      return random.choice(possible_moves)
+
+    # Loops through possible moves and returns if a move wins the game, else returns None
+    def getWinInOne(self,player: Piece, power_dict):
+        for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
+          self.moveAI(x,y,z,dir,player)
+          if self.hasWon(player):
+            self.undo()
+            return (x,y,z,dir)
+          self.undo()
+        return None
+    
+    # Loops through possible moves and returns a move which prevents the opponent from winning 
+    # If there are multiple, picks one at random. If none exist returns None
+    def getDefendingMove(self,player: Piece, power_dict):
+        potential_moves = []
+        for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
+          self.moveAI(x,y,z,dir,player)
+          opponent = self.otherPlayer(player)
+          if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+            potential_moves.append((x,y,z,dir))
+          self.undo()
+        if potential_moves:
+          return random.choice(potential_moves)
+        return None
+    
+    def getGoodDefendingMove(self, player: Piece, power_dict):
+        potential_moves = []
+        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+            points = 0
+            self.moveAI(x, y, z, dir, player)
+            opponent = self.otherPlayer(player)
+            if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+                points += 100
+            points += self.getTwoInARows(player) * 4
+            if self.pieces[x][y][z] == opponent:
+               points += 10
+            neighbors = self.neighbor_positions(x, y, z)
+            for (i,j,k) in neighbors:
+               if self.pieces[i][j][k] == opponent:
+                  points += 3
+            potential_moves.append(((x, y, z, dir), points))
+            self.undo()
+
+        potential_moves.sort(key=lambda move: move[1], reverse=True)
+
+        return potential_moves[0][0]
+    
+    def getBestDefendingMove(self, player: Piece, power_dict):
+        opponent = self.otherPlayer(player)
+        corners = frozenset([(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+                       (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)])
+        middles = frozenset([(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)])
+        potential_moves = []
+        
+        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+            points = 0
+            self.moveAI(x, y, z, dir, player)
+            if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+                points += 100
+            points += self.getTwoInARows(player) * 5
+            neighbors = self.neighbor_positions(x, y, z)
+            non_empty_neighbors = sum(1 for i, j, k in neighbors
+                                       if self.pieces[i][j][k] != Piece.EMPTY)
+            for (i,j,k) in neighbors:
+               if self.pieces[i][j][k] == opponent:
+                  points += 6
+            if self.pieces[x][y][z] == opponent:
+               points += 15
+            if non_empty_neighbors == 6:
+               points += 10
+            if (x,y,z) in middles:
+               points += 2
+            if (x,y,z) in corners:
+               points -= 1
+            potential_moves.append(((x, y, z, dir), points))
+            self.undo()
+
+        potential_moves.sort(key=lambda move: move[1], reverse=True)
+
+        # Check top 5 moves for getWinInTwo condition
+        top_moves = potential_moves[:5]
+        for move, _ in top_moves:
+            x, y, z, dir = move
+            self.moveAI(x,y,z,dir,player)
+            if self.getWinInTwo(opponent, power_dict[opponent.value]) is None:
+                self.undo()
+                return move
+            self.undo()
+
+        if potential_moves:
+            return potential_moves[0][0]
+        return None
+
+    # Loops through possible moves and for each one examines all possible opponent moves.
+    # If there are any moves which allow the given player to win after any opponent move, 
+    # return one at random. Otherwise, return None
+    def getWinInTwo(self,player: Piece, power_dict):
+        winningMove = self.getWinInOne(player, power_dict[player.value])
+        if winningMove:
+          return winningMove
+        potential_moves = []
+        opponent = self.otherPlayer[player]
+        for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
+          self.moveAI(x,y,z,dir,player)
+          if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+            winner = True
+            for (x2,y2,z2,dir2) in self.getPossibleMoves(power_dict[opponent.value]):
+              self.moveAI(x2,y2,z2,dir2,opponent)
+              # TODO "-1" is an estimate to avoid recalculating power
+              if self.getWinInOne(player, power_dict[player.value] - 1) == None:
+                winner = False
+              self.undo()
+            if winner:
+              potential_moves.append((x,y,z,dir))
+          self.undo()
+        if potential_moves:
+          return random.choice(potential_moves)
+        return None
+    
+    # Returns a random move which is either a middle or edge
+    def getGoodStartMove(self, player: Piece, power_dict):
+        # Define corner positions
+        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
+                  (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
+        
+        # Collect valid moves from middles and edges
+        potential_moves = []
+        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+            if not (x, y, z) in corners:
+                potential_moves.append((x, y, z, dir))
+
+        # Randomly select one of the valid moves
+        if potential_moves:
+            return random.choice(potential_moves)
+        return None
+    
+    def getSimpleDefendingMove(self,player: Piece, power_dict):
+        opponent = self.otherPlayer(player)
+        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+            if self.pieces[x][y][z] == opponent:
                return((x,y,z,dir))
             neighbors = self.neighbor_positions(x, y, z)
             for (i,j,k) in neighbors:
-              if self.pieces[i][j][k] == self.otherPlayer(player):
+              if self.pieces[i][j][k] == opponent:
                 return((x,y,z,dir))
               
     def getRandomBlockerMove(self):
@@ -641,17 +668,17 @@ class Board:
             return self.getRandomBlockerMove()
          return None
     
-    def getBetterBlockerMove(self, player: Piece):
+    def getBetterBlockerMove(self, player: Piece, power_dict):
       if player == Piece.BLUE:
-        defending_move = self.getDefendingMove(player)
+        defending_move = self.getDefendingMove(player, power_dict[player.value])
         if defending_move:
             return self.getRandomBlockerMove()
         for blocker_move in self.getPossibleBlockerMoves():
             (x,y,z,dir) = blocker_move
             self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
             
-            defending_move = self.getDefendingMove(player)
-            winning_move = self.getWinInOne(player)
+            defending_move = self.getDefendingMove(player, power_dict[player.value])
+            winning_move = self.getWinInOne(player, power_dict[player.value])
             
             if defending_move or winning_move:
                 self.undo()
@@ -659,36 +686,34 @@ class Board:
             self.undo()
         return self.getRandomBlockerMove()
       else:
-        opWinningMove = self.getWinInOne(self.otherPlayer(player))
-        defendingMove = self.getDefendingMove(player)
+        opponent = self.otherPlayer(player)
+        opWinningMove = self.getWinInOne(opponent, power_dict[opponent.value])
+        defendingMove = self.getDefendingMove(player, power_dict[player.value])
         if opWinningMove:
           for blocker_move in self.getPossibleBlockerMoves():
             (x,y,z,dir) = blocker_move
             self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
 
-            if self.getWinInOne(self.otherPlayer(player)) == None or (defendingMove == None and self.getDefendingMove(player) != None):
+            if self.getWinInOne(opponent, power_dict[opponent.value]) == None or (defendingMove == None and self.getDefendingMove(player, power_dict[player.value]) != None):
               self.undo()
               return blocker_move
             self.undo()
         return None
-          
-            
-               
        
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num):
+    def getMove(self, board: Board, move_num, power_dict):
         if move_num > 3:
-           winningMove = board.getWinInOne(self.player)
+           winningMove = board.getWinInOne(self.player, power_dict)
            if winningMove:
               return winningMove
-        simpleDefendingMove = board.getSimpleDefendingMove(self.player)
+        simpleDefendingMove = board.getSimpleDefendingMove(self.player, power_dict)
         if simpleDefendingMove:
             return simpleDefendingMove
-        return board.getRandomMove(self.player)
+        return board.getRandomMove(self.player, power_dict)
     
     def getBlockerMove(self, board: Board):
        return None
@@ -699,18 +724,18 @@ class MediumAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num):
+    def getMove(self, board: Board, move_num, power_dict):
         if move_num == 0:
-           return board.getGoodStartMove()
-        winningMove = board.getWinInOne(self.player)
+           return board.getGoodStartMove(self.player, power_dict)
+        winningMove = board.getWinInOne(self.player, power_dict)
         if winningMove:
           return winningMove
         else:
-          defendingMove = board.getGoodDefendingMove(self.player)
+          defendingMove = board.getGoodDefendingMove(self.player, power_dict)
           if defendingMove:
             return defendingMove
           else:
-            return board.getRandomMove(self.player)
+            return board.getRandomMove(self.player, power_dict)
           
     def getBlockerMove(self, board: Board):
        return board.getRandomBlockerMove()
@@ -719,33 +744,33 @@ class HardAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num):  
+    def getMove(self, board: Board, move_num, power_dict):  
         if move_num == 0:
-           return board.getBestDefendingMove(self.player)
+           return board.getBestDefendingMove(self.player, power_dict)
         elif move_num == 1:
-          winInTwo = board.getWinInTwo(self.player)
+          winInTwo = board.getWinInTwo(self.player, power_dict)
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getBestDefendingMove(self.player)
+            defendingMove = board.getBestDefendingMove(self.player, power_dict)
             if defendingMove:
               return defendingMove
             else:
-              return board.getRandomMove(self.player)
+              return board.getRandomMove(self.player, power_dict)
         else:
-          winningMove = board.getWinInOne(self.player)
+          winningMove = board.getWinInOne(self.player, power_dict)
           if winningMove:
             return winningMove
           else:
-            winInTwo = board.getWinInTwo(self.player)
+            winInTwo = board.getWinInTwo(self.player, power_dict)
             if winInTwo and (random.random() < 0.5 or self.player == Piece.BLUE):
               return winInTwo
             else:
-              defendingMove = board.getGoodDefendingMove(self.player)
+              defendingMove = board.getGoodDefendingMove(self.player, power_dict)
               if defendingMove:
                 return defendingMove
               else:
-                return board.getRandomMove(self.player)
+                return board.getRandomMove(self.player, power_dict)
         
     def getBlockerMove(self, board: Board):
        return board.getMediumBlockerMove(self.player)
@@ -754,29 +779,29 @@ class ExpertAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num):  
+    def getMove(self, board: Board, move_num, power_dict):  
         if move_num == 0:
-           return board.getBestDefendingMove(self.player)
+           return board.getBestDefendingMove(self.player, power_dict)
         elif move_num == 1:
-          winInTwo = board.getWinInTwo(self.player)
+          winInTwo = board.getWinInTwo(self.player, power_dict)
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getBestDefendingMove(self.player)
+            defendingMove = board.getBestDefendingMove(self.player, power_dict)
             if defendingMove:
               return defendingMove
             else:
-              return board.getRandomMove(self.player)
+              return board.getRandomMove(self.player, power_dict)
         else:
-          winningMove = board.getWinInOne(self.player)
+          winningMove = board.getWinInOne(self.player, power_dict)
           if winningMove:
             return winningMove
           else:
-            winInTwo = board.getWinInTwo(self.player)
+            winInTwo = board.getWinInTwo(self.player, power_dict)
             if winInTwo:
               return winInTwo
             else:
-              defendingMove = board.getBestDefendingMove(self.player)
+              defendingMove = board.getBestDefendingMove(self.player, power_dict)
               if defendingMove:
                 return defendingMove
               else:
@@ -789,8 +814,11 @@ class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
+        self.red_power = 0
+        self.blue_power = 3
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
+        self.move_count = 0
         self.last_move_blocker = False
         self.difficulty = difficulty
         match(difficulty):
@@ -802,6 +830,14 @@ class GamePlayer:
                 self.computer = HardAgent(self.computer_color)
             case 'expert':
                 self.computer = ExpertAgent(self.computer_color)
+
+    @staticmethod
+    def get_power_gain(move_count):
+        turn = move_count // 2
+        power_gains = {0: 0, 1: 1, 2: 0, 3: 1, 4: 1, 5: 0}
+        if turn >= 6:
+            return 1
+        return power_gains.get(turn, 0)
 
     def serialize(self):
         return json.dumps({
@@ -841,11 +877,17 @@ class GamePlayer:
            else:
               return None
         else:
-           (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color))
+           power_dict = {
+            'RED': self.red_power,
+            'BLUE': self.blue_power
+           }
+           (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color), power_dict)
            self.board.moveAI(x,y,z,dir,self.computer_color)
            return (x,y,z,dir)
 
     def move(self,x,y,z,dir,player,isBlockerMove):
+        if not self.board.validMove(x,y,z,dir,isBlockerMove):
+              raise Exception("invalid_move")
         if isBlockerMove:
            if self.last_move_blocker:
               raise Exception("last_move_blocker")
@@ -859,9 +901,21 @@ class GamePlayer:
               self.blue_blocker_count += 1
            self.last_move_blocker = True
         else:
+           available_power = self.red_power if player == Piece.RED else self.blue_power
+           pieces_needed = self.board.count_pieces_pushed(x, y, z, dir)
+           if pieces_needed > available_power:
+                raise Exception("insufficient_power")
+           if player == Piece.RED:
+                self.red_power -= pieces_needed
+           else:
+                self.blue_power -= pieces_needed
            self.last_move_blocker = False
-        if not self.board.validMove(x,y,z,dir,isBlockerMove):
-           raise Exception("invalid_move")
+           self.move_count += 1
+           power_gain = self.get_power_gain(self.move_count)
+           if player == Piece.RED:
+                self.blue_power = min(5, self.blue_power + power_gain)
+           else:
+                self.red_power = min(5, self.red_power + power_gain)
         self.board.move(x,y,z,dir,player,isBlockerMove)
 
 from django.db import models
@@ -917,6 +971,8 @@ class Game(models.Model):
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
 
+    red_power = models.IntegerField(default=0)
+    blue_power = models.IntegerField(default=3)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
     last_move_blocker = models.BooleanField(default=False)
@@ -924,6 +980,14 @@ class Game(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
+
+    @staticmethod
+    def get_power_gain(move_count):
+        turn = move_count // 2
+        power_gains = {0: 0, 1: 1, 2: 0, 3: 1, 4: 1, 5: 0}
+        if turn >= 6:
+            return 1
+        return power_gains.get(turn, 0)
 
     @classmethod
     def create(cls, **kwargs):
@@ -953,6 +1017,8 @@ class Game(models.Model):
     def move(self, x, y, z, dir, player, isBlockerMove):
         board = Board()
         board.setState(json.loads(self.game_state))
+        if not board.validMove(x,y,z,dir,isBlockerMove):
+           raise Exception("invalid_move")
         if isBlockerMove:
            if self.last_move_blocker:
               raise Exception("last_move_blocker")
@@ -968,11 +1034,22 @@ class Game(models.Model):
                 self.blue_blocker_count += 1
            self.last_move_blocker = True
         else:
+           available_power = self.red_power if player == Piece.RED else self.blue_power
+           pieces_pushed = board.count_pieces_pushed(x, y, z, dir)
+           if pieces_pushed > available_power:
+                raise Exception("insufficient_power")
+           if player == Piece.RED:
+               self.red_power -= pieces_pushed
+           else:
+               self.blue_power -= pieces_pushed
            self.last_move_blocker = False
-        if not board.validMove(x,y,z,dir,isBlockerMove):
-           raise Exception("invalid_move")
+           self.move_count += 1
+           power_gain = self.get_power_gain(self.move_count)
+           if player == Piece.RED:
+               self.blue_power = min(5, self.blue_power + power_gain)
+           else:
+               self.red_power = min(5, self.red_power + power_gain)
         board.move(x,y,z,dir,player,isBlockerMove)
-        self.move_count += 1
         self.game_state = json.dumps(board.getState())
 
     def __str__(self):
