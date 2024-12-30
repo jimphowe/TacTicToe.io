@@ -69,7 +69,9 @@ def local_game_view(request):
 
     context = {
         'game_state': json.dumps(game.board.getState()),
-        'player_color': 'RED'
+        'player_color': 'RED',
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
     }
 
     return HttpResponse(template.render(context, request))
@@ -116,7 +118,15 @@ def handle_local_move(request):
     elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
-    return JsonResponse({'status': 'success', 'position': position, 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
+    return JsonResponse({
+        'status': 'success',
+        'position': position,
+        'game_state': game_state,
+        'winner': winner,
+        'winning_run': winning_run,
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
+    })
 
 def singleplayer_setup_view(request):
     template = loader.get_template('singleplayer_setup.html')
@@ -136,7 +146,9 @@ def singleplayer_game_view(request):
     context = {
         'game_state': json.dumps(game.board.getState()),
         'difficulty': difficulty,
-        'player_color': humanColor
+        'player_color': humanColor,
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
     }
 
     template = loader.get_template('singleplayer_game.html')
@@ -179,7 +191,9 @@ def handle_singleplayer_move(request):
         'status': 'success',
         'game_state': game_state,
         'winner': winner,
-        'winning_run': winning_run
+        'winning_run': winning_run,
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
     })
 
 @csrf_exempt
@@ -248,7 +262,14 @@ def handle_computer_move(request):
     elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
-    return JsonResponse({'status': 'success', 'game_state': game_state, 'winner': winner, 'winning_run': winning_run})
+    return JsonResponse({
+        'status': 'success',
+        'game_state': game_state,
+        'winner': winner,
+        'winning_run': winning_run,
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
+    })
 
 from django.shortcuts import render, get_object_or_404
 from .models import Game
@@ -288,6 +309,8 @@ def multiplayer_game_view(request, game_code):
         'opponent_name': opponent_profile.user.username,
         'opponent_elo': opponent_profile.rapid_elo,
         'is_game_over': game.completed,
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
     }
     return render(request, 'multiplayer_game.html', context)
 
@@ -378,7 +401,9 @@ def handle_multiplayer_move(request):
                 'elo_change': game.elo_change,
                 'turn': game.turn.id,
                 'is_blocker_move': isBlockerMove,
-                'move_player_id': request.user.id
+                'move_player_id': request.user.id,
+                'red_power': game.red_power,
+                'blue_power': game.blue_power,
             }
         )
         

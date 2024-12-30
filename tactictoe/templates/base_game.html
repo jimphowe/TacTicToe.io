@@ -16,6 +16,7 @@
     <script src="{% static 'js/game_over.js' %}"></script>
     <script src="{% static 'js/icons.js' %}"></script>
     <script src="{% static 'js/components/SettingsPanel.js' %}"></script>
+    <script src="{% static 'js/components/PowerDisplay.js' %}"></script>
     <style>
         body, html { 
             margin: 0; 
@@ -434,6 +435,7 @@
         </div>
     </div>
     <div id="settings-panel-root"></div>
+    <div id="power-display-root"></div>
     <div class="game-container">
         <div class="canvas-container">
             <canvas id="myCanvas"></canvas>
@@ -504,10 +506,28 @@
         }
 
         document.addEventListener('DOMContentLoaded', (event) => {
+            window.playerColor = '{{ player_color }}';
+            window.redPower = '{{ red_power }}';
+            window.bluePower = '{{ blue_power }}';
+            window.myId = '{{ request.user.id }}';
+
             const settingsRoot = document.getElementById('settings-panel-root');
             if (settingsRoot) {
                 ReactDOM.render(React.createElement(window.SettingsPanel), settingsRoot);
             }
+
+            const powerDisplayRoot = document.getElementById('power-display-root');
+            if (powerDisplayRoot) {
+                ReactDOM.render(React.createElement(window.PowerDisplay), powerDisplayRoot);
+            }
+
+            window.addEventListener('click', onMouseClick, false);
+            window.addEventListener('mousemove', onMouseMove, false);
+            window.addEventListener('mouseout', onMouseOut, false);
+            
+            renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+            renderer.domElement.addEventListener('touchmove', onTouchMove, false);
+            renderer.domElement.addEventListener('touchend', onTouchEnd, false);
         });
 
         document.querySelectorAll('.rotation-button').forEach(button => {
@@ -582,10 +602,6 @@
         let touchEndX, touchEndY;
         let isSwiping = false;
         const swipeThreshold = 80; // minimum distance for a swipe
-
-        renderer.domElement.addEventListener('touchstart', onTouchStart, false);
-        renderer.domElement.addEventListener('touchmove', onTouchMove, false);
-        renderer.domElement.addEventListener('touchend', onTouchEnd, false);
 
         function onTouchStart(event) {
             event.preventDefault();
@@ -728,8 +744,6 @@
             var backgroundColor = '#d3d2c0';
             var boardColor = '#edd8a8';
         {% endif %}
-
-        console.log(backgroundColor);
 
         document.documentElement.style.setProperty('--game-background-color', backgroundColor);
         renderer.setClearColor(backgroundColor);
@@ -1086,16 +1100,12 @@
             }
         }
 
-        window.addEventListener('mousemove', onMouseMove, false);
-
         function onMouseOut(event) {
             if (lastIntersected) {
                 lastIntersected.material = lastIntersected.currentMaterial;
                 lastIntersected = null;
             }
         }
-
-        window.addEventListener('mouseout', onMouseOut, false);
 
         function onKeyDown(event) {
             let direction;
@@ -1144,8 +1154,6 @@
                 }
             }
         }
-
-        window.addEventListener('click', onMouseClick, false);
 
         function rotateCube(direction) {
             // Update pieces game board indexed locations in cube

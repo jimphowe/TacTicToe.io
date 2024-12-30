@@ -243,6 +243,7 @@
         var data = JSON.parse(e.data);
         
         await updateGameState(JSON.parse(data.game_state));
+        window.updatePowerDisplay(data.red_power, data.blue_power);
         playSound("move");
         
         if (data.winner_id) {

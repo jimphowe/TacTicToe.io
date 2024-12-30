@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(11)
+        self.setupBoard(9)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(11)
+           self.setupBoard(9)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -196,8 +196,8 @@ class Board:
             for z in range(3):
               for dir in directions:
                 if self.valid(x,y,z,dir):
-                  pieces_needed = self.count_pieces_pushed(x,y,z,dir)
-                  if pieces_needed > available_power:
+                  pieces_pushed = self.count_pieces_pushed(x,y,z,dir)
+                  if pieces_pushed > available_power:
                       continue
                   moves.append((x,y,z,dir))
         return moves
@@ -528,7 +528,7 @@ class Board:
         for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
           self.moveAI(x,y,z,dir,player)
           opponent = self.otherPlayer(player)
-          if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+          if self.getWinInOne(opponent, power_dict) == None:
             potential_moves.append((x,y,z,dir))
           self.undo()
         if potential_moves:
@@ -541,7 +541,7 @@ class Board:
             points = 0
             self.moveAI(x, y, z, dir, player)
             opponent = self.otherPlayer(player)
-            if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+            if self.getWinInOne(opponent, power_dict) == None:
                 points += 100
             points += self.getTwoInARows(player) * 4
             if self.pieces[x][y][z] == opponent:
@@ -567,7 +567,7 @@ class Board:
         for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
             points = 0
             self.moveAI(x, y, z, dir, player)
-            if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+            if self.getWinInOne(opponent, power_dict) == None:
                 points += 100
             points += self.getTwoInARows(player) * 5
             neighbors = self.neighbor_positions(x, y, z)
@@ -594,7 +594,7 @@ class Board:
         for move, _ in top_moves:
             x, y, z, dir = move
             self.moveAI(x,y,z,dir,player)
-            if self.getWinInTwo(opponent, power_dict[opponent.value]) is None:
+            if self.getWinInTwo(opponent, power_dict) is None:
                 self.undo()
                 return move
             self.undo()
@@ -607,19 +607,23 @@ class Board:
     # If there are any moves which allow the given player to win after any opponent move, 
     # return one at random. Otherwise, return None
     def getWinInTwo(self,player: Piece, power_dict):
-        winningMove = self.getWinInOne(player, power_dict[player.value])
+        winningMove = self.getWinInOne(player, power_dict)
         if winningMove:
           return winningMove
         potential_moves = []
-        opponent = self.otherPlayer[player]
+        opponent = self.otherPlayer(player)
+
+        moves_made = self.numPieces(Piece.RED) + self.numPieces(Piece.BLUE)
+
         for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
+          first_move_cost = self.count_pieces_pushed(x, y, z, dir)
+          remaining_power = power_dict[player.value] - first_move_cost + 1
           self.moveAI(x,y,z,dir,player)
-          if self.getWinInOne(opponent, power_dict[opponent.value]) == None:
+          if self.getWinInOne(opponent, power_dict) == None:
             winner = True
             for (x2,y2,z2,dir2) in self.getPossibleMoves(power_dict[opponent.value]):
               self.moveAI(x2,y2,z2,dir2,opponent)
-              # TODO "-1" is an estimate to avoid recalculating power
-              if self.getWinInOne(player, power_dict[player.value] - 1) == None:
+              if self.getWinInOne(player, {player.value: remaining_power, opponent.value: power_dict[opponent.value]}) == None:
                 winner = False
               self.undo()
             if winner:
@@ -670,15 +674,15 @@ class Board:
     
     def getBetterBlockerMove(self, player: Piece, power_dict):
       if player == Piece.BLUE:
-        defending_move = self.getDefendingMove(player, power_dict[player.value])
+        defending_move = self.getDefendingMove(player, power_dict)
         if defending_move:
             return self.getRandomBlockerMove()
         for blocker_move in self.getPossibleBlockerMoves():
             (x,y,z,dir) = blocker_move
             self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
             
-            defending_move = self.getDefendingMove(player, power_dict[player.value])
-            winning_move = self.getWinInOne(player, power_dict[player.value])
+            defending_move = self.getDefendingMove(player, power_dict)
+            winning_move = self.getWinInOne(player, power_dict)
             
             if defending_move or winning_move:
                 self.undo()
@@ -687,14 +691,14 @@ class Board:
         return self.getRandomBlockerMove()
       else:
         opponent = self.otherPlayer(player)
-        opWinningMove = self.getWinInOne(opponent, power_dict[opponent.value])
-        defendingMove = self.getDefendingMove(player, power_dict[player.value])
+        opWinningMove = self.getWinInOne(opponent, power_dict)
+        defendingMove = self.getDefendingMove(player, power_dict)
         if opWinningMove:
           for blocker_move in self.getPossibleBlockerMoves():
             (x,y,z,dir) = blocker_move
             self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
 
-            if self.getWinInOne(opponent, power_dict[opponent.value]) == None or (defendingMove == None and self.getDefendingMove(player, power_dict[player.value]) != None):
+            if self.getWinInOne(opponent, power_dict) == None or (defendingMove == None and self.getDefendingMove(player, power_dict) != None):
               self.undo()
               return blocker_move
             self.undo()
@@ -805,20 +809,20 @@ class ExpertAgent:
               if defendingMove:
                 return defendingMove
               else:
-                return board.getRandomMove(self.player)
+                return board.getRandomMove(self.player, power_dict)
               
-    def getBlockerMove(self, board: Board):
-       return board.getBetterBlockerMove(self.player)
+    def getBlockerMove(self, board: Board, power_dict):
+       return board.getBetterBlockerMove(self.player, power_dict)
     
 class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
         self.red_power = 0
-        self.blue_power = 3
+        self.blue_power = 2
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
-        self.move_count = 0
+        self.moves_made = 0
         self.last_move_blocker = False
         self.difficulty = difficulty
         match(difficulty):
@@ -831,14 +835,6 @@ class GamePlayer:
             case 'expert':
                 self.computer = ExpertAgent(self.computer_color)
 
-    @staticmethod
-    def get_power_gain(move_count):
-        turn = move_count // 2
-        power_gains = {0: 0, 1: 1, 2: 0, 3: 1, 4: 1, 5: 0}
-        if turn >= 6:
-            return 1
-        return power_gains.get(turn, 0)
-
     def serialize(self):
         return json.dumps({
             'board_state': self.board.getState(),
@@ -846,7 +842,10 @@ class GamePlayer:
             'red_blocker_count': self.red_blocker_count,
             'blue_blocker_count': self.blue_blocker_count,
             'last_move_blocker': self.last_move_blocker,
-            'difficulty': self.difficulty
+            'red_power': self.red_power,
+            'blue_power': self.blue_power,
+            'difficulty': self.difficulty,
+            'moves_made': self.moves_made
         })
     
     @classmethod
@@ -857,14 +856,21 @@ class GamePlayer:
         game_player.red_blocker_count = data['red_blocker_count']
         game_player.blue_blocker_count = data['blue_blocker_count']
         game_player.last_move_blocker = data['last_move_blocker']
+        game_player.red_power = data['red_power']
+        game_player.blue_power = data['blue_power']
+        game_player.moves_made = data['moves_made']
         return game_player
 
     def isOver(self):
         return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.BLUE)
 
     def makeComputerMove(self,isBlockerMove):
+        power_dict = {
+            'RED': self.red_power,
+            'BLUE': self.blue_power
+           }
         if isBlockerMove:
-           move = self.computer.getBlockerMove(self.board)
+           move = self.computer.getBlockerMove(self.board, power_dict)
            if move:
             (x,y,z,dir) = move
             if self.computer_color == Piece.RED:
@@ -877,11 +883,13 @@ class GamePlayer:
            else:
               return None
         else:
-           power_dict = {
-            'RED': self.red_power,
-            'BLUE': self.blue_power
-           }
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color), power_dict)
+           pieces_pushed = self.board.count_pieces_pushed(x, y, z, dir)
+           if self.computer_color == Piece.RED:
+              self.red_power = min(5, self.red_power - pieces_pushed + 1)
+           else:
+              self.blue_power = min(5, self.blue_power - pieces_pushed + 1)
+           self.moves_made += 1
            self.board.moveAI(x,y,z,dir,self.computer_color)
            return (x,y,z,dir)
 
@@ -902,20 +910,15 @@ class GamePlayer:
            self.last_move_blocker = True
         else:
            available_power = self.red_power if player == Piece.RED else self.blue_power
-           pieces_needed = self.board.count_pieces_pushed(x, y, z, dir)
-           if pieces_needed > available_power:
+           pieces_pushed = self.board.count_pieces_pushed(x, y, z, dir)
+           if pieces_pushed > available_power:
                 raise Exception("insufficient_power")
-           if player == Piece.RED:
-                self.red_power -= pieces_needed
+           if self.computer_color == Piece.RED:
+              self.blue_power = min(5, self.blue_power - pieces_pushed + 1)
            else:
-                self.blue_power -= pieces_needed
+              self.red_power = min(5, self.red_power - pieces_pushed + 1)
            self.last_move_blocker = False
-           self.move_count += 1
-           power_gain = self.get_power_gain(self.move_count)
-           if player == Piece.RED:
-                self.blue_power = min(5, self.blue_power + power_gain)
-           else:
-                self.red_power = min(5, self.red_power + power_gain)
+           self.moves_made += 1
         self.board.move(x,y,z,dir,player,isBlockerMove)
 
 from django.db import models
@@ -962,7 +965,7 @@ class Game(models.Model):
     # Game state and status
     game_state = models.JSONField(default=list)
     turn = models.ForeignKey(User, on_delete=models.CASCADE)
-    move_count = models.IntegerField(default=0)
+    moves_made = models.IntegerField(default=0)
     completed = models.BooleanField(default=False)
     winner = models.ForeignKey(User, related_name='winner', on_delete=models.SET_NULL, null=True, blank=True)
     elo_change = models.IntegerField(default=None, null=True)
@@ -972,7 +975,7 @@ class Game(models.Model):
     last_move_time = models.DateTimeField(auto_now_add=True)
 
     red_power = models.IntegerField(default=0)
-    blue_power = models.IntegerField(default=3)
+    blue_power = models.IntegerField(default=2)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
     last_move_blocker = models.BooleanField(default=False)
@@ -980,14 +983,6 @@ class Game(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
-
-    @staticmethod
-    def get_power_gain(move_count):
-        turn = move_count // 2
-        power_gains = {0: 0, 1: 1, 2: 0, 3: 1, 4: 1, 5: 0}
-        if turn >= 6:
-            return 1
-        return power_gains.get(turn, 0)
 
     @classmethod
     def create(cls, **kwargs):
@@ -1023,7 +1018,7 @@ class Game(models.Model):
            if self.last_move_blocker:
               raise Exception("last_move_blocker")
            if player == Piece.RED:
-                if self.move_count < 1:
+                if self.moves_made < 1:
                     raise Exception("red_first_move")
                 if self.red_blocker_count >= 3:
                     raise Exception("max_blocker_moves")
@@ -1039,16 +1034,11 @@ class Game(models.Model):
            if pieces_pushed > available_power:
                 raise Exception("insufficient_power")
            if player == Piece.RED:
-               self.red_power -= pieces_pushed
+              self.red_power = min(5, self.red_power - pieces_pushed + 1)
            else:
-               self.blue_power -= pieces_pushed
+              self.blue_power = min(5, self.blue_power - pieces_pushed + 1)
            self.last_move_blocker = False
-           self.move_count += 1
-           power_gain = self.get_power_gain(self.move_count)
-           if player == Piece.RED:
-               self.blue_power = min(5, self.blue_power + power_gain)
-           else:
-               self.red_power = min(5, self.red_power + power_gain)
+           self.moves_made += 1
         board.move(x,y,z,dir,player,isBlockerMove)
         self.game_state = json.dumps(board.getState())
 

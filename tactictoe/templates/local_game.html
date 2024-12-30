@@ -80,6 +80,7 @@
                 }
 
                 await updateGameState(data.game_state);
+                window.updatePowerDisplay(data.red_power, data.blue_power);
                 playSound("move");
 
                 if (data.winner) {

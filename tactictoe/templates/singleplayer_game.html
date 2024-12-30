@@ -138,6 +138,7 @@
                 }
             } else {
                 await updateGameState(data.game_state);
+                window.updatePowerDisplay(data.red_power, data.blue_power);
                 playSound("move");
                 
                 if (data.winner) {
@@ -187,6 +188,7 @@
                         ReactDOM.render(null, indicatorRoot);
 
                         await updateGameState(moveData.game_state);
+                        window.updatePowerDisplay(moveData.red_power, moveData.blue_power);
                         playSound("move");
 
                         if (moveData.winner) {
