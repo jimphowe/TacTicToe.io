@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(9)
+        self.setupBoard(8)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(9)
+           self.setupBoard(8)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -470,15 +470,16 @@ class Board:
         return neighbors
     
     def getTwoInARows(self, player: Piece):
-        count = 0
-        for run in self.winningRuns:
-            player_count = sum(1 for x, y, z in run if self.pieces[x][y][z] == player)
-            if player_count == 2:
-                if (1, 1, 1) in run:
-                    count += 0.5
-                else:
-                    count += 1
-        return count
+      count = 0
+      for run in self.winningRuns:
+          player_count = sum(1 for x, y, z in run if self.pieces[x][y][z] == player)
+          
+          if player_count == 2:
+              empty_spot = any(self.pieces[x][y][z] == Piece.EMPTY for x, y, z in run)
+              
+              count += 1.0 if empty_spot else 0.5
+              
+      return count
 
     def numPieces(self,player: Piece):
         count = 0
@@ -563,9 +564,14 @@ class Board:
                        (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)])
         middles = frozenset([(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)])
         potential_moves = []
-        
-        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+        available_power = power_dict[player.value]
+        for (x, y, z, dir) in self.getPossibleMoves(available_power):
             points = 0
+            power_cost = self.count_pieces_pushed(x, y, z, dir)
+        
+            if available_power > 0:
+              power_efficiency = 15 * (1 - power_cost/available_power)
+              points += power_efficiency
             self.moveAI(x, y, z, dir, player)
             if self.getWinInOne(opponent, power_dict) == None:
                 points += 100
@@ -617,7 +623,7 @@ class Board:
 
         for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
           first_move_cost = self.count_pieces_pushed(x, y, z, dir)
-          remaining_power = power_dict[player.value] - first_move_cost + 1
+          remaining_power = power_dict[player.value] - first_move_cost + GamePlayer.get_power_gain(moves_made)
           self.moveAI(x,y,z,dir,player)
           if self.getWinInOne(opponent, power_dict) == None:
             winner = True
@@ -676,7 +682,7 @@ class Board:
       if player == Piece.BLUE:
         defending_move = self.getDefendingMove(player, power_dict)
         if defending_move:
-            return self.getRandomBlockerMove()
+            return None
         for blocker_move in self.getPossibleBlockerMoves():
             (x,y,z,dir) = blocker_move
             self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
@@ -819,7 +825,7 @@ class GamePlayer:
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
         self.red_power = 0
-        self.blue_power = 2
+        self.blue_power = 1
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
         self.moves_made = 0
@@ -834,6 +840,11 @@ class GamePlayer:
                 self.computer = HardAgent(self.computer_color)
             case 'expert':
                 self.computer = ExpertAgent(self.computer_color)
+
+    @staticmethod
+    def get_power_gain(moves_made):
+        turn = (moves_made + 1) // 2
+        return 1 if turn % 2 == 0 else 0
 
     def serialize(self):
         return json.dumps({
@@ -884,12 +895,12 @@ class GamePlayer:
               return None
         else:
            (x,y,z,dir) = self.computer.getMove(self.board, self.board.numPieces(self.computer_color), power_dict)
+           self.moves_made += 1
            pieces_pushed = self.board.count_pieces_pushed(x, y, z, dir)
            if self.computer_color == Piece.RED:
-              self.red_power = min(5, self.red_power - pieces_pushed + 1)
+              self.red_power = min(5, self.red_power - pieces_pushed + self.get_power_gain(self.moves_made))
            else:
-              self.blue_power = min(5, self.blue_power - pieces_pushed + 1)
-           self.moves_made += 1
+              self.blue_power = min(5, self.blue_power - pieces_pushed + self.get_power_gain(self.moves_made))
            self.board.moveAI(x,y,z,dir,self.computer_color)
            return (x,y,z,dir)
 
@@ -909,16 +920,16 @@ class GamePlayer:
               self.blue_blocker_count += 1
            self.last_move_blocker = True
         else:
+           self.last_move_blocker = False
+           self.moves_made += 1
            available_power = self.red_power if player == Piece.RED else self.blue_power
            pieces_pushed = self.board.count_pieces_pushed(x, y, z, dir)
            if pieces_pushed > available_power:
                 raise Exception("insufficient_power")
            if self.computer_color == Piece.RED:
-              self.blue_power = min(5, self.blue_power - pieces_pushed + 1)
+              self.blue_power = min(5, self.blue_power - pieces_pushed + self.get_power_gain(self.moves_made))
            else:
-              self.red_power = min(5, self.red_power - pieces_pushed + 1)
-           self.last_move_blocker = False
-           self.moves_made += 1
+              self.red_power = min(5, self.red_power - pieces_pushed + self.get_power_gain(self.moves_made))
         self.board.move(x,y,z,dir,player,isBlockerMove)
 
 from django.db import models
@@ -974,8 +985,8 @@ class Game(models.Model):
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
 
-    red_power = models.IntegerField(default=0)
-    blue_power = models.IntegerField(default=2)
+    red_power = models.IntegerField(default=1)
+    blue_power = models.IntegerField(default=3)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
     last_move_blocker = models.BooleanField(default=False)
@@ -1029,16 +1040,16 @@ class Game(models.Model):
                 self.blue_blocker_count += 1
            self.last_move_blocker = True
         else:
+           self.last_move_blocker = False
+           self.moves_made += 1
            available_power = self.red_power if player == Piece.RED else self.blue_power
            pieces_pushed = board.count_pieces_pushed(x, y, z, dir)
            if pieces_pushed > available_power:
                 raise Exception("insufficient_power")
            if player == Piece.RED:
-              self.red_power = min(5, self.red_power - pieces_pushed + 1)
+              self.red_power = min(5, self.red_power - pieces_pushed + self.get_power_gain(self.moves_made))
            else:
-              self.blue_power = min(5, self.blue_power - pieces_pushed + 1)
-           self.last_move_blocker = False
-           self.moves_made += 1
+              self.blue_power = min(5, self.blue_power - pieces_pushed + self.get_power_gain(self.moves_made))
         board.move(x,y,z,dir,player,isBlockerMove)
         self.game_state = json.dumps(board.getState())
 
