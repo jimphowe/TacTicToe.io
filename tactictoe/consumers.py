@@ -62,6 +62,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await self.send(text_data=json.dumps({
             'game_state': event['game_state'],
+            'red_power': event['red_power'],
+            'blue_power': event['blue_power'],
             'winner_id': winner_id,
             'winner_color': winner_color,
             'winning_run': winning_run,

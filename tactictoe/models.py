@@ -476,9 +476,8 @@ class Board:
           
           if player_count == 2:
               empty_spot = any(self.pieces[x][y][z] == Piece.EMPTY for x, y, z in run)
-              
               count += 1.0 if empty_spot else 0.5
-              
+    
       return count
 
     def numPieces(self,player: Piece):
@@ -824,12 +823,11 @@ class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
-        self.red_power = 0
-        self.blue_power = 1
+        self.red_power = 2
+        self.blue_power = 3
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
         self.moves_made = 0
-        self.last_move_blocker = False
         self.difficulty = difficulty
         match(difficulty):
             case 'easy':
@@ -852,7 +850,6 @@ class GamePlayer:
             'computer_color': self.computer_color.value,
             'red_blocker_count': self.red_blocker_count,
             'blue_blocker_count': self.blue_blocker_count,
-            'last_move_blocker': self.last_move_blocker,
             'red_power': self.red_power,
             'blue_power': self.blue_power,
             'difficulty': self.difficulty,
@@ -866,7 +863,6 @@ class GamePlayer:
         game_player.board.setState(data['board_state'])
         game_player.red_blocker_count = data['red_blocker_count']
         game_player.blue_blocker_count = data['blue_blocker_count']
-        game_player.last_move_blocker = data['last_move_blocker']
         game_player.red_power = data['red_power']
         game_player.blue_power = data['blue_power']
         game_player.moves_made = data['moves_made']
@@ -908,8 +904,6 @@ class GamePlayer:
         if not self.board.validMove(x,y,z,dir,isBlockerMove):
               raise Exception("invalid_move")
         if isBlockerMove:
-           if self.last_move_blocker:
-              raise Exception("last_move_blocker")
            if player == Piece.RED:
               if self.red_blocker_count >= 3:
                  raise Exception("max_blocker_moves")
@@ -918,18 +912,16 @@ class GamePlayer:
               if self.blue_blocker_count >= 3:
                  raise Exception("max_blocker_moves")
               self.blue_blocker_count += 1
-           self.last_move_blocker = True
         else:
-           self.last_move_blocker = False
            self.moves_made += 1
            available_power = self.red_power if player == Piece.RED else self.blue_power
            pieces_pushed = self.board.count_pieces_pushed(x, y, z, dir)
            if pieces_pushed > available_power:
                 raise Exception("insufficient_power")
-           if self.computer_color == Piece.RED:
-              self.blue_power = min(5, self.blue_power - pieces_pushed + self.get_power_gain(self.moves_made))
-           else:
+           if player == Piece.RED:
               self.red_power = min(5, self.red_power - pieces_pushed + self.get_power_gain(self.moves_made))
+           else:
+              self.blue_power = min(5, self.blue_power - pieces_pushed + self.get_power_gain(self.moves_made))
         self.board.move(x,y,z,dir,player,isBlockerMove)
 
 from django.db import models
@@ -985,11 +977,10 @@ class Game(models.Model):
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
 
-    red_power = models.IntegerField(default=1)
+    red_power = models.IntegerField(default=2)
     blue_power = models.IntegerField(default=3)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
-    last_move_blocker = models.BooleanField(default=False)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1020,14 +1011,17 @@ class Game(models.Model):
         game.save()
         return game
     
+    @staticmethod
+    def get_power_gain(moves_made):
+        turn = (moves_made + 1) // 2
+        return 1 if turn % 2 == 0 else 0
+    
     def move(self, x, y, z, dir, player, isBlockerMove):
         board = Board()
         board.setState(json.loads(self.game_state))
         if not board.validMove(x,y,z,dir,isBlockerMove):
            raise Exception("invalid_move")
         if isBlockerMove:
-           if self.last_move_blocker:
-              raise Exception("last_move_blocker")
            if player == Piece.RED:
                 if self.moves_made < 1:
                     raise Exception("red_first_move")
@@ -1038,9 +1032,7 @@ class Game(models.Model):
                 if self.blue_blocker_count >= 3:
                     raise Exception("max_blocker_moves")
                 self.blue_blocker_count += 1
-           self.last_move_blocker = True
         else:
-           self.last_move_blocker = False
            self.moves_made += 1
            available_power = self.red_power if player == Piece.RED else self.blue_power
            pieces_pushed = board.count_pieces_pushed(x, y, z, dir)

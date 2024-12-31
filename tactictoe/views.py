@@ -680,5 +680,5 @@ def get_timers(request, game_code):
         'player_one_id': game.player_one.id,
         'current_turn_id': game.turn.id,
         'is_game_over': game.completed,
-        'move_count': game.move_count,
+        'moves_made': game.moves_made,
     })
