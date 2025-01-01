@@ -123,9 +123,17 @@
 
             if (data.status == 'error') {
                 console.log(data);
+                let row;
                 playSound("invalid");
                 if (data.message == 'invalid_move') {
-                    const row = getRowToJiggle(piece);
+                    row = getRowToJiggle(piece);
+                    jigglePieces(row, direction, () => {
+                        isJiggling = false;
+                    });
+                }
+                else if (data.message == 'insufficient_power') {
+                    showToast("Insufficient power")
+                    row = getRowToJiggle(piece);
                     jigglePieces(row, direction, () => {
                         isJiggling = false;
                     });

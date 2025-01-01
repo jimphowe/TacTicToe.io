@@ -270,7 +270,7 @@ window.GameControls = function() {
                       style: {
                         width: isDesktop ? '80px' : '28px',
                         height: isDesktop ? '80px' : '28px',
-                        backgroundColor: isBlockerSelected ? '#FFD700' : '#1f2937',
+                        backgroundColor: isBlockerSelected ? '#e7e470' : '#1f2937',
                         borderRadius: '12px',
                         transition: 'all 300ms',
                         cursor: 'pointer',

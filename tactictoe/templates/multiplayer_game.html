@@ -322,10 +322,18 @@
             const data = await response.json();
 
             if (data.status == 'error') {
+                let row;
                 switch(data.message) {
                     case 'invalid_move':
                         playSound("invalid");
-                        const row = getRowToJiggle(piece);
+                        row = getRowToJiggle(piece);
+                        jigglePieces(row, direction, () => {
+                            isJiggling = false;
+                        });
+                        break;
+                    case 'insufficient_power':
+                        showToast("Insufficient power")
+                        row = getRowToJiggle(piece);
                         jigglePieces(row, direction, () => {
                             isJiggling = false;
                         });
