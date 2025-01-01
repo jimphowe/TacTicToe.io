@@ -16,7 +16,7 @@
     <script src="{% static 'js/game_over.js' %}"></script>
     <script src="{% static 'js/icons.js' %}"></script>
     <script src="{% static 'js/components/SettingsPanel.js' %}"></script>
-    <script src="{% static 'js/components/PowerDisplay.js' %}"></script>
+    <script src="{% static 'js/components/GameControls.js' %}"></script>
     <style>
         body, html { 
             margin: 0; 
@@ -385,57 +385,8 @@
             Invalid Move
         </div>
     </div>
-    <div class="blocker-widget">
-        <h3 class="blocker-widget-header">Blocker Pieces</h3>
-        <div class="blocker-widget-content">
-            <div class="player-blocker-info">
-                <div class="player-row">
-                    <div class="player-color-icon red"></div>
-                    <span class="player-color-text">Red</span>
-                    <div class="blocker-icons" id="red-blockers">
-                        <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
-                        </svg>
-                        <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
-                        </svg>
-                        <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="player-row">
-                    <div class="player-color-icon blue"></div>
-                    <span class="player-color-text">Blue</span>
-                    <div class="blocker-icons" id="blue-blockers">
-                        <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
-                        </svg>
-                        <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
-                        </svg>
-                        <svg class="blocker-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            <div id="blocker-select" class="blocker-select">
-                <div class="blocker-background">
-                    <img src="/static/images/red_blocker.png" class="blocker-piece" id="red-blocker">
-                    <img src="/static/images/blue_blocker.png" class="blocker-piece" id="blue-blocker">
-                    <div class="blocker-x-overlay" id="blockerXOverlay">
-                        <svg viewBox="0 0 80 80">
-                            <line x1="20" y1="20" x2="60" y2="60"/>
-                            <line x1="60" y1="20" x2="20" y2="60"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     <div id="settings-panel-root"></div>
-    <div id="power-display-root"></div>
+    <div id="game-controls-root"></div>
     <div class="game-container">
         <div class="canvas-container">
             <canvas id="myCanvas"></canvas>
@@ -482,7 +433,7 @@
         let blockerWidget = null;
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
-        // renderer.setClearColor(0xd3d2c0);
+        renderer.setClearColor(0xd3d2c0);
 
         function onWindowResize() {
             adjustCameraPosition();
@@ -510,15 +461,16 @@
             window.redPower = '{{ red_power }}';
             window.bluePower = '{{ blue_power }}';
             window.myId = '{{ request.user.id }}';
+            window.isBlockerSelected = false;
 
             const settingsRoot = document.getElementById('settings-panel-root');
             if (settingsRoot) {
                 ReactDOM.render(React.createElement(window.SettingsPanel), settingsRoot);
             }
 
-            const powerDisplayRoot = document.getElementById('power-display-root');
-            if (powerDisplayRoot) {
-                ReactDOM.render(React.createElement(window.PowerDisplay), powerDisplayRoot);
+            const gameControlsRoot = document.getElementById('game-controls-root');
+            if (gameControlsRoot) {
+                ReactDOM.render(React.createElement(window.GameControls), gameControlsRoot);
             }
 
             window.addEventListener('click', onMouseClick, false);
@@ -878,28 +830,6 @@
 
         scene.add(cubeGroup);
 
-        function initGame() {
-            blockerWidget = document.querySelector('.blocker-widget');
-
-            // Add click handler for the blocker select
-            const blockerSelect = document.querySelector('.blocker-select');
-            const blockerBackground = blockerSelect.querySelector('.blocker-background');
-            const xOverlay = document.getElementById('blockerXOverlay');
-
-            blockerSelect.addEventListener('click', () => {
-                if (!xOverlay.classList.contains('show')) {
-                    isBlockerSelected = !isBlockerSelected;
-                    if (isBlockerSelected) {
-                        blockerBackground.classList.add('selected');
-                    } else {
-                        blockerBackground.classList.remove('selected');
-                    }
-                }
-            });
-
-            updateBlockerWidget(gameState);
-        }
-
         // Initialize Raycaster
         var raycaster = new THREE.Raycaster();
         var mouse = new THREE.Vector2();
@@ -1136,8 +1066,6 @@
         }
 
         window.addEventListener('keydown', onKeyDown, false);
-
-        let isBlockerSelected = false;
 
         function onMouseClick(event) {
             const rect = renderer.domElement.getBoundingClientRect();
@@ -1508,8 +1436,6 @@
         //     }
         // }
         // initOnScreenConsole();
-
-        initGame();
     </script>
     {% block scripts %}{% endblock %}
 </body>

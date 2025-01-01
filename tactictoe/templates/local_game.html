@@ -34,7 +34,7 @@
         currentPlayer = JSON.parse(localStorage.getItem('player'));
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         const direction = sideToDirection(currentDirectionMapping['BACK']);
-        const isBlockerMove = isBlockerSelected;
+        const isBlockerMove = window.isBlockerSelected;
 
         try {
             const response = await fetch('/local/move', {
@@ -67,9 +67,8 @@
                 }
             } else {
                 if (isBlockerMove) {
-                    isBlockerSelected = false;
-                    const blockerBackground = document.querySelector('.blocker-background');
-                    blockerBackground.classList.remove('selected');
+                    window.isBlockerSelected = false;
+                    window.dispatchEvent(new Event('blockerStateChanged'));
                 } else {
                     const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
                     playerColor = nextPlayer;
@@ -78,6 +77,7 @@
 
                 await updateGameState(data.game_state);
                 window.updatePowerDisplay(data.red_power, data.blue_power);
+                window.updateBlockerDisplay(data.game_state);
                 playSound("move");
 
                 if (data.winner) {

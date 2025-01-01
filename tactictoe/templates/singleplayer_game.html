@@ -100,7 +100,7 @@
             return;
         }
         moving = true;
-        const isBlockerMove = isBlockerSelected;
+        const isBlockerMove = window.isBlockerSelected;
 
         try {
             const currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
@@ -136,14 +136,14 @@
             } else {
                 await updateGameState(data.game_state);
                 window.updatePowerDisplay(data.red_power, data.blue_power);
+                window.updateBlockerDisplay(data.game_state);
                 playSound("move");
                 
                 if (data.winner) {
                     handleGameOver(data.winner, data.winning_run);
                 } else if (isBlockerMove) {
-                    isBlockerSelected = false;
-                    const blockerBackground = document.querySelector('.blocker-background');
-                    blockerBackground.classList.remove('selected');
+                    window.isBlockerSelected = false;
+                    window.dispatchEvent(new Event('blockerStateChanged'));
                 } else {
                     const indicatorRoot = document.getElementById('computer-move-indicator-root');
                     ReactDOM.render(React.createElement(ComputerMoveIndicator), indicatorRoot);
@@ -186,6 +186,7 @@
 
                         await updateGameState(moveData.game_state);
                         window.updatePowerDisplay(moveData.red_power, moveData.blue_power);
+                        window.updateBlockerDisplay(data.game_state);
                         playSound("move");
 
                         if (moveData.winner) {

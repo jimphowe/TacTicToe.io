@@ -244,6 +244,7 @@
         
         await updateGameState(JSON.parse(data.game_state));
         window.updatePowerDisplay(data.red_power, data.blue_power);
+        window.updateBlockerDisplay(data.game_state);
         playSound("move");
         
         if (data.winner_id) {
@@ -301,7 +302,7 @@
     async function handlePieceClick(piece) {
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         const direction = sideToDirection(currentDirectionMapping['BACK']);
-        const isBlockerMove = isBlockerSelected;
+        const isBlockerMove = window.isBlockerSelected;
 
         try {
             const response = await fetch('/multiplayer/move', {
@@ -342,9 +343,8 @@
                 syncGameTimers();
 
                 if (isBlockerMove) {
-                    isBlockerSelected = false;
-                    const blockerBackground = document.querySelector('.blocker-background');
-                    blockerBackground.classList.remove('selected');
+                    window.isBlockerSelected = false;
+                    window.dispatchEvent(new Event('blockerStateChanged'));
                 }
             }
         } catch (error) {
