@@ -150,13 +150,26 @@
             const slider = document.getElementById('custom-slider');
             const handle = document.getElementById('slider-handle');
             const difficultyValue = document.getElementById('difficulty-value');
-    
-            function updateSlider(clientX) {
+
+            function updateSlider(clientX, shouldSnap) {
                 const rect = slider.getBoundingClientRect();
                 let position = (clientX - rect.left) / rect.width;
                 position = Math.max(0, Math.min(position, 1));
+                
+                if (shouldSnap) {
+                    if (position < 0.25) {
+                        position = 0.125;
+                    } else if (position < 0.5) {
+                        position = 0.375;
+                    } else if (position < 0.75) {
+                        position = 0.625;
+                    } else {
+                        position = 0.875;
+                    }
+                }
+                
                 handle.style.left = `${position * 100}%`;
-    
+
                 if (position < 0.25) {
                     difficultyValue.value = 'easy';
                 } else if (position < 0.5) {
@@ -167,22 +180,25 @@
                     difficultyValue.value = 'expert';
                 }
             }
-    
+
             function handleStart(e) {
-                e.preventDefault(); // Prevent default touch behavior
+                e.preventDefault();
                 const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-                updateSlider(clientX);
+                updateSlider(clientX, false);
                 
                 function handleMove(e) {
                     const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-                    updateSlider(clientX);
+                    updateSlider(clientX, false);
                 }
                 
-                function handleEnd() {
+                function handleEnd(e) {
                     document.removeEventListener('mousemove', handleMove);
                     document.removeEventListener('touchmove', handleMove);
                     document.removeEventListener('mouseup', handleEnd);
                     document.removeEventListener('touchend', handleEnd);
+
+                    const clientX = e.type.includes('mouse') ? e.clientX : e.changedTouches[0].clientX;
+                    updateSlider(clientX, true);
                 }
                 
                 document.addEventListener('mousemove', handleMove);
@@ -190,11 +206,11 @@
                 document.addEventListener('mouseup', handleEnd);
                 document.addEventListener('touchend', handleEnd);
             }
-    
+
             slider.addEventListener('mousedown', handleStart);
             slider.addEventListener('touchstart', handleStart);
-    
-            updateSlider(slider.getBoundingClientRect().left);
+
+            updateSlider(slider.getBoundingClientRect().left + (slider.getBoundingClientRect().width * 0.125), true);
         });
     
         function selectPlayer(player) {

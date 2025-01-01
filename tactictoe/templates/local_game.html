@@ -72,6 +72,8 @@
                 }
                 else if (data.message == 'max_blocker_moves') {
                     showToast("Max blockers placed")
+                    window.isBlockerSelected = false;
+                    window.dispatchEvent(new Event('blockerStateChanged'));
                 }
             } else {
                 if (isBlockerMove) {

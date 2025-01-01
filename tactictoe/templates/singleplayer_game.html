@@ -44,7 +44,9 @@
                     border: '2px solid white',
                     borderTopColor: 'transparent',
                     borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
+                    animation: 'spin 1s linear infinite',
+                    minWidth: '20px',
+                    minHeight: '20px',
                 },
                 key: 'spinner'
             }),
@@ -140,6 +142,8 @@
                 }
                 else if (data.message == 'max_blocker_moves') {
                     showToast("Max blockers placed")
+                    window.isBlockerSelected = false;
+                    window.dispatchEvent(new Event('blockerStateChanged'));
                 }
             } else {
                 await updateGameState(data.game_state);

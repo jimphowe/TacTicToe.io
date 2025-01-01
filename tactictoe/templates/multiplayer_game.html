@@ -343,6 +343,8 @@
                         break;
                     case 'max_blocker_moves':
                         showToast("Max blockers placed")
+                        window.isBlockerSelected = false;
+                        window.dispatchEvent(new Event('blockerStateChanged'));
                         break;
                     default:
                         showToast("Unexpected Error");
