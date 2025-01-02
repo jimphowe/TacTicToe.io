@@ -823,7 +823,7 @@ class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
-        self.red_power = 2
+        self.red_power = 1
         self.blue_power = 3
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
@@ -977,7 +977,7 @@ class Game(models.Model):
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
 
-    red_power = models.IntegerField(default=2)
+    red_power = models.IntegerField(default=1)
     blue_power = models.IntegerField(default=3)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)

@@ -83,7 +83,7 @@
     });
 
     function handleGameOver(winner, winningRun) {
-        if (winner == playerColor) {
+        if (winner == window.playerColor) {
             playSound("win");
         }
         else {
@@ -116,7 +116,7 @@
                 body: JSON.stringify({
                     position: piece.userData.originalPosition,
                     direction: direction,
-                    player: playerColor,
+                    player: window.playerColor,
                     is_blocker_move: isBlockerMove
                 })
             });

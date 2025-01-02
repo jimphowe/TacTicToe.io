@@ -16,7 +16,6 @@ window.GameControls = function() {
   }, []);
 
   React.useEffect(() => {
-    // Keep React state in sync with global state
     const handleBlockerChange = () => {
       setIsBlockerSelected(window.isBlockerSelected);
     };
@@ -62,7 +61,6 @@ window.GameControls = function() {
     window.isBlockerSelected = newValue;
     setIsBlockerSelected(newValue);
     
-    // Dispatch event for any other components that need to know
     window.dispatchEvent(new Event('blockerStateChanged'));
   };
 

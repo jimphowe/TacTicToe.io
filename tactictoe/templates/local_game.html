@@ -18,7 +18,6 @@
     document.addEventListener('DOMContentLoaded', (event) => {
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
-        localStorage.setItem('player', JSON.stringify('RED'));
         highlightMaterial = redHighlightMaterial;
     });
 
@@ -31,7 +30,6 @@
     }
 
     async function handlePieceClick(piece) {
-        currentPlayer = JSON.parse(localStorage.getItem('player'));
         currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
         const direction = sideToDirection(currentDirectionMapping['BACK']);
         const isBlockerMove = window.isBlockerSelected;
@@ -46,7 +44,7 @@
                 body: JSON.stringify({
                     position: piece.userData.originalPosition,
                     direction: direction,
-                    player: currentPlayer,
+                    player: window.playerColor,
                     difficulty: '{{ difficulty|safe }}',
                     is_blocker_move: isBlockerMove
                 })
@@ -80,9 +78,8 @@
                     window.isBlockerSelected = false;
                     window.dispatchEvent(new Event('blockerStateChanged'));
                 } else {
-                    const nextPlayer = currentPlayer === 'RED' ? 'BLUE' : 'RED';
-                    playerColor = nextPlayer;
-                    localStorage.setItem('player', JSON.stringify(nextPlayer));
+                    const nextPlayer = window.playerColor === 'RED' ? 'BLUE' : 'RED';
+                    window.playerColor = nextPlayer;
                 }
 
                 await updateGameState(data.game_state);

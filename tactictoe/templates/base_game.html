@@ -152,221 +152,6 @@
         .rotate-right svg {
             transform: rotate(90deg);
         }
-
-        /* Blocker styles */
-
-        .blocker-widget {
-            position: fixed;
-            background-color: rgba(15, 23, 42, 0.9);
-            border-radius: 12px;
-            padding: 36px 16px;
-            color: #fff;
-            font-family: system-ui, -apple-system, sans-serif;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            pointer-events: auto;
-            z-index: 1000;
-        }
-
-        @media (max-width: 768px) {
-            .blocker-widget {
-                bottom: 30px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: auto;
-            }
-        }
-
-        .blocker-widget-content {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .player-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin: 8px 0;
-            white-space: nowrap;
-            width: 100%;
-        }
-
-        .player-color-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .red { background-color: #ef4444; }
-        .blue { background-color: #3b82f6; }
-
-        .player-color-text {
-            font-size: 18px;
-            min-width: 60px;
-        }
-
-        .blocker-icons {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .blocker-icon {
-            width: 24px;
-            height: 24px;
-            opacity: 0.3;
-            transition: opacity 0.3s ease;
-        }
-
-        .blocker-icon.filled {
-            opacity: 1;
-        }
-
-        .blocker-select {
-            text-align: center;
-            cursor: pointer;
-            width: fit-content; /* Limit width to content */
-            margin: 0 auto; /* Keep it centered */
-        }
-
-        .blocker-background {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            cursor: pointer;
-            transition: filter 0.2s ease;
-            position: relative;
-        }
-
-        .blocker-widget-header {
-            font-size: 22px;
-            font-weight: 600;
-            margin: 0 0 28px 0;
-            text-align: center;
-        }
-
-        @media (min-width: 769px) {
-            .blocker-widget {
-                top: 50%;
-                left: 60px;
-                transform: translateY(-50%);
-                width: 280px;
-            }
-
-            .blocker-background {
-                margin: 20px auto 0;
-            }
-        }
-
-        .blocker-background.selected {
-            background-image: url("/static/images/blocker_background_selected.png");
-        }
-
-        .blocker-background:not(.selected) {
-            background-image: url("/static/images/blocker_background.png");
-        }
-
-        @media (min-width: 769px) {
-            .blocker-background:hover {
-                filter: brightness(0.8);
-            }
-        }
-
-        .blocker-piece {
-            width: 60px;
-            height: 60px;
-            position: absolute;
-            top: 10px;          
-            left: 10px;         
-            pointer-events: none;
-        }
-
-        .blocker-x-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 80px;
-            height: 80px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 1000;
-        }
-
-        .blocker-x-overlay.show {
-            opacity: 1;
-        }
-
-        .blocker-x-overlay svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .blocker-x-overlay line {
-            stroke: #ef4444;
-            stroke-width: 6;
-            stroke-linecap: round;
-        }
-
-        /* Mobile Styles */
-        @media (max-width: 768px) {
-            .blocker-widget {
-                padding: 20px 28px 20px;
-            }
-            
-            .blocker-widget-header {
-                font-size: 16px;
-                margin: 0 0 8px 0;
-            }
-
-            .blocker-widget-content {
-                flex-direction: row;
-                align-items: center;
-                gap: 16px;
-            }
-
-            .player-blocker-info {
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .blocker-select {
-                margin-top: 0;
-            }
-
-            .blocker-background {
-                width: 60px;
-                height: 60px;
-            }
-
-            .blocker-piece {
-                width: 45px;
-                height: 45px;
-                top: 7.5px;
-                left: 7.5px;
-            }
-
-            .blocker-x-overlay {
-                width: 60px;
-                height: 60px;
-            }
-
-            .player-row {
-                margin: 4px 0;
-            }
-
-            .blocker-icons {
-                margin-right: 16px;  /* Add some space between the icons and the blocker selector */
-                margin-left: -16px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -424,8 +209,8 @@
         let rotationLastFinished = Date.now();
         const ROTATION_BUFFER = 60;
         const isMobile = window.innerWidth <= 768;
-        let playerColor = '{{ player_color }}';
         let gameOver = false;
+        let highlightMaterial;
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -480,6 +265,8 @@
             renderer.domElement.addEventListener('touchstart', onTouchStart, false);
             renderer.domElement.addEventListener('touchmove', onTouchMove, false);
             renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+
+            highlightMaterial = (window.playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
         });
 
         document.querySelectorAll('.rotation-button').forEach(button => {
@@ -755,7 +542,6 @@
             color: 0x5b95e1,
             emissive: 0x333300
         })
-        let highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
         const redDotMaterial = new THREE.MeshPhongMaterial({ color: 0xdf7053 });
         const blueDotMaterial = new THREE.MeshPhongMaterial({ color: 0x5b95e1 });
         function createDotsSphere(color) {
@@ -1309,10 +1095,10 @@
             const blueBlocker = document.getElementById('blue-blocker');
             const xOverlay = document.getElementById('blockerXOverlay');
             
-            redBlocker.style.display = playerColor === 'RED' ? 'block' : 'none';
-            blueBlocker.style.display = playerColor === 'BLUE' ? 'block' : 'none';
+            redBlocker.style.display = window.playerColor === 'RED' ? 'block' : 'none';
+            blueBlocker.style.display = window.playerColor === 'BLUE' ? 'block' : 'none';
 
-            if (playerColor === 'RED' && moveCount === 0) {
+            if (window.playerColor === 'RED' && moveCount === 0) {
                 xOverlay.classList.add('show');
             } else {
                 xOverlay.classList.remove('show');
