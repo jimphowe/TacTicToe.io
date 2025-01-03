@@ -21,7 +21,6 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        #import ipdb; ipdb.set_trace()
         data = json.loads(text_data)
         game_state = data['game_state']
         winner_id = data['winner_id']
@@ -29,8 +28,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         winning_run = data['winning_run']
         user = self.scope["user"]
         winner_name = None if winner_id == None else user.username
+        is_tie = data['is_tie']
         elo_change = data['elo_change']
         turn = data['turn']
+        red_power = data['red_power']
+        blue_power = data['blue_power']
 
         # Send the new game state to all players in the game group
         await self.channel_layer.group_send(
@@ -42,13 +44,15 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'winner_color': winner_color,
                 'winning_run': winning_run,
                 'winner_name': winner_name,
+                'is_tie': is_tie,
                 'elo_change': elo_change,
-                'turn': turn
+                'turn': turn,
+                'red_power': red_power,
+                'blue_power': blue_power
             }
         )
 
     async def send_game_update(self, event):
-        # Send message to WebSocket
         elo_change = None
         winner_id = event['winner_id']
         winner_color = event['winner_color']
@@ -56,20 +60,27 @@ class GameConsumer(AsyncWebsocketConsumer):
         user = self.scope['user']
         winner_name = event['winner_name']
         turn = event['turn']
+        is_tie = event['is_tie']
+        red_power = event['red_power']
+        blue_power = event['blue_power']
+
         if winner_id:
             is_winner = str(user.id) == str(winner_id)
             elo_change = event['elo_change'] if is_winner else -1 * int(event['elo_change'])
+        else:
+            elo_change = event['elo_change']
 
         await self.send(text_data=json.dumps({
             'game_state': event['game_state'],
-            'red_power': event['red_power'],
-            'blue_power': event['blue_power'],
             'winner_id': winner_id,
             'winner_color': winner_color,
             'winning_run': winning_run,
             'winner_name': winner_name,
             'elo_change': elo_change,
-            'turn': turn
+            'turn': turn,
+            'is_tie': is_tie,
+            'red_power': red_power,
+            'blue_power': blue_power
         }))
 
 

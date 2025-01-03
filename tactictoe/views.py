@@ -112,17 +112,22 @@ def handle_local_move(request):
     request.session.save()
     winner = None
     winning_run = None
+    is_tie = False
     if game.board.hasWon(Piece.RED):
         winner = 'RED'
         winning_run = game.board.winningRun(Piece.RED)
     elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
+    elif game.board.isTie():
+        is_tie = True
+        winner = 'TIE'
     return JsonResponse({
         'status': 'success',
         'position': position,
         'game_state': game_state,
         'winner': winner,
+        'is_tie': is_tie,
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
@@ -181,16 +186,22 @@ def handle_singleplayer_move(request):
     request.session.save()
     winner = None
     winning_run = None
+    is_tie = False
+
     if game.board.hasWon(Piece.RED):
         winner = 'RED'
         winning_run = game.board.winningRun(Piece.RED)
     elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
+    elif game.board.isTie():
+        is_tie = True
+        winner = 'TIE'
     return JsonResponse({
         'status': 'success',
         'game_state': game_state,
         'winner': winner,
+        'is_tie': is_tie,
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
@@ -369,6 +380,7 @@ def handle_multiplayer_move(request):
         winner = None
         winner_color = None
         winning_run = None
+        is_tie = False
         
         if board.hasWon(p1_color):
             winner = game.player_one
@@ -378,11 +390,13 @@ def handle_multiplayer_move(request):
             winner = game.player_two
             winner_color = p2_color.value
             winning_run = board.winningRun(p2_color)
+        elif board.isTie():
+            is_tie = True
             
         winner_id = None if winner == None else winner.id
         winner_name = None if winner == None else winner.username
         
-        if winner:
+        if winner or is_tie:
             game.completed = True
             game.completed_at = datetime.now()
             game.winner = winner
@@ -398,6 +412,7 @@ def handle_multiplayer_move(request):
                 'winner_color': winner_color,
                 'winning_run': winning_run,
                 'winner_name': winner_name,
+                'is_tie': is_tie,
                 'elo_change': game.elo_change,
                 'turn': game.turn.id,
                 'is_blocker_move': isBlockerMove,
@@ -459,7 +474,9 @@ def handle_resignation(request):
             'winner_name': winner.username,
             'winning_run': None,
             'elo_change': game.elo_change,
-            'turn': game.turn.id
+            'turn': game.turn.id,
+            'red_power': game.red_power,
+            'blue_power': game.blue_power
         }
     )
     

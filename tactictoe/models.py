@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(8)
+        self.setupBoard(18)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(8)
+           self.setupBoard(18)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -489,21 +489,21 @@ class Board:
                         count += 1
         return count
     
-    # Returns true if the given player has won (all locations in a run of three are equal to the player)
     def hasWon(self,player: Piece):
         for run in self.winningRuns:
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return True
-        if player == Piece.BLUE and self.numPieces(Piece.EMPTY) == 0:
-           return True
         return False
+    
+    def isTie(self):
+        if self.numPieces(Piece.EMPTY) > 0:
+            return False
+        return not (self.hasWon(Piece.RED) or self.hasWon(Piece.BLUE))
     
     def winningRun(self,player: Piece):
         for run in self.winningRuns:
             if all(self.pieces[x][y][z] == player for (x,y,z) in run):
                 return run
-        if player == Piece.BLUE and self.hasWon(player):
-            return [(x,y,z) for x in range(3) for y in range(3) for z in range(3) if self.pieces[x][y][z] == player]
         return None
     
     # Returns a random valid move in the given board

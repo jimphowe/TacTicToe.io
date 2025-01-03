@@ -83,13 +83,19 @@
     });
 
     function handleGameOver(winner, winningRun) {
-        if (winner == window.playerColor) {
+        let isTie = !winner
+        if (isTie) {
+            playSound("move");
+        }
+        else if (winner == window.playerColor) {
             playSound("win");
         }
         else {
             playSound("lose");
         }
-        highlightWinningRun(winner, winningRun);
+        if (!isTie) {
+            highlightWinningRun(winner, winningRun);
+        }
         createGameOverUI(winner, null, function() {
             location.reload();
         });

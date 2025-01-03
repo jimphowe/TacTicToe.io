@@ -2,14 +2,14 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.shortcuts import get_object_or_404
 import redis
+import json
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from tactictoe.models import EloRating, Game, Piece
+from tactictoe.models import Game, Piece, Board
 from tactictoe.elo_utils import update_elo_ratings
 
-from django.db import transaction
 from django.conf import settings
 
 class Command(BaseCommand):
@@ -42,18 +42,27 @@ class Command(BaseCommand):
         if game.completed:
             redis_client.delete(key)
             return
+        
+        board = Board()
+        board.setState(json.loads(game.game_state))
+        is_tie = board.isTie()
 
-        winner = game.player_two if game.turn == game.player_one else game.player_one
-        loser = game.player_one if game.turn == game.player_one else game.player_two
-        winner_color = Piece.BLUE if game.turn == game.player_one else Piece.RED
-        if loser == game.player_one:
-            game.player_one_time_left = '0 second'
-        else:
+        winner = None
+        winner_color = None
+
+        if not is_tie:
+            winner = game.player_two if game.turn == game.player_one else game.player_one
+            winner_color = Piece.BLUE if game.turn == game.player_one else Piece.RED
+            game.winner = winner
+        
+        if winner == game.player_one:
             game.player_two_time_left = '0 second'
+        elif winner == game.player_two:
+            game.player_one_time_left = '0 second'
 
         game.completed = True
         game.completed_at = datetime.now()
-        game.winner = winner
+
         game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
 
         channel_layer = get_channel_layer()
@@ -66,8 +75,11 @@ class Command(BaseCommand):
                 'winner_color': winner_color.value,
                 'winning_run': None,
                 'winner_name': winner.username,
+                'is_tie': is_tie,
                 'elo_change': game.elo_change,
-                'turn': game.turn.id
+                'turn': game.turn.id,
+                'red_power': game.red_power,
+                'blue_power': game.blue_power
             }
         )
 

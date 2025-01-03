@@ -22,8 +22,16 @@
     });
 
     function handleGameOver(winner, winningRun) {
-        highlightWinningRun(winner, winningRun);
-        playSound("win");
+        let isTie = !winner
+        if (isTie) {
+            playSound("move");
+        }
+        else {
+            playSound("win");
+        }
+        if (!isTie) {
+            highlightWinningRun(winner, winningRun);
+        }
         createGameOverUI(winner, null, function() {
             location.reload();
         });

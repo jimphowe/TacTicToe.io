@@ -5,13 +5,18 @@ function createGameOverUI(winner, eloChange, buttonAction) {
     gameOver = true;
     window.removeEventListener('click', onMouseClick);
 
-    let message = 'Game Over! ' + winner + ' wins!';
+    let message;
+    if (winner === 'TIE') {
+        message = 'Game Over! It\'s a tie!';
+    } else {
+        message = 'Game Over! ' + winner + ' wins!';
+    }
 
     // Calculate Elo change display
     let eloChangeMessage = "";
     if (eloChange !== null) {
         const eloChangeText = `Elo: ${eloChange > 0 ? '+' + eloChange : eloChange}`;
-        const eloChangeColor = eloChange > 0 ? '#4CAF50' : '#F44336';
+        const eloChangeColor = eloChange > 0 ? '#4CAF50' : (eloChange < 0 ? '#F44336' : '#FFD700');
         eloChangeMessage = `<div style='color: ${eloChangeColor}; font-size: 18px; margin-top: 10px;'>${eloChangeText}</div>`;
     }
 

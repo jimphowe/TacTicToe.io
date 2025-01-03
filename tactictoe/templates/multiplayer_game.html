@@ -244,10 +244,10 @@
         
         await updateGameState(JSON.parse(data.game_state));
         window.updatePowerDisplay(data.red_power, data.blue_power);
-        window.updateBlockerDisplay(data.game_state);
+        window.updateBlockerDisplay(JSON.parse(data.game_state));
         playSound("move");
         
-        if (data.winner_id) {
+        if (data.winner_id || data.is_tie) {
             handleGameOver(data.winner_name, data.winner_color, data.winning_run, data.elo_change);
         } else {
             syncGameTimers();
@@ -257,21 +257,31 @@
     function handleGameOver(winnerName, winnerColor, winningRun, eloChange) {
         stopTimers();
         syncGameTimers();
+        const isTie = !winnerName
 
-        if (eloChange > 0) {
-            playSound("win");
+        if (isTie) {
+            playSound("move");
         }
-        else {
+        else if (eloChange > 0) {
+            playSound("win");
+        } else {
             playSound("lose");
         }
-        highlightWinningRun(winnerColor, winningRun);
+
+        // Only highlight winning run if it's not a tie
+        if (!isTie) {
+            highlightWinningRun(winnerColor, winningRun);
+        }
+
         document.querySelector('.home-button').style.display = 'block';
         var matchmakingModal = new bootstrap.Modal(document.getElementById('matchmakingModal'), {
             backdrop: 'static',
             keyboard: false
         });
-        createGameOverUI(winnerName, eloChange, function() {
-            const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'}
+
+        let displayWinner = winnerName || 'TIE';
+        createGameOverUI(displayWinner, eloChange, function() {
+            const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
             localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
             startWebSocket();
             findOpponent().done(function(response) {
@@ -285,6 +295,7 @@
                 alert('Error finding an opponent. Please try again.');
             });
         });
+
         $('#cancelSearchBtn').click(function() {
             cancelSearch().done(function(response) {
                 if (response.status === 'success') {

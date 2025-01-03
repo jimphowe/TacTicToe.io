@@ -12,16 +12,21 @@ def update_elo_ratings(game_type, player_one, player_two, winner):
     expected_p2 = 1 - expected_p1
     
     k_factor_p1 = calculate_k_factor(p1_elo.rating)
-    k_factor_p2 = calculate_k_factor(p2_elo.rating)
+    k_factor_p2 = k_factor_p1
+    # TODO use different k factors. probably return both values from this method?
+    # k_factor_p2 = calculate_k_factor(p2_elo.rating)
     
-    if winner == player_one:
+    if winner is None:
+        actual_score = 0.5
+        elo_change_p1 = round(k_factor_p1 * (actual_score - expected_p1), 0)
+        elo_change_p2 = round(k_factor_p2 * (actual_score - expected_p2), 0)
+    elif winner == player_one:
         elo_change_p1 = round(k_factor_p1 * (1 - expected_p1), 0)
         elo_change_p2 = round(k_factor_p2 * (0 - expected_p2), 0)
     else:
         elo_change_p1 = round(k_factor_p1 * (0 - expected_p1), 0)
         elo_change_p2 = round(k_factor_p2 * (1 - expected_p2), 0)
     
-    # Update ratings
     with transaction.atomic():
         p1_elo.rating += elo_change_p1
         p2_elo.rating += elo_change_p2
