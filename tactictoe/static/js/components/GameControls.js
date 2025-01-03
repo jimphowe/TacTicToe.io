@@ -144,8 +144,8 @@ window.GameControls = function() {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '20px',
-        height: '20px',
+        width: isDesktop ? '24px' : '20px',
+        height: isDesktop ? '24px' : '20px',
         flexShrink: 0
       }
     },
@@ -175,19 +175,6 @@ window.GameControls = function() {
       }
     },
     text
-  );
-
-  const ColorDot = ({ color }) => React.createElement(
-    'div',
-    {
-      style: {
-        width: isDesktop ? '16px' : '12px',
-        height: isDesktop ? '16px' : '12px',
-        borderRadius: '50%',
-        backgroundColor: color === 'red' ? '#ef4444' : '#3b82f6',
-        marginRight: isDesktop ? '12px' : '8px'
-      }
-    }
   );
 
   const PlayerLabel = ({ color }) => React.createElement(
@@ -239,7 +226,6 @@ window.GameControls = function() {
               }
             },
             [
-              React.createElement(ColorDot, { key: 'dot', color }),
               React.createElement(PlayerLabel, { key: 'label', color }),
               React.createElement(
                 'span',
@@ -274,106 +260,120 @@ window.GameControls = function() {
       { color: redFirst ? 'red' : 'blue', count: redFirst ? redBlockerCount : blueBlockerCount, isPlayer: true },
       { color: redFirst ? 'blue' : 'red', count: redFirst ? blueBlockerCount : redBlockerCount, isPlayer: false }
     ];
-
+  
     return React.createElement(
       'div',
       null,
       [
         isDesktop && React.createElement(SectionHeader, { key: 'header', text: 'Blocker Pieces' }),
-        ...rows.map(({ color, count, isPlayer }, index) =>
-          React.createElement(
-            'div',
-            {
-              key: color,
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: index === 0 ? '12px' : 0
-              }
-            },
-            [
-              React.createElement(ColorDot, { key: 'dot', color }),
-              React.createElement(PlayerLabel, { key: 'label', color }),
-              React.createElement(
-                'div',
-                {
-                  key: 'shields',
-                  style: {
-                    display: 'flex',
-                    gap: '4px'
-                  }
-                },
-                Array(3).fill().map((_, i) => React.createElement(ShieldIcon, {
-                  key: i,
-                  filled: i < (3 - count),
-                  color
-                }))
-              ),
-              isPlayer && React.createElement(
-                'div',
-                {
-                  key: 'blocker-container',
-                  style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    marginLeft: '12px',
-                    gap: '4px'
-                  }
-                },
-                [
-                  React.createElement(
-                    'button',
-                    {
-                      key: 'blocker-button',
-                      onClick: handleBlockerClick,
-                      style: {
-                        width: isDesktop ? '80px' : '28px',
-                        height: isDesktop ? '80px' : '28px',
-                        backgroundColor: isBlockerSelected ? '#e7e470' : '#1f2937',
-                        borderRadius: '12px',
-                        transition: 'all 300ms',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '2px solid #4a5568',
-                        boxShadow: isBlockerSelected ? 
-                          '0 0 10px rgba(255, 215, 0, 0.3)' : 
-                          '0 2px 4px rgba(0, 0, 0, 0.2)',
-                        transform: isBlockerSelected ? 'scale(1.05)' : 'scale(1)',
-                        ':hover': {
-                          border: '2px solid #718096',
-                          transform: 'scale(1.05)',
-                          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+            }
+          },
+          [
+            React.createElement(
+              'div',
+              {
+                style: {
+                  flex: '1'
+                }
+              },
+              rows.map(({ color, count }, index) =>
+                React.createElement(
+                  'div',
+                  {
+                    key: color,
+                    style: {
+                      display: 'flex',
+                      alignItems: 'center',
+                      marginBottom: index === 0 ? '12px' : 0
+                    }
+                  },
+                  [
+                    React.createElement(PlayerLabel, { key: 'label', color }),
+                    React.createElement(
+                      'div',
+                      {
+                        key: 'shields',
+                        style: {
+                          display: 'flex',
+                          gap: '4px'
                         }
-                      }
-                    },
-                    React.createElement('img', {
-                      src: `/static/images/${window.playerColor.toLowerCase()}_blocker.png`,
-                      alt: 'Blocker piece',
-                      style: {
-                        width: isDesktop ? '60px' : '24px',
-                        height: isDesktop ? '60px' : '24px'
-                      }
-                    })
-                  ),
-                  React.createElement(
-                    'span',
-                    {
-                      key: 'button-label',
-                      style: {
-                        fontSize: isDesktop ? '12px' : '10px',
-                        color: '#9ca3af',
-                        textAlign: 'center'
-                      }
-                    },
-                    'Place Blocker'
-                  )
-                ]
+                      },
+                      Array(3).fill().map((_, i) => React.createElement(ShieldIcon, {
+                        key: i,
+                        filled: i < (3 - count),
+                        color
+                      }))
+                    )
+                  ]
+                )
               )
-            ]
-          )
+            ),
+            // Blocker button (only show if player is in the game)
+            window.playerColor && React.createElement(
+              'div',
+              {
+                key: 'blocker-container',
+                style: {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  marginLeft: 'auto', // Push to the right
+                  gap: '4px'
+                }
+              },
+              [
+                React.createElement(
+                  'button',
+                  {
+                    key: 'blocker-button',
+                    onClick: handleBlockerClick,
+                    style: {
+                      width: isDesktop ? '80px' : '28px',
+                      height: isDesktop ? '80px' : '28px',
+                      backgroundColor: isBlockerSelected ? '#e7e470' : '#1f2937',
+                      borderRadius: '12px',
+                      transition: 'all 300ms',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid #4a5568',
+                      boxShadow: isBlockerSelected ? 
+                        '0 0 10px rgba(255, 215, 0, 0.3)' : 
+                        '0 2px 4px rgba(0, 0, 0, 0.2)',
+                      transform: isBlockerSelected ? 'scale(1.05)' : 'scale(1)',
+                    }
+                  },
+                  React.createElement('img', {
+                    src: `/static/images/${window.playerColor.toLowerCase()}_blocker.png`,
+                    alt: 'Blocker piece',
+                    style: {
+                      width: isDesktop ? '60px' : '24px',
+                      height: isDesktop ? '60px' : '24px'
+                    }
+                  })
+                ),
+                React.createElement(
+                  'span',
+                  {
+                    key: 'button-label',
+                    style: {
+                      fontSize: isDesktop ? '12px' : '10px',
+                      color: '#9ca3af',
+                      textAlign: 'center'
+                    }
+                  },
+                  'Place Blocker'
+                )
+              ]
+            )
+          ]
         )
       ]
     );
@@ -398,8 +398,8 @@ window.GameControls = function() {
         backgroundColor: 'rgba(30, 41, 59, 0.9)',
         borderRadius: '8px',
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        padding: isDesktop ? '32px 40px' : '16px',
-        minWidth: isDesktop ? '400px' : '280px',
+        padding: isDesktop ? '20px 28px' : '16px',
+        minWidth: isDesktop ? '300px' : '280px',
         zIndex: 50
       }
     },
