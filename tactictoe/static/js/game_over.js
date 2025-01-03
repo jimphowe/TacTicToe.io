@@ -1,12 +1,9 @@
 function createGameOverUI(winner, eloChange, buttonAction) {
-    if (winner == null) {
-        return;
-    }
     gameOver = true;
     window.removeEventListener('click', onMouseClick);
 
     let message;
-    if (winner === 'TIE') {
+    if (winner === null) {
         message = 'Game Over! It\'s a tie!';
     } else {
         message = 'Game Over! ' + winner + ' wins!';

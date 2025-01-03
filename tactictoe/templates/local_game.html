@@ -95,7 +95,7 @@
                 window.updateBlockerDisplay(data.game_state);
                 playSound("move");
 
-                if (data.winner) {
+                if (data.winner || data.is_tie) {
                     handleGameOver(data.winner, data.winning_run);
                 }
             }

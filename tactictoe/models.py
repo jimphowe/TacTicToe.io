@@ -724,7 +724,7 @@ class EasyAgent:
             return simpleDefendingMove
         return board.getRandomMove(self.player, power_dict)
     
-    def getBlockerMove(self, board: Board):
+    def getBlockerMove(self, board: Board, power_dict):
        return None
         
 # Returns a winning move if one exists, otherwise a move preventing the opponent from 
@@ -746,7 +746,7 @@ class MediumAgent:
           else:
             return board.getRandomMove(self.player, power_dict)
           
-    def getBlockerMove(self, board: Board):
+    def getBlockerMove(self, board: Board, power_dict):
        return board.getRandomBlockerMove()
           
 class HardAgent:
@@ -781,7 +781,7 @@ class HardAgent:
               else:
                 return board.getRandomMove(self.player, power_dict)
         
-    def getBlockerMove(self, board: Board):
+    def getBlockerMove(self, board: Board, power_dict):
        return board.getMediumBlockerMove(self.player)
 
 class ExpertAgent:

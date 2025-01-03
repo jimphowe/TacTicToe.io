@@ -157,7 +157,7 @@
                 window.updateBlockerDisplay(data.game_state);
                 playSound("move");
                 
-                if (data.winner) {
+                if (data.winner || data.is_tie) {
                     handleGameOver(data.winner, data.winning_run);
                 } else if (isBlockerMove) {
                     window.isBlockerSelected = false;
@@ -176,9 +176,10 @@
 
                     const blockerData = await blockerResponse.json();
 
-                    if (blockerData.winner) {
+                    if (blockerData.winner || blockerData.is_tie) {
                         await new Promise(resolve => setTimeout(resolve, 1500));
                         await updateGameState(blockerData.game_state);
+                        window.updateBlockerDisplay(blockerData.game_state);
                         playSound("move");
                         handleGameOver(blockerData.winner, blockerData.winning_run);
                     }
@@ -186,6 +187,7 @@
                         if (blockerData.status === 'success') {
                             await new Promise(resolve => setTimeout(resolve, 1500));
                             await updateGameState(blockerData.game_state);
+                            window.updateBlockerDisplay(blockerData.game_state);
                             playSound("move");
                         }
 
@@ -204,10 +206,10 @@
 
                         await updateGameState(moveData.game_state);
                         window.updatePowerDisplay(moveData.red_power, moveData.blue_power);
-                        window.updateBlockerDisplay(data.game_state);
+                        window.updateBlockerDisplay(moveData.game_state);
                         playSound("move");
 
-                        if (moveData.winner) {
+                        if (moveData.winner || moveData.is_tie) {
                             handleGameOver(moveData.winner, moveData.winning_run);
                         }
                     }

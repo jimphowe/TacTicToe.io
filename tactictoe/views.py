@@ -121,7 +121,6 @@ def handle_local_move(request):
         winning_run = game.board.winningRun(Piece.BLUE)
     elif game.board.isTie():
         is_tie = True
-        winner = 'TIE'
     return JsonResponse({
         'status': 'success',
         'position': position,
@@ -187,7 +186,7 @@ def handle_singleplayer_move(request):
     winner = None
     winning_run = None
     is_tie = False
-
+    
     if game.board.hasWon(Piece.RED):
         winner = 'RED'
         winning_run = game.board.winningRun(Piece.RED)
@@ -196,7 +195,6 @@ def handle_singleplayer_move(request):
         winning_run = game.board.winningRun(Piece.BLUE)
     elif game.board.isTie():
         is_tie = True
-        winner = 'TIE'
     return JsonResponse({
         'status': 'success',
         'game_state': game_state,
@@ -233,18 +231,22 @@ def handle_computer_blocker_move(request):
         request.session.save()
         winner = None
         winning_run = None
+        is_tie = False
         if game.board.hasWon(Piece.RED):
             winner = 'RED'
             winning_run = game.board.winningRun(Piece.RED)
         elif game.board.hasWon(Piece.BLUE):
             winner = 'BLUE'
             winning_run = game.board.winningRun(Piece.BLUE)
+        elif game.board.isTie():
+            is_tie = True
         
         return JsonResponse({
             'status': 'success',
             'game_state': game_state,
             'winner': winner,
-            'winning_run': winning_run
+            'winning_run': winning_run,
+            'is_tie': is_tie
         })
     except Exception as e:
         return JsonResponse({
@@ -267,16 +269,20 @@ def handle_computer_move(request):
     request.session.save()
     winner = None
     winning_run = None
+    is_tie = False
     if game.board.hasWon(Piece.RED):
         winner = 'RED'
         winning_run = game.board.winningRun(Piece.RED)
     elif game.board.hasWon(Piece.BLUE):
         winner = 'BLUE'
         winning_run = game.board.winningRun(Piece.BLUE)
+    elif game.board.isTie():
+        is_tie = True
     return JsonResponse({
         'status': 'success',
         'game_state': game_state,
         'winner': winner,
+        'is_tie': is_tie,
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
