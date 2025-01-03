@@ -1,6 +1,7 @@
 window.GameControls = function() {
   const [myPower, setMyPower] = React.useState(window.playerColor === 'RED' ? window.redPower : window.bluePower);
   const [opponentPower, setOpponentPower] = React.useState(window.playerColor === 'RED' ? window.bluePower : window.redPower);
+  const [moveCount, setMoveCount] = React.useState(window.moveCount || 0);
   const [redBlockerCount, setRedBlockerCount] = React.useState(0);
   const [blueBlockerCount, setBlueBlockerCount] = React.useState(0);
   const [isBlockerSelected, setIsBlockerSelected] = React.useState(false);
@@ -24,33 +25,38 @@ window.GameControls = function() {
     return () => window.removeEventListener('blockerStateChanged', handleBlockerChange);
   }, []);
 
-  const myPowerValue = Math.min(5, Math.max(0, myPower));
-  const opponentPowerValue = Math.min(5, Math.max(0, opponentPower));
-  
   window.updatePowerDisplay = function(redPower, bluePower) {
-    setMyPower(window.playerColor === 'RED' ? redPower : bluePower);
-    setOpponentPower(window.playerColor === 'RED' ? bluePower : redPower);
+    const movePhase = (moveCount + 1) % 4;
+    
+    const redHalfPower = movePhase === 1 || movePhase === 2;
+    const blueHalfPower = movePhase === 2 || movePhase === 3;
+    
+    const redValue = redPower + (redHalfPower ? 0.5 : 0);
+    const blueValue = bluePower + (blueHalfPower ? 0.5 : 0);
+    
+    setMyPower(window.playerColor === 'RED' ? redValue : blueValue);
+    setOpponentPower(window.playerColor === 'RED' ? blueValue : redValue);
   };
 
   React.useEffect(() => {
     window.updateBlockerDisplay = function(gameState) {
       let redCount = 0;
       let blueCount = 0;
-      let moveCount = 0;
+      let moves = 0;
 
       gameState.forEach(layer => {
         layer.forEach(row => {
           row.forEach(cell => {
             if (cell === 'RED_BLOCKER') redCount++;
             if (cell === 'BLUE_BLOCKER') blueCount++;
-            if (cell === 'RED' || cell === 'BLUE') moveCount++;
+            if (cell === 'RED' || cell === 'BLUE') moves++;
           });
         });
       });
 
       setRedBlockerCount(redCount);
       setBlueBlockerCount(blueCount);
-      window.moveCount = moveCount;
+      setMoveCount(moves);
     };
   }, []);
 
@@ -62,6 +68,73 @@ window.GameControls = function() {
     setIsBlockerSelected(newValue);
     
     window.dispatchEvent(new Event('blockerStateChanged'));
+  };
+
+  const PowerBar = ({ value, color, nextTurnGainsPower }) => {
+    const totalBars = 5;
+    const bars = [];
+    
+    for (let i = 0; i < totalBars; i++) {
+      const isFullyFilled = i < Math.floor(value);
+      const isHalfFilled = i === Math.floor(value) && value % 1 !== 0;
+      const showNextTurnIndicator = i === Math.floor(value) && nextTurnGainsPower && i < totalBars;
+      
+      bars.push(
+        React.createElement(
+          'div',
+          {
+            key: i,
+            style: {
+              width: '20px',
+              height: '20px',
+              borderRadius: '4px',
+              backgroundColor: '#374151',
+              position: 'relative',
+              overflow: 'hidden'
+            }
+          },
+          [
+            // Full or half fill
+            React.createElement('div', {
+              key: 'fill',
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: isFullyFilled ? '100%' : (isHalfFilled ? '50%' : '0%'),
+                height: '100%',
+                backgroundColor: color === 'red' ? '#ef4444' : '#3b82f6',
+                transition: 'width 300ms, background-color 300ms'
+              }
+            }),
+            // Next turn indicator
+            showNextTurnIndicator && React.createElement('div', {
+              key: 'indicator',
+              style: {
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: '50%',
+                height: '100%',
+                backgroundColor: color === 'red' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)',
+                transition: 'background-color 300ms'
+              }
+            })
+          ]
+        )
+      );
+    }
+    
+    return React.createElement(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          gap: '4px'
+        }
+      },
+      bars
+    );
   };
 
   const ShieldIcon = ({ filled, color }) => React.createElement(
@@ -88,29 +161,6 @@ window.GameControls = function() {
         d: 'M3.783 2.826L12 1l8.217 1.826a1 1 0 0 1 .783.976v9.987a6 6 0 0 1-2.672 4.992L12 23l-6.328-4.219A6 6 0 0 1 3 13.79V3.802a1 1 0 0 1 .783-.976z'
       })
     )
-  );
-
-  const PowerBar = ({ value, color }) => React.createElement(
-    'div',
-    {
-      style: {
-        display: 'flex',
-        gap: '4px'
-      }
-    },
-    Array(5).fill().map((_, i) => React.createElement(
-      'div',
-      {
-        key: i,
-        style: {
-          width: '20px',
-          height: '20px',
-          borderRadius: '4px',
-          backgroundColor: i < value ? (color === 'red' ? '#ef4444' : '#3b82f6') : '#374151',
-          transition: 'background-color 300ms'
-        }
-      }
-    ))
   );
 
   const SectionHeader = ({ text }) => React.createElement(
@@ -156,8 +206,16 @@ window.GameControls = function() {
   const PowerSection = () => {
     const redFirst = window.playerColor === 'RED';
     const rows = [
-      { color: redFirst ? 'red' : 'blue', power: redFirst ? myPowerValue : opponentPowerValue },
-      { color: redFirst ? 'blue' : 'red', power: redFirst ? opponentPowerValue : myPowerValue }
+      { 
+        color: redFirst ? 'red' : 'blue', 
+        power: redFirst ? myPower : opponentPower,
+        nextTurnGainsPower: false  // Remove the next turn indicator entirely
+      },
+      { 
+        color: redFirst ? 'blue' : 'red', 
+        power: redFirst ? opponentPower : myPower,
+        nextTurnGainsPower: false
+      }
     ];
 
     return React.createElement(
@@ -169,7 +227,7 @@ window.GameControls = function() {
       },
       [
         isDesktop && React.createElement(SectionHeader, { key: 'header', text: 'Pushing Power' }),
-        ...rows.map(({ color, power }, index) => 
+        ...rows.map(({ color, power, nextTurnGainsPower }, index) => 
           React.createElement(
             'div',
             {
@@ -195,9 +253,14 @@ window.GameControls = function() {
                     marginRight: '8px'
                   }
                 },
-                power
+                Math.floor(power)
               ),
-              React.createElement(PowerBar, { key: 'bar', value: power, color })
+              React.createElement(PowerBar, { 
+                key: 'bar', 
+                value: power, 
+                color,
+                nextTurnGainsPower: nextTurnGainsPower
+              })
             ]
           )
         )
@@ -240,15 +303,14 @@ window.GameControls = function() {
                     gap: '4px'
                   }
                 },
-                // Now showing remaining blockers (3 - count)
                 Array(3).fill().map((_, i) => React.createElement(ShieldIcon, {
                   key: i,
-                  filled: i < (3 - count), // This is the key change
+                  filled: i < (3 - count),
                   color
                 }))
               ),
               isPlayer && React.createElement(
-                'div',  // Wrapper div for button and label
+                'div',
                 {
                   key: 'blocker-container',
                   style: {
