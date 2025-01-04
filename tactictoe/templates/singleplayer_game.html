@@ -153,8 +153,7 @@
                 }
             } else {
                 await updateGameState(data.game_state);
-                window.updatePowerDisplay(data.red_power, data.blue_power);
-                window.updateBlockerDisplay(data.game_state);
+                window.updateControlPanel(data.game_state, data.red_power, data.blue_power);
                 playSound("move");
                 
                 if (data.winner || data.is_tie) {
@@ -179,7 +178,7 @@
                     if (blockerData.winner || blockerData.is_tie) {
                         await new Promise(resolve => setTimeout(resolve, 1500));
                         await updateGameState(blockerData.game_state);
-                        window.updateBlockerDisplay(blockerData.game_state);
+                        window.updateControlPanel(blockerData.game_state, blockerData.red_power, blockerData.blue_power);
                         playSound("move");
                         handleGameOver(blockerData.winner, blockerData.winning_run);
                     }
@@ -187,7 +186,7 @@
                         if (blockerData.status === 'success') {
                             await new Promise(resolve => setTimeout(resolve, 1500));
                             await updateGameState(blockerData.game_state);
-                            window.updateBlockerDisplay(blockerData.game_state);
+                            window.updateControlPanel(blockerData.game_state, blockerData.red_power, blockerData.blue_power);
                             playSound("move");
                         }
 
@@ -205,8 +204,7 @@
                         ReactDOM.render(null, indicatorRoot);
 
                         await updateGameState(moveData.game_state);
-                        window.updatePowerDisplay(moveData.red_power, moveData.blue_power);
-                        window.updateBlockerDisplay(moveData.game_state);
+                        window.updateControlPanel(moveData.game_state, moveData.red_power, moveData.blue_power);
                         playSound("move");
 
                         if (moveData.winner || moveData.is_tie) {

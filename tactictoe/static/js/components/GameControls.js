@@ -25,38 +25,37 @@ window.GameControls = function() {
     return () => window.removeEventListener('blockerStateChanged', handleBlockerChange);
   }, []);
 
-  window.updatePowerDisplay = function(redPower, bluePower) {
-    const movePhase = (moveCount + 1) % 4;
-    
-    const redHalfPower = movePhase === 1 || movePhase === 2;
-    const blueHalfPower = movePhase === 2 || movePhase === 3;
-    
-    const redValue = redPower + (redHalfPower ? 0.5 : 0);
-    const blueValue = bluePower + (blueHalfPower ? 0.5 : 0);
-    
-    setMyPower(window.playerColor === 'RED' ? redValue : blueValue);
-    setOpponentPower(window.playerColor === 'RED' ? blueValue : redValue);
-  };
-
   React.useEffect(() => {
-    window.updateBlockerDisplay = function(gameState) {
-      let redCount = 0;
-      let blueCount = 0;
+    window.updateControlPanel = function(gameState, redPower, bluePower) {
+      let redBlockers = 0;
+      let blueBlockers = 0;
       let moves = 0;
 
       gameState.forEach(layer => {
         layer.forEach(row => {
           row.forEach(cell => {
-            if (cell === 'RED_BLOCKER') redCount++;
-            if (cell === 'BLUE_BLOCKER') blueCount++;
+            if (cell === 'RED_BLOCKER') redBlockers++;
+            if (cell === 'BLUE_BLOCKER') blueBlockers++;
             if (cell === 'RED' || cell === 'BLUE') moves++;
           });
         });
       });
 
-      setRedBlockerCount(redCount);
-      setBlueBlockerCount(blueCount);
-      setMoveCount(moves);
+      const movePhase = moves % 4;
+      const redHalfPower = movePhase === 1 || movePhase === 2;
+      const blueHalfPower = movePhase === 2 || movePhase === 3;
+      
+      const redValue = redPower + (redHalfPower ? 0.5 : 0);
+      const blueValue = bluePower + (blueHalfPower ? 0.5 : 0);
+
+      setRedBlockerCount(redBlockers);
+      setBlueBlockerCount(blueBlockers);
+      setMyPower(window.playerColor === 'RED' ? redValue : blueValue);
+      setOpponentPower(window.playerColor === 'RED' ? blueValue : redValue);
+    };
+
+    return () => {
+      window.updateControlPanel = undefined;
     };
   }, []);
 
@@ -271,15 +270,20 @@ window.GameControls = function() {
           {
             style: {
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
+              gap: '16px'
             }
           },
           [
+            // Container for blocker rows
             React.createElement(
               'div',
               {
                 style: {
-                  flex: '1'
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'  // Small gap between rows
                 }
               },
               rows.map(({ color, count }, index) =>
@@ -289,8 +293,7 @@ window.GameControls = function() {
                     key: color,
                     style: {
                       display: 'flex',
-                      alignItems: 'center',
-                      marginBottom: index === 0 ? '12px' : 0
+                      alignItems: 'center'
                     }
                   },
                   [
@@ -314,16 +317,14 @@ window.GameControls = function() {
                 )
               )
             ),
-            // Blocker button (only show if player is in the game)
-            window.playerColor && React.createElement(
+            // Blocker button container
+            window.playerColor === redFirst ? 'RED' : 'BLUE' && React.createElement(
               'div',
               {
-                key: 'blocker-container',
                 style: {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  marginLeft: 'auto', // Push to the right
                   gap: '4px'
                 }
               },
@@ -331,7 +332,6 @@ window.GameControls = function() {
                 React.createElement(
                   'button',
                   {
-                    key: 'blocker-button',
                     onClick: handleBlockerClick,
                     style: {
                       width: isDesktop ? '80px' : '28px',
@@ -347,7 +347,7 @@ window.GameControls = function() {
                       boxShadow: isBlockerSelected ? 
                         '0 0 10px rgba(255, 215, 0, 0.3)' : 
                         '0 2px 4px rgba(0, 0, 0, 0.2)',
-                      transform: isBlockerSelected ? 'scale(1.05)' : 'scale(1)',
+                      transform: isBlockerSelected ? 'scale(1.05)' : 'scale(1)'
                     }
                   },
                   React.createElement('img', {
@@ -362,7 +362,6 @@ window.GameControls = function() {
                 React.createElement(
                   'span',
                   {
-                    key: 'button-label',
                     style: {
                       fontSize: isDesktop ? '12px' : '10px',
                       color: '#9ca3af',
