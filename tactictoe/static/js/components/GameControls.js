@@ -1,7 +1,6 @@
 window.GameControls = function() {
   const [myPower, setMyPower] = React.useState(window.playerColor === 'RED' ? window.redPower : window.bluePower);
   const [opponentPower, setOpponentPower] = React.useState(window.playerColor === 'RED' ? window.bluePower : window.redPower);
-  const [moveCount, setMoveCount] = React.useState(window.moveCount || 0);
   const [redBlockerCount, setRedBlockerCount] = React.useState(0);
   const [blueBlockerCount, setBlueBlockerCount] = React.useState(0);
   const [isBlockerSelected, setIsBlockerSelected] = React.useState(false);
@@ -190,16 +189,15 @@ window.GameControls = function() {
   );
 
   const PowerSection = () => {
-    const redFirst = window.playerColor === 'RED';
     const rows = [
       { 
-        color: redFirst ? 'red' : 'blue', 
-        power: redFirst ? myPower : opponentPower,
-        nextTurnGainsPower: false  // Remove the next turn indicator entirely
+        color: 'red', 
+        power: window.playerColor === 'RED' ? myPower : opponentPower,
+        nextTurnGainsPower: false
       },
       { 
-        color: redFirst ? 'blue' : 'red', 
-        power: redFirst ? opponentPower : myPower,
+        color: 'blue', 
+        power: window.playerColor === 'RED' ? opponentPower : myPower,
         nextTurnGainsPower: false
       }
     ];
@@ -254,10 +252,9 @@ window.GameControls = function() {
   };
 
   const BlockerSection = () => {
-    const redFirst = window.playerColor === 'RED';
     const rows = [
-      { color: redFirst ? 'red' : 'blue', count: redFirst ? redBlockerCount : blueBlockerCount, isPlayer: true },
-      { color: redFirst ? 'blue' : 'red', count: redFirst ? blueBlockerCount : redBlockerCount, isPlayer: false }
+      { color: 'red', count: redBlockerCount, isPlayer: window.playerColor === 'RED' },
+      { color: 'blue', count: blueBlockerCount, isPlayer: window.playerColor === 'BLUE' }
     ];
   
     return React.createElement(
@@ -283,7 +280,7 @@ window.GameControls = function() {
                 style: {
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px'  // Small gap between rows
+                  gap: '12px'
                 }
               },
               rows.map(({ color, count }, index) =>
@@ -318,7 +315,7 @@ window.GameControls = function() {
               )
             ),
             // Blocker button container
-            window.playerColor === redFirst ? 'RED' : 'BLUE' && React.createElement(
+            window.playerColor && React.createElement(
               'div',
               {
                 style: {
