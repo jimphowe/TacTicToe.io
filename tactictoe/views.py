@@ -143,7 +143,7 @@ def singleplayer_game_view(request):
     computerColor = 'RED' if firstPlayer == 'computer' else 'BLUE'
     game = GamePlayer(difficulty, computerColor)
     if firstPlayer == 'computer':
-        game.makeComputerMove(False)
+        game.makeComputerMove(isBlockerMove=False)
 
     request.session['game_player'] = game.serialize()
     
@@ -186,7 +186,7 @@ def handle_singleplayer_move(request):
     winner = None
     winning_run = None
     is_tie = False
-    
+
     if game.board.hasWon(Piece.RED):
         winner = 'RED'
         winning_run = game.board.winningRun(Piece.RED)
@@ -221,11 +221,12 @@ def handle_computer_blocker_move(request):
         })
     
     try:
-        move = game.makeComputerMove(isBlockerMove=True)
-        if move == None:
+        response = game.makeComputerMove(isBlockerMove=True)
+        if response == None:
             return JsonResponse({
                 'status': 'empty',
             })
+        (_, block_again) = response
         game_state = game.board.getState()
         request.session['game_player'] = game.serialize()
         request.session.save()
@@ -246,7 +247,10 @@ def handle_computer_blocker_move(request):
             'game_state': game_state,
             'winner': winner,
             'winning_run': winning_run,
-            'is_tie': is_tie
+            'is_tie': is_tie,
+            'red_power': game.red_power,
+            'blue_power': game.blue_power,
+            'block_again': block_again
         })
     except Exception as e:
         return JsonResponse({

@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(18)
+        self.setupBoard(8)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(18)
+           self.setupBoard(8)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -669,45 +669,22 @@ class Board:
         possibleMoves = self.getPossibleBlockerMoves()
         return random.choice(possibleMoves)
     
-    def getMediumBlockerMove(self, player: Piece):
-      if player == Piece.BLUE:
-         return self.getRandomBlockerMove()
-      else:
-         if random.random() < 0.5:
-            return self.getRandomBlockerMove()
-         return None
-    
     def getBetterBlockerMove(self, player: Piece, power_dict):
-      if player == Piece.BLUE:
-        defending_move = self.getDefendingMove(player, power_dict)
-        if defending_move:
-            return None
-        for blocker_move in self.getPossibleBlockerMoves():
-            (x,y,z,dir) = blocker_move
-            self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
-            
-            defending_move = self.getDefendingMove(player, power_dict)
-            winning_move = self.getWinInOne(player, power_dict)
-            
-            if defending_move or winning_move:
-                self.undo()
-                return blocker_move
-            self.undo()
-        return self.getRandomBlockerMove()
-      else:
-        opponent = self.otherPlayer(player)
-        opWinningMove = self.getWinInOne(opponent, power_dict)
-        defendingMove = self.getDefendingMove(player, power_dict)
-        if opWinningMove:
-          for blocker_move in self.getPossibleBlockerMoves():
-            (x,y,z,dir) = blocker_move
-            self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
-
-            if self.getWinInOne(opponent, power_dict) == None or (defendingMove == None and self.getDefendingMove(player, power_dict) != None):
+      defending_move = self.getDefendingMove(player, power_dict)
+      if defending_move:
+          return None
+      for blocker_move in self.getPossibleBlockerMoves():
+          (x,y,z,dir) = blocker_move
+          self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
+          
+          defending_move = self.getDefendingMove(player, power_dict)
+          winning_move = self.getWinInOne(player, power_dict)
+          
+          if defending_move or winning_move:
               self.undo()
-              return blocker_move
-            self.undo()
-        return None
+              return (blocker_move, False)
+          self.undo()
+      return (self.getRandomBlockerMove(), True)
        
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
@@ -824,7 +801,7 @@ class GamePlayer:
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
         self.red_power = 1
-        self.blue_power = 3
+        self.blue_power = 4
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
         self.moves_made = 0
@@ -879,14 +856,14 @@ class GamePlayer:
         if isBlockerMove:
            move = self.computer.getBlockerMove(self.board, power_dict)
            if move:
-            (x,y,z,dir) = move
+            ((x,y,z,dir), block_again) = move
             if self.computer_color == Piece.RED:
                self.red_blocker_count += 1
                self.board.move(x,y,z,dir,Piece.RED,True)
             else:
                self.blue_blocker_count += 1
                self.board.move(x,y,z,dir,Piece.BLUE,True)
-            return move
+            return (move, block_again)
            else:
               return None
         else:
@@ -978,7 +955,7 @@ class Game(models.Model):
     last_move_time = models.DateTimeField(auto_now_add=True)
 
     red_power = models.IntegerField(default=1)
-    blue_power = models.IntegerField(default=3)
+    blue_power = models.IntegerField(default=4)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
     

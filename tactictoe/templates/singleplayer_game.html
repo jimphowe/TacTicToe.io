@@ -165,31 +165,37 @@
                     const indicatorRoot = document.getElementById('computer-move-indicator-root');
                     ReactDOM.render(React.createElement(ComputerMoveIndicator), indicatorRoot);
 
-                    const blockerResponse = await fetch('/singleplayer/computer-blocker-move', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    });
+                    async function makeBlockerMove() {
+                        const blockerResponse = await fetch('/singleplayer/computer-blocker-move', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
 
-                    const blockerData = await blockerResponse.json();
+                        const blockerData = await blockerResponse.json();
 
-                    if (blockerData.winner || blockerData.is_tie) {
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-                        await updateGameState(blockerData.game_state);
-                        window.updateControlPanel(blockerData.game_state, blockerData.red_power, blockerData.blue_power);
-                        playSound("move");
-                        handleGameOver(blockerData.winner, blockerData.winning_run);
-                    }
-                    else {
                         if (blockerData.status === 'success') {
                             await new Promise(resolve => setTimeout(resolve, 1500));
                             await updateGameState(blockerData.game_state);
                             window.updateControlPanel(blockerData.game_state, blockerData.red_power, blockerData.blue_power);
                             playSound("move");
+
+                            if (blockerData.block_again) {
+                                await makeBlockerMove();
+                            }
                         }
 
+                        return blockerData;
+                    }
+
+                    const finalBlockerData = await makeBlockerMove();
+
+                    if (finalBlockerData.winner || finalBlockerData.is_tie) {
+                        handleGameOver(finalBlockerData.winner, finalBlockerData.winning_run);
+                    }
+                    else {
                         await new Promise(resolve => setTimeout(resolve, 1500));
                         const moveResponse = await fetch('/singleplayer/computer-move', {
                             method: 'POST',
