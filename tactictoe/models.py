@@ -668,10 +668,133 @@ class Board:
     def getRandomBlockerMove(self):
         possibleMoves = self.getPossibleBlockerMoves()
         return random.choice(possibleMoves)
+
+    def getGoodIntermediateBlockerMove(self, player: Piece):
+      opponent = self.otherPlayer(player)
+      potential_positions = []
+      
+      # Look through all winning runs
+      for run in self.winningRuns:
+          # Check if opponent has 2 pieces in this run
+          opponent_pieces = [(x,y,z) for (x,y,z) in run if self.pieces[x][y][z] == opponent]
+          if len(opponent_pieces) == 2:
+              # Get the third position in the run
+              third_pos = [pos for pos in run if pos not in opponent_pieces][0]
+              x, y, z = third_pos
+              
+              if self.pieces[x][y][z] == Piece.EMPTY:
+                  # Case 1: Third spot is empty - highest priority
+                  if not (x == 1 and y == 1 and z == 1):  # Avoid center
+                      potential_positions.append((third_pos, 15))  # Highest priority
+                      
+                  # Also consider positions where pieces could be pushed to this empty spot
+                  for piece_pos in opponent_pieces:
+                      push_positions = self.getPushablePositions(piece_pos, third_pos)
+                      for pos in push_positions:
+                          if self.pieces[pos[0]][pos[1]][pos[2]] == Piece.EMPTY:
+                              if not (pos[0] == 1 and pos[1] == 1 and pos[2] == 1):
+                                  potential_positions.append((pos, 10))
+                                  
+              else:
+                  # Case 2: Third spot is filled - check if it's pushable
+                  pushable = False
+                  directions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'FRONT', 'BACK']
+                  for dir in directions:
+                      if self.valid(x, y, z, dir):
+                          pushable = True
+                          # Get positions where the filled piece could be pushed to
+                          if dir == 'UP' and z > 0:
+                              block_pos = (x, y, z-1)
+                          elif dir == 'DOWN' and z < 2:
+                              block_pos = (x, y, z+1)
+                          elif dir == 'LEFT' and x > 0:
+                              block_pos = (x-1, y, z)
+                          elif dir == 'RIGHT' and x < 2:
+                              block_pos = (x+1, y, z)
+                          elif dir == 'FRONT' and y > 0:
+                              block_pos = (x, y-1, z)
+                          elif dir == 'BACK' and y < 2:
+                              block_pos = (x, y+1, z)
+                          else:
+                              continue
+                              
+                          if self.pieces[block_pos[0]][block_pos[1]][block_pos[2]] == Piece.EMPTY:
+                              if not (block_pos[0] == 1 and block_pos[1] == 1 and block_pos[2] == 1):
+                                  potential_positions.append((block_pos, 8))  # Medium priority
+                                  
+                  if pushable:
+                      # Also look for positions to block the push path
+                      for piece_pos in opponent_pieces:
+                          push_positions = self.getPushablePositions(piece_pos, third_pos)
+                          for pos in push_positions:
+                              if self.pieces[pos[0]][pos[1]][pos[2]] == Piece.EMPTY:
+                                  if not (pos[0] == 1 and pos[1] == 1 and pos[2] == 1):
+                                      potential_positions.append((pos, 5))  # Lower priority
+
+      if not potential_positions:
+          return self.getRandomBlockerMove()
+      
+      # Sort by priority and pick highest priority position
+      potential_positions.sort(key=lambda x: x[1], reverse=True)
+      for pos, _ in potential_positions:
+          blocker_move = self.spotToValidDir(pos[0], pos[1], pos[2])
+          if blocker_move:
+              return blocker_move
+              
+      return self.getRandomBlockerMove()
+
+    # Find positions where pieces could be pushed from to reach target
+    def getPushablePositions(self, piece_pos, target_pos):
+        x1, y1, z1 = piece_pos
+        x2, y2, z2 = target_pos
+        positions = []
+        
+        # Check if pieces are in same row/column/diagonal and find pushable positions
+        if x1 == x2:
+            if y1 == y2:  # Same vertical line
+                if z1 < z2:
+                    positions.append((x1, y1, max(0, z1-1)))
+                else:
+                    positions.append((x1, y1, min(2, z1+1)))
+            elif z1 == z2:  # Same horizontal line in x-plane
+                if y1 < y2:
+                    positions.append((x1, max(0, y1-1), z1))
+                else:
+                    positions.append((x1, min(2, y1+1), z1))
+                    
+        elif y1 == y2:
+            if z1 == z2:  # Same horizontal line in y-plane
+                if x1 < x2:
+                    positions.append((max(0, x1-1), y1, z1))
+                else:
+                    positions.append((min(2, x1+1), y1, z1))
+                    
+        # For diagonal lines, add positions on both sides
+        if abs(x2-x1) == abs(y2-y1) == 1:
+            positions.extend([
+                (2*x1-x2, 2*y1-y2, z1),
+                (2*x2-x1, 2*y2-y1, z1)
+            ])
+        if abs(x2-x1) == abs(z2-z1) == 1:
+            positions.extend([
+                (2*x1-x2, y1, 2*z1-z2),
+                (2*x2-x1, y1, 2*z2-z1)
+            ])
+        if abs(y2-y1) == abs(z2-z1) == 1:
+            positions.extend([
+                (x1, 2*y1-y2, 2*z1-z2),
+                (x1, 2*y2-y1, 2*z2-z1)
+            ])
+            
+        # Filter out invalid positions
+        return [(x,y,z) for (x,y,z) in positions 
+                if 0 <= x <= 2 and 0 <= y <= 2 and 0 <= z <= 2
+                and not (x == 1 and y == 1 and z == 1)]  # Exclude center
     
-    def getBetterBlockerMove(self, player: Piece, power_dict):
+    def getGoodBlockerMove(self, player: Piece, power_dict):
       defending_move = self.getDefendingMove(player, power_dict)
-      if defending_move:
+      winning_move = self.getWinInOne(player, power_dict)
+      if defending_move or winning_move:
           return None
       for blocker_move in self.getPossibleBlockerMoves():
           (x,y,z,dir) = blocker_move
@@ -684,7 +807,28 @@ class Board:
               self.undo()
               return (blocker_move, False)
           self.undo()
-      return (self.getRandomBlockerMove(), True)
+      if random.random() < 0.5:
+        return (self.getRandomBlockerMove(player), True)
+      else:
+        return (self.getGoodIntermediateBlockerMove(player), True)
+    
+    def getBetterBlockerMove(self, player: Piece, power_dict):
+      defending_move = self.getDefendingMove(player, power_dict)
+      winning_move = self.getWinInOne(player, power_dict)
+      if defending_move or winning_move:
+          return None
+      for blocker_move in self.getPossibleBlockerMoves():
+          (x,y,z,dir) = blocker_move
+          self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
+          
+          defending_move = self.getDefendingMove(player, power_dict)
+          winning_move = self.getWinInOne(player, power_dict)
+          
+          if defending_move or winning_move:
+              self.undo()
+              return (blocker_move, False)
+          self.undo()
+      return (self.getGoodIntermediateBlockerMove(player), True)
        
 # Returns a winning move if one exists, otherwise picks a random move
 class EasyAgent:
@@ -724,7 +868,7 @@ class MediumAgent:
             return board.getRandomMove(self.player, power_dict)
           
     def getBlockerMove(self, board: Board, power_dict):
-       return board.getRandomBlockerMove()
+       return (board.getRandomBlockerMove(), False)
           
 class HardAgent:
     def __init__(self,player):
@@ -759,7 +903,7 @@ class HardAgent:
                 return board.getRandomMove(self.player, power_dict)
         
     def getBlockerMove(self, board: Board, power_dict):
-       return board.getMediumBlockerMove(self.player)
+       return board.getGoodBlockerMove(self.player, power_dict)
 
 class ExpertAgent:
     def __init__(self,player):
