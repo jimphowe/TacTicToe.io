@@ -142,8 +142,8 @@ window.GameControls = function() {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: isDesktop ? '24px' : '20px',
-        height: isDesktop ? '24px' : '20px',
+        width: '24px',
+        height: '24px',
         flexShrink: 0
       }
     },
@@ -201,7 +201,7 @@ window.GameControls = function() {
         nextTurnGainsPower: false
       }
     ];
-
+  
     return React.createElement(
       'div',
       {
@@ -209,96 +209,284 @@ window.GameControls = function() {
           marginBottom: isDesktop ? '40px' : '12px'
         }
       },
-      [
-        isDesktop && React.createElement(SectionHeader, { key: 'header', text: 'Pushing Power' }),
-        ...rows.map(({ color, power, nextTurnGainsPower }, index) => 
-          React.createElement(
-            'div',
-            {
-              key: color,
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: index === 0 ? '12px' : 0
-              }
-            },
-            [
-              React.createElement(PlayerLabel, { key: 'label', color }),
-              React.createElement(
-                'span',
-                {
-                  key: 'value',
-                  style: {
-                    color: '#ffffff',
-                    fontWeight: 500,
-                    minWidth: '12px',
-                    textAlign: 'center',
-                    marginRight: '8px'
-                  }
-                },
-                Math.floor(power)
-              ),
-              React.createElement(PowerBar, { 
-                key: 'bar', 
-                value: power, 
-                color,
-                nextTurnGainsPower: nextTurnGainsPower
-              })
-            ]
+      isDesktop ? 
+        // Desktop layout
+        [
+          React.createElement(SectionHeader, { key: 'header', text: 'Pushing Power' }),
+          ...rows.map(({ color, power, nextTurnGainsPower }, index) => 
+            React.createElement(
+              'div',
+              {
+                key: color,
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: index === 0 ? '12px' : 0
+                }
+              },
+              [
+                React.createElement(PlayerLabel, { key: 'label', color }),
+                React.createElement(
+                  'span',
+                  {
+                    key: 'value',
+                    style: {
+                      color: '#ffffff',
+                      fontWeight: 500,
+                      minWidth: '12px',
+                      textAlign: 'center',
+                      marginRight: '8px'
+                    }
+                  },
+                  Math.floor(power)
+                ),
+                React.createElement(PowerBar, { 
+                  key: 'bar', 
+                  value: power, 
+                  color,
+                  nextTurnGainsPower: nextTurnGainsPower
+                })
+              ]
+            )
           )
-        )
-      ]
-    );
-  };
-
-  const BlockerSection = () => {
-    const rows = [
-      { color: 'red', count: redBlockerCount, isPlayer: window.playerColor === 'RED' },
-      { color: 'blue', count: blueBlockerCount, isPlayer: window.playerColor === 'BLUE' }
-    ];
-  
-    return React.createElement(
-      'div',
-      null,
-      [
-        isDesktop && React.createElement(SectionHeader, { key: 'header', text: 'Blocker Pieces' }),
+        ] :
+        // Mobile layout
         React.createElement(
           'div',
           {
             style: {
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: '16px'
+              gap: '12px'
             }
           },
           [
-            // Container for blocker rows
             React.createElement(
-              'div',
+              'span',
               {
+                key: 'label',
                 style: {
+                  color: '#d1d5db',
+                  fontSize: '14px',
+                  lineHeight: '1',
+                  marginRight: '12px',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
+                  flexDirection: 'column'
                 }
               },
-              rows.map(({ color, count }, index) =>
+              [
+                React.createElement('span', { key: 'word1' }, 'Pushing'),
+                React.createElement('span', { key: 'word2' }, 'Power')
+              ]
+            ),
+            React.createElement(
+              'div',
+              { key: 'rows' },
+              rows.map(({ color, power, nextTurnGainsPower }, index) => 
                 React.createElement(
                   'div',
                   {
                     key: color,
                     style: {
                       display: 'flex',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      marginBottom: index === 0 ? '12px' : 0
                     }
                   },
                   [
-                    React.createElement(PlayerLabel, { key: 'label', color }),
+                    React.createElement(PowerBar, { 
+                      key: 'bar', 
+                      value: power, 
+                      color,
+                      nextTurnGainsPower: nextTurnGainsPower
+                    })
+                  ]
+                )
+              )
+            )
+          ]
+        )
+    );
+  };
+  
+  const BlockerSection = () => {
+    const rows = [
+      { color: 'red', count: redBlockerCount, isPlayer: window.playerColor === 'RED' },
+      { color: 'blue', count: blueBlockerCount, isPlayer: window.playerColor === 'BLUE' }
+    ];
+  
+    const blockerButton = window.playerColor && React.createElement(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '4px'
+        }
+      },
+      [
+        React.createElement(
+          'button',
+          {
+            onClick: handleBlockerClick,
+            style: {
+              width: isDesktop ? '80px' : '60px',
+              height: isDesktop ? '80px' : '60px',
+              backgroundColor: isBlockerSelected ? '#e7e470' : '#1f2937',
+              borderRadius: '12px',
+              transition: 'all 300ms',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid #4a5568',
+              boxShadow: isBlockerSelected ? 
+                '0 0 10px rgba(255, 215, 0, 0.3)' : 
+                '0 2px 4px rgba(0, 0, 0, 0.2)',
+              transform: isBlockerSelected ? 'scale(1.05)' : 'scale(1)'
+            }
+          },
+          React.createElement('img', {
+            src: `/static/images/${window.playerColor.toLowerCase()}_blocker.png`,
+            alt: 'Blocker piece',
+            style: {
+              width: isDesktop ? '60px' : '40px',
+              height: isDesktop ? '60px' : '40px'
+            }
+          })
+        ),
+        isDesktop && React.createElement(
+          'span',
+          {
+            style: {
+              fontSize: '12px',
+              color: '#9ca3af',
+              textAlign: 'center'
+            }
+          },
+          'Place Blocker'
+        )
+      ]
+    );
+  
+    return React.createElement(
+      'div',
+      null,
+      isDesktop ?
+        // Desktop layout
+        [
+          React.createElement(SectionHeader, { key: 'header', text: 'Blocker Pieces' }),
+          React.createElement(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '16px'
+              }
+            },
+            [
+              React.createElement(
+                'div',
+                {
+                  key: 'blocker-rows',
+                  style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }
+                },
+                rows.map(({ color, count }) =>
+                  React.createElement(
+                    'div',
+                    {
+                      key: color,
+                      style: {
+                        display: 'flex',
+                        alignItems: 'center'
+                      }
+                    },
+                    [
+                      React.createElement(PlayerLabel, { key: 'label', color }),
+                      React.createElement(
+                        'div',
+                        {
+                          key: 'shields',
+                          style: {
+                            display: 'flex',
+                            gap: '4px'
+                          }
+                        },
+                        Array(3).fill().map((_, i) => React.createElement(ShieldIcon, {
+                          key: i,
+                          filled: i < (3 - count),
+                          color
+                        }))
+                      )
+                    ]
+                  )
+                )
+              ),
+              blockerButton
+            ]
+          )
+        ] :
+        // Mobile layout
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }
+          },
+          [
+            React.createElement(
+              'span',
+              {
+                key: 'label',
+                style: {
+                  color: '#d1d5db',
+                  fontSize: '14px',
+                  lineHeight: '1',
+                  marginRight: '12px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }
+              },
+              [
+                React.createElement('span', { key: 'word1' }, 'Blocker'),
+                React.createElement('span', { key: 'word2' }, 'Pieces')
+              ]
+            ),
+            React.createElement(
+              'div',
+              {
+                style: {
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'center'
+                }
+              },
+              [
+                React.createElement(
+                  'div',
+                  {
+                    key: 'blocker-rows',
+                    style: {
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }
+                  },
+                  rows.map(({ color, count }) =>
                     React.createElement(
                       'div',
                       {
-                        key: 'shields',
+                        key: color,
                         style: {
                           display: 'flex',
                           gap: '4px'
@@ -310,68 +498,13 @@ window.GameControls = function() {
                         color
                       }))
                     )
-                  ]
-                )
-              )
-            ),
-            // Blocker button container
-            window.playerColor && React.createElement(
-              'div',
-              {
-                style: {
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px'
-                }
-              },
-              [
-                React.createElement(
-                  'button',
-                  {
-                    onClick: handleBlockerClick,
-                    style: {
-                      width: isDesktop ? '80px' : '28px',
-                      height: isDesktop ? '80px' : '28px',
-                      backgroundColor: isBlockerSelected ? '#e7e470' : '#1f2937',
-                      borderRadius: '12px',
-                      transition: 'all 300ms',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '2px solid #4a5568',
-                      boxShadow: isBlockerSelected ? 
-                        '0 0 10px rgba(255, 215, 0, 0.3)' : 
-                        '0 2px 4px rgba(0, 0, 0, 0.2)',
-                      transform: isBlockerSelected ? 'scale(1.05)' : 'scale(1)'
-                    }
-                  },
-                  React.createElement('img', {
-                    src: `/static/images/${window.playerColor.toLowerCase()}_blocker.png`,
-                    alt: 'Blocker piece',
-                    style: {
-                      width: isDesktop ? '60px' : '24px',
-                      height: isDesktop ? '60px' : '24px'
-                    }
-                  })
+                  )
                 ),
-                React.createElement(
-                  'span',
-                  {
-                    style: {
-                      fontSize: isDesktop ? '12px' : '10px',
-                      color: '#9ca3af',
-                      textAlign: 'center'
-                    }
-                  },
-                  'Place Blocker'
-                )
+                blockerButton
               ]
             )
           ]
         )
-      ]
     );
   };
 
@@ -387,7 +520,7 @@ window.GameControls = function() {
           maxHeight: '90vh',
           overflowY: 'auto'
         } : {
-          top: '96px',
+          bottom: '4%',
           left: '50%',
           transform: 'translateX(-50%)'
         }),
@@ -395,7 +528,7 @@ window.GameControls = function() {
         borderRadius: '8px',
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
         padding: isDesktop ? '20px 28px' : '16px',
-        minWidth: isDesktop ? '300px' : '280px',
+        minWidth: isDesktop ? '300px' : '260px',
         zIndex: 50
       }
     },
