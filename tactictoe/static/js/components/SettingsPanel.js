@@ -2,10 +2,16 @@ window.SettingsPanel = function() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [neutralPiecesHidden, setNeutralPiecesHidden] = React.useState(false);
   const [soundsMuted, setSoundsMuted] = React.useState(false);
+  const [isMultiplayer, setIsMultiplayer] = React.useState(false);
 
   const togglePanel = () => {
     setIsOpen(!isOpen);
   };
+
+  React.useEffect(() => {
+    const topBar = document.querySelector('.top-bar');
+    setIsMultiplayer(!!topBar);
+  }, []);
 
   const toggleNeutralPieces = () => {
     setNeutralPiecesHidden(!neutralPiecesHidden);
@@ -35,7 +41,7 @@ window.SettingsPanel = function() {
         onClick: togglePanel,
         style: {
           position: 'absolute',
-          top: '28px',
+          top: isMultiplayer ? '98px' : '28px',
           right: '36px',
           background: 'none',
           border: 'none',
@@ -53,7 +59,7 @@ window.SettingsPanel = function() {
       {
         style: {
           position: 'absolute',
-          top: '20px',
+          top: isMultiplayer ? '90px' : '20px',
           right: '20px',
           backgroundColor: '#d1d5db',
           padding: '24px',
