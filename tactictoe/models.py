@@ -858,14 +858,17 @@ class MediumAgent:
         if move_num == 0:
            return board.getGoodStartMove(self.player, power_dict)
         winningMove = board.getWinInOne(self.player, power_dict)
-        if winningMove:
-          return winningMove
-        else:
-          defendingMove = board.getGoodDefendingMove(self.player, power_dict)
-          if defendingMove:
-            return defendingMove
+        if move_num < 3:
+          if winningMove:
+            return winningMove
           else:
-            return board.getRandomMove(self.player, power_dict)
+            defendingMove = board.getGoodDefendingMove(self.player, power_dict)
+            if defendingMove:
+              return defendingMove
+            else:
+              return board.getRandomMove(self.player, power_dict)
+        else:
+          return board.getRandomMove(self.player, power_dict)
           
     def getBlockerMove(self, board: Board, power_dict):
        return (board.getRandomBlockerMove(), False)

@@ -63,25 +63,56 @@
         
         <div class="section">
             <h3 class="highlight">Objective</h3>
-            <p>Position 3 of your pieces in a row anywhere on the three-dimensional 3x3x3 game board. Players alternate turns placing their pieces until one achieves a run of 3 or the board fills up without a winner. If the board fills up, the second player wins the game.</p>
+            <p>Position 3 of your pieces in a row anywhere on the three-dimensional 3x3x3 game board. 
+                Players alternate turns placing their pieces until one achieves a run of 3 or the board fills 
+                up without a winner. If the board fills up, it's a tie!
+            </p>
             <div class="image-pair">
                 <img src="{% static 'images/red_wins.png' %}" alt="Red Wins">
-                <img src="{% static 'images/blue_wins.png' %}" alt="Blue Wins">
+                <img src="{% static 'images/tie_game.png' %}" alt="Blue Wins">
             </div>
         </div>
         
         <div class="section">
             <h3 class="highlight">The Twist</h3>
-            <p>You can either place a new piece in an empty square, <strong>or</strong> push existing pieces toward the back of the cube, as long as the row you push isn't full. Rotate the board using your arrow keys or W, A, S, D to play on any side of the board.</p>
+            <p>You can either place a new piece in an empty square, <strong>or</strong> push existing pieces 
+                toward the back of the cube, as long as the row you push isn't full. Rotate the board using 
+                the buttons on screen or W, A, S, D to play on any side of the board.
+            </p>
             <div class="image-pair">
                 <img src="{% static 'images/before_push.png' %}" alt="Before Push">
                 <img src="{% static 'images/after_push.png' %}" alt="After Push">
             </div>
         </div>
+
+        <div class="section">
+            <h3 class="highlight">Pushing Power</h3>
+            <p>Pushing existing pieces in the cube costs "Pushing Power" for each piece you push. Throughout the
+                game you will gain half a power per turn after you make your move. To start the game, Red has 1
+                power and Blue has 4. This serves to even out the first player advantage.
+            </p>
+            <div class="image-pair">
+                <img src="{% static 'images/power_controls.png' %}" alt="Power Controls">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3 class="highlight">Blocker Pieces</h3>
+            <p>The last game mechanic to be aware of are blocker pieces. These are neutral pieces which you can play
+                throughout the game in addition to your regular move. Use them to stop your opponent from winning or to
+                lock your pieces into an advantageous position, where your opponent can't push them away. Blocker pieces
+                must be placed on an empty square, and cannot push existing pieces.
+            </p>
+            <div class="image-pair">
+                <img src="{% static 'images/blocker_controls.png' %}" alt="Blocker Controls">
+            </div>
+        </div>
         
         <div class="section">
-            <h3 class="highlight">Neutral Pieces</h3>
-            <p>Nine "neutral" black pieces start on the board as obstacles, placed in a random pattern generated each time you play. Use these to block your opponent or secure advantageous positions for your pieces. You can also place three neutral pieces throughout the game (1 per turn) in addition to your normal move. These placements cannot push existing pieces, and must be placed on an empty square.</p>
+            <h3 class="highlight">Game Setup</h3>
+            <p>Eight "neutral" black pieces start on the board as obstacles, placed in a random pattern generated
+                each time you play. This makes every game unique, so your strategies need to be adaptable.
+            </p>
             <div class="image-pair">
                 <img src="{% static 'images/start_1.png' %}" alt="Start Position 1">
                 <img src="{% static 'images/start_2.png' %}" alt="Start Position 2">
@@ -89,6 +120,7 @@
         </div>
         
         <p class="text-center highlight">Hope you enjoy!</p>
+        <p class="text-center highlight">- jimbo_o</p>
     </div>
 </body>
 </html>
