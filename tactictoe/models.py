@@ -858,7 +858,7 @@ class MediumAgent:
         if move_num == 0:
            return board.getGoodStartMove(self.player, power_dict)
         winningMove = board.getWinInOne(self.player, power_dict)
-        if move_num < 3:
+        if move_num <= 2 or move_num > 3:
           if winningMove:
             return winningMove
           else:
