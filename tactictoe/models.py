@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(8)
+        self.setupBoard(9)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(8)
+           self.setupBoard(9)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -947,8 +947,8 @@ class GamePlayer:
     def __init__(self, difficulty, computerColor):
         self.board = Board()
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
-        self.red_power = 1
-        self.blue_power = 4
+        self.red_power = 0
+        self.blue_power = 1
         self.red_blocker_count = 0
         self.blue_blocker_count = 0
         self.moves_made = 0
@@ -1033,7 +1033,7 @@ class GamePlayer:
                  raise Exception("max_blocker_moves")
               self.red_blocker_count += 1
            else:
-              if self.blue_blocker_count >= 3:
+              if self.blue_blocker_count >= 4:
                  raise Exception("max_blocker_moves")
               self.blue_blocker_count += 1
         else:
@@ -1101,8 +1101,8 @@ class Game(models.Model):
     player_two_time_left = models.DurationField(default=timedelta(seconds=180))
     last_move_time = models.DateTimeField(auto_now_add=True)
 
-    red_power = models.IntegerField(default=1)
-    blue_power = models.IntegerField(default=4)
+    red_power = models.IntegerField(default=0)
+    blue_power = models.IntegerField(default=1)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
     
@@ -1153,7 +1153,7 @@ class Game(models.Model):
                     raise Exception("max_blocker_moves")
                 self.red_blocker_count += 1
            else:
-                if self.blue_blocker_count >= 3:
+                if self.blue_blocker_count >= 4:
                     raise Exception("max_blocker_moves")
                 self.blue_blocker_count += 1
         else:
