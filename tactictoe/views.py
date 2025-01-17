@@ -520,54 +520,61 @@ from .models import Game
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-@login_required
 def find_opponent(request):
     current_user = request.user
-    waiting_users = cache.get('waiting_users', [])
-
-    opponent = None
-    for user in waiting_users:
-        if user != current_user:
-            opponent = user
-            break
-
-    if opponent:
-        waiting_users.remove(opponent)
-        cache.set('waiting_users', waiting_users, timeout=1200)
-        players = [current_user, opponent]
-        random.shuffle(players)
-        player_one, player_two = players
-        game = Game.start_new_game(player_one, player_two, 'rapid') # TODO update when blitz/bullet added
-
-        game_key = f"game:{game.game_code}"
-        
-        if game.turn == game.player_one:
-            redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
-            redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
-        else:
-            redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
-            redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
-        
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'setup_room', 
-            {
-                'type': 'send_game_ready',
-                'game_code': game.game_code
-            }
-        )
-        return JsonResponse({'status': 'success', 'game_code': game.game_code, 'player_one_id': game.turn.id})
-    else:
-        add_to_waiting_queue(current_user)
-        return JsonResponse({'status': 'waiting'})
+    user_id = str(current_user.id)
+    redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
     
+    redis_client.rpush('waiting_users', user_id)
+    waiting_users = redis_client.lrange('waiting_users', 0, -1)
+    
+    if len(waiting_users) == 1:
+        return JsonResponse({'status': 'waiting'})
+    else:
+        opponent_id = waiting_users[0].decode()
+        
+        redis_client.lrem('waiting_users', 0, opponent_id)
+        redis_client.lrem('waiting_users', 0, user_id)
+        
+        try:
+            opponent = User.objects.get(id=opponent_id)
+            players = [current_user, opponent]
+            random.shuffle(players)
+            player_one, player_two = players
+            game = Game.start_new_game(player_one, player_two, 'rapid')
+
+            game_key = f"game:{game.game_code}"
+            
+            if game.turn == game.player_one:
+                redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+                redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+            else:
+                redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+                redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'setup_room',
+                {
+                    'type': 'send_game_ready',
+                    'game_code': game.game_code
+                }
+            )
+            return JsonResponse({
+                'status': 'success', 
+                'game_code': game.game_code,
+                'player_one_id': game.turn.id
+            })
+            
+        except User.DoesNotExist:
+            redis_client.delete('waiting_users')
+            return JsonResponse({'status': 'waiting'})
+
 @login_required
 def cancel_search(request):
     current_user = request.user
-    waiting_users = cache.get('waiting_users', [])
-    if current_user in waiting_users:
-        waiting_users.remove(current_user)
-        cache.set('waiting_users', waiting_users, timeout=1200)
+    redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
+    redis_client.lrem('waiting_users', 0, str(current_user.id))
     return JsonResponse({'status': 'success'})
  
 from django.core.cache import cache
