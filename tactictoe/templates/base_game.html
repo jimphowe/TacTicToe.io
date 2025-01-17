@@ -221,25 +221,13 @@
         renderer.setClearColor(0xd3d2c0);
 
         function onWindowResize() {
-            adjustCameraPosition();
             adjustCameraForScreenSize();
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        adjustCameraPosition();
         window.addEventListener('resize', onWindowResize, false);
-
-        function adjustCameraPosition() {
-            const aspect = window.innerWidth / window.innerHeight;
-            if (aspect < 1) {
-                camera.position.set(10, 6, 4);
-            } else {
-                camera.position.set(7, 4, 3);
-            }
-            camera.lookAt(scene.position);
-        }
 
         document.addEventListener('DOMContentLoaded', (event) => {
             window.playerColor = '{{ player_color }}';
@@ -325,7 +313,7 @@
             if (isMobile) {
                 camera.fov = mobileFOV;
                 cameraDistance = 14;
-                camera.position.set(0, 0, cameraDistance);
+                camera.position.set(10, 6, 4);
             } else {
                 camera.fov = desktopFOV;
                 cameraDistance = 10;
