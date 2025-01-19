@@ -12,9 +12,9 @@ class Piece(Enum):
 class Board:
     def __init__(self):
         # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(9)
+        self.setupBoard(8)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(9)
+           self.setupBoard(8)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
 
@@ -813,20 +813,23 @@ class Board:
         return (self.getGoodIntermediateBlockerMove(player), True)
     
     def getBetterBlockerMove(self, player: Piece, power_dict):
-      defending_move = self.getDefendingMove(player, power_dict)
-      winning_move = self.getWinInOne(player, power_dict)
-      if defending_move or winning_move:
+      initial_defending_move = self.getDefendingMove(player, power_dict)
+      initial_winning_move = self.getWinInOne(player, power_dict) or self.getWinInTwo(player, power_dict)
+
+      if initial_winning_move:
           return None
       for blocker_move in self.getPossibleBlockerMoves():
           (x,y,z,dir) = blocker_move
           self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
           
           defending_move = self.getDefendingMove(player, power_dict)
-          winning_move = self.getWinInOne(player, power_dict)
+          winning_move = self.getWinInOne(player, power_dict) or self.getWinInTwo(player, power_dict)
           
-          if defending_move or winning_move:
+          if (defending_move and not initial_defending_move) or winning_move:
               self.undo()
               return (blocker_move, False)
+          elif initial_defending_move:
+              return None
           self.undo()
       return (self.getGoodIntermediateBlockerMove(player), True)
        

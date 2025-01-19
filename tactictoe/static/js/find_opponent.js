@@ -28,6 +28,13 @@ function startWebSocket() {
         if (data.status === 'success') {
             playSound("start");
             window.location.href = '/game/' + data.game_code;
+        } else if (data.status === 'cancelled') {
+            const waitingModal = document.querySelector('.waiting-modal');
+            if (waitingModal) {
+                waitingModal.remove();
+            }
+            alert('Other player cancelled the rematch');
+            window.location.href = '/';
         }
     };
 

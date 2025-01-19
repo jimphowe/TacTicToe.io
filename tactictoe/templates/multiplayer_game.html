@@ -111,6 +111,7 @@
     </div>
 </div>
 <script>
+    console.log("Friend room code:", '{{ friend_room_code }}');
     var findOpponentUrl = "{% url 'find_opponent' %}";
 
     document.addEventListener('DOMContentLoaded', (event) => {
@@ -241,6 +242,14 @@
 
     gameSocket.onmessage = async function(e) {
         var data = JSON.parse(e.data);
+
+        console.log(data);
+
+        if (data.status === 'cancelled') {
+            alert(data.message || 'Other player cancelled rematch');
+            window.location.href = '/';
+            return;
+        }
         
         await updateGameState(JSON.parse(data.game_state));
         window.updateControlPanel(JSON.parse(data.game_state), data.red_power, data.blue_power);
@@ -279,9 +288,38 @@
         });
 
         let displayWinner = winnerName || 'TIE';
-        createGameOverUI(displayWinner, eloChange, function() {
+        createGameOverUI(displayWinner, eloChange, '{{ friend_room_code }}', function() {
             const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
             localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
+
+            if ('{{ friend_room_code }}') {
+                const waitingModal = showWaitingForRematch('{{ friend_room_code }}');
+                
+                fetch('/handle-rematch/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        friend_room_code: '{{ friend_room_code }}'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.game_created) {
+                        waitingModal.remove();
+                        window.location.href = '/game/' + data.game_code;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    waitingModal.remove();
+                    showToast('Unexpected error occurred');
+                });
+                return;
+            }
+
             startWebSocket();
             findOpponent().done(function(response) {
                 if (response.status === 'success') {

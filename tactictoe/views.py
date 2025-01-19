@@ -298,6 +298,7 @@ from .models import Game
 def multiplayer_game_view(request, game_code):
     game = get_object_or_404(Game, game_code=game_code)
     player_color = 'RED' if request.user == game.player_one else 'BLUE'
+    friend_room_code = cache.get(f'game_room:{game_code}')
 
     rapid_elo_subquery = EloRating.objects.filter(
         user_profile=OuterRef('pk'),
@@ -332,6 +333,7 @@ def multiplayer_game_view(request, game_code):
         'is_game_over': game.completed,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'friend_room_code': friend_room_code
     }
     return render(request, 'multiplayer_game.html', context)
 
@@ -591,12 +593,15 @@ def create_room(request):
     current_user = request.user
     room_code = generate_room_code()
     
-    # Store the room code and user in cache
-    cache.set(f'room:{room_code}', current_user.id, timeout=1200)
-    
-    # Store the room code for the current user
+    # Store the room code and creator in cache as before
+    cache.set(f'room:{room_code}', current_user.id, timeout=1200)  # 20 min timeout for initial matching
     cache.set(f'user_room:{current_user.id}', room_code, timeout=1200)
     
+    # Create a new key to track this as an ongoing friend match room
+    cache.set(f'friend_room:{room_code}', {
+        'creator_id': current_user.id,
+        'joiner_id': None
+    }, timeout=3600)
     return JsonResponse({'status': 'success', 'room_code': room_code})
 
 @login_required
@@ -605,7 +610,6 @@ def join_room(request):
         room_code = request.POST.get('room_code')
         current_user = request.user
         
-        # Check if the room exists
         creator_id = cache.get(f'room:{room_code}')
         if creator_id is None:
             return JsonResponse({'status': 'error', 'message': 'Room not found or expired.'})
@@ -613,17 +617,19 @@ def join_room(request):
         if creator_id == current_user.id:
             return JsonResponse({'status': 'error', 'message': 'You cannot join your own room.'})
         
-        # Start the game
+        # Update friend room tracking
+        friend_room = cache.get(f'friend_room:{room_code}')
+        if friend_room:
+            friend_room['joiner_id'] = current_user.id
+            cache.set(f'friend_room:{room_code}', friend_room, timeout=3600)
+        
         creator = User.objects.get(id=creator_id)
         game = Game.start_new_game(creator, current_user, 'rapid')
         
-        # Remove the room from cache
-        cache.delete(f'room:{room_code}')
+        # Store mapping from game code to friend room code
+        cache.set(f'game_room:{game.game_code}', room_code, timeout=3600)
         
-        # Remove the room code reference for the creator
-        cache.delete(f'user_room:{creator_id}')
-        
-        # Set initial timer value in Redis
+        # Set up initial timer in Redis
         game_key = f"game:{game.game_code}"
         if game.turn == game.player_one:
             redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
@@ -632,19 +638,151 @@ def join_room(request):
             redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
             redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
         
-        # Notify the creator
+        # Remove the initial matchmaking keys
+        cache.delete(f'room:{room_code}')
+        cache.delete(f'user_room:{creator_id}')
+        
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             'setup_room',
             {
                 'type': 'send_game_ready',
-                'game_code': game.game_code
+                'game_code': game.game_code,
+                'friend_room_code': room_code
             }
         )
         
-        return JsonResponse({'status': 'success', 'game_code': game.game_code})
+        return JsonResponse({
+            'status': 'success', 
+            'game_code': game.game_code,
+            'friend_room_code': room_code
+        })
     
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+@login_required
+def handle_rematch(request):
+    data = json.loads(request.body)
+    friend_room_code = data.get('friend_room_code')
+    
+    friend_room = cache.get(f'friend_room:{friend_room_code}')
+    if not friend_room:
+        return JsonResponse({'status': 'error', 'message': 'Friend room expired'})
+    
+    if request.user.id not in [friend_room['creator_id'], friend_room['joiner_id']]:
+        return JsonResponse({'status': 'error', 'message': 'Not authorized'})
+    
+    # Add this player to rematch ready list
+    rematch_key = f'rematch:{friend_room_code}'
+    ready_players = cache.get(rematch_key) or set()
+    ready_players.add(request.user.id)
+    cache.set(rematch_key, ready_players, timeout=3600)
+    
+    # Check if both players are ready
+    other_player_id = friend_room['creator_id'] if request.user.id == friend_room['joiner_id'] else friend_room['joiner_id']
+    if other_player_id in ready_players:
+        # Both players are ready, create the new game
+        player_one = User.objects.get(id=friend_room['creator_id'])
+        player_two = User.objects.get(id=friend_room['joiner_id'])
+        
+        previous_game = Game.objects.filter(
+            player_one__in=[player_one, player_two],
+            player_two__in=[player_one, player_two]
+        ).order_by('-created_at').first()
+
+        # Swap the colors from the previous game
+        if previous_game.player_one == player_one:
+            new_player_one = player_two
+            new_player_two = player_one
+        else:
+            new_player_one = player_one
+            new_player_two = player_two
+        
+        game = Game.start_new_game(new_player_one, new_player_two, 'rapid')
+        cache.set(f'game_room:{game.game_code}', friend_room_code, timeout=3600)
+        
+        # Set up Redis timer
+        game_key = f"game:{game.game_code}"
+        if game.turn == game.player_one:
+            redis_client.hset(game_key, "time_left", game.player_one_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_one_time_left.total_seconds()))
+        else:
+            redis_client.hset(game_key, "time_left", game.player_two_time_left.total_seconds())
+            redis_client.expire(game_key, int(game.player_two_time_left.total_seconds()))
+        
+        # Clear rematch ready list
+        cache.delete(rematch_key)
+        
+        # Notify both players through WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'setup_room',
+            {
+                'type': 'send_game_ready',
+                'game_code': game.game_code,
+                'friend_room_code': friend_room_code
+            }
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'game_code': game.game_code,
+            'friend_room_code': friend_room_code,
+            'game_created': True
+        })
+    
+    # Only this player is ready, return waiting status
+    return JsonResponse({
+        'status': 'waiting'
+    })
+
+@login_required
+def cancel_rematch(request):
+    data = json.loads(request.body)
+    friend_room_code = data.get('friend_room_code')
+    
+    rematch_key = f'rematch:{friend_room_code}'
+    ready_players = cache.get(rematch_key) or set()
+
+    game_code = cache.get(f'game_room:{friend_room_code}')
+    
+    # Notify other player if they're waiting
+    if len(ready_players) > 0:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'setup_room',
+            {
+                'type': 'send_game_ready',
+                'status': 'cancelled',
+                'message': 'Other player cancelled rematch'
+            }
+        )
+        if game_code:
+            async_to_sync(channel_layer.group_send)(
+                f'game_{game_code}',
+                {
+                    'type': 'send_game_update',
+                    'status': 'cancelled',
+                    'message': 'Other player cancelled rematch'
+                }
+            )
+    
+    ready_players.discard(request.user.id)
+    if ready_players:
+        cache.set(rematch_key, ready_players, timeout=3600)
+    else:
+        cache.delete(rematch_key)
+    
+    return JsonResponse({'status': 'success'})
+
+@login_required
+def leave_friend_room(request):
+    data = json.loads(request.body)
+    friend_room_code = data.get('friend_room_code')
+    
+    friend_room = cache.get(f'friend_room:{friend_room_code}')
+    if friend_room and request.user.id in [friend_room['creator_id'], friend_room['joiner_id']]:
+        cache.delete(f'friend_room:{friend_room_code}')
+    
+    return JsonResponse({'status': 'success'})
 
 @login_required
 def cancel_create_room(request):
@@ -654,8 +792,10 @@ def cancel_create_room(request):
         room_code = cache.get(f'user_room:{current_user.id}')
         
         if room_code:
+            # Delete all three related cache keys
             cache.delete(f'room:{room_code}')
             cache.delete(f'user_room:{current_user.id}')
+            cache.delete(f'friend_room:{room_code}')
             return JsonResponse({'status': 'success'})
         else:
             return JsonResponse({'status': 'error', 'message': 'No room found for this user.'})

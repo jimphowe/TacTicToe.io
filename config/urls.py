@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tactictoe.views import home, signup, profile_view, save_colors, get_timers, player_guide, find_opponent, cancel_search, create_room, join_room, cancel_create_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_multiplayer_move, handle_resignation, leaderboard_view
+from tactictoe.views import home, signup, profile_view, save_colors, get_timers, player_guide, find_opponent, cancel_search, cancel_rematch, create_room, join_room, cancel_create_room, handle_rematch, leave_friend_room, game_state, multiplayer_setup_view, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, singleplayer_setup_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_multiplayer_move, handle_resignation, leaderboard_view
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
@@ -24,6 +24,9 @@ urlpatterns = [
     path('cancel-search/', cancel_search, name='cancel_search'),
     path('create-room/', create_room, name='create_room'),
     path('join-room/', join_room, name='join_room'),
+    path('handle-rematch/', handle_rematch, name='handle_rematch'),
+    path('cancel-rematch/', cancel_rematch, name='cancel_rematch'),
+    path('leave-friend-room/', leave_friend_room, name='leave_friend_room'),
     path('cancel-create-room/', cancel_create_room, name='cancel_create_room'),
     path('game_state/<str:game_code>/', game_state, name='game_state'),
     path('game/<str:game_code>/', multiplayer_game_view, name='multiplayer_game_view'),

@@ -53,6 +53,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
 
     async def send_game_update(self, event):
+        if event.get('status') == 'cancelled':
+            await self.send(text_data=json.dumps({
+                'status': 'cancelled',
+                'message': event.get('message')
+            }))
+            return
+
         elo_change = None
         winner_id = event['winner_id']
         winner_color = event['winner_color']
@@ -91,7 +98,7 @@ class SetupConsumer(AsyncWebsocketConsumer):
         # Join the setup room group
         await self.channel_layer.group_add(
             self.room_group_name,
-            self.channel_name
+            self.channel_name,
         )
         await self.accept()
 
@@ -110,6 +117,8 @@ class SetupConsumer(AsyncWebsocketConsumer):
         # Send message to WebSocket to update the client
         await self.send(text_data=json.dumps({
             'status': 'success',
-            'game_code': event['game_code']
+            'game_code': event.get('game_code'),
+            'friend_room_code': event.get('friend_room_code'),
+            'message': event.get('message')
         }))
 

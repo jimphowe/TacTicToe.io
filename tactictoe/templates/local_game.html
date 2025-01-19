@@ -32,7 +32,7 @@
         if (!isTie) {
             highlightWinningRun(winner, winningRun);
         }
-        createGameOverUI(winner, null, function() {
+        createGameOverUI(winner, null, null, function() {
             location.reload();
         });
     }
