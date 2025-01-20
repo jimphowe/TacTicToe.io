@@ -813,12 +813,35 @@ class Board:
         return (self.getGoodIntermediateBlockerMove(player), True)
     
     def getBetterBlockerMove(self, player: Piece, power_dict):
+      opponent = self.otherPlayer(player)
       initial_defending_move = self.getDefendingMove(player, power_dict)
       initial_winning_move = self.getWinInOne(player, power_dict) or self.getWinInTwo(player, power_dict)
-
       if initial_winning_move:
           return None
-      for blocker_move in self.getPossibleBlockerMoves():
+      
+      potential_blocks = []
+
+      for run in self.winningRuns:
+        # Check if opponent has pieces in this run
+        opponent_pieces = [(x,y,z) for (x,y,z) in run if self.pieces[x][y][z] == opponent]
+        if len(opponent_pieces) >= 1:
+            # Get the empty positions in the run
+            empty_positions = [(x,y,z) for (x,y,z) in run if self.pieces[x][y][z] == Piece.EMPTY]
+            for pos in empty_positions:
+                if pos not in [(1,1,1)]:  # Avoid center
+                    potential_blocks.append(pos)
+                    
+            # Also consider positions that could block pushes
+            for piece_pos in opponent_pieces:
+                for empty_pos in empty_positions:
+                    push_positions = self.getPushablePositions(piece_pos, empty_pos)
+                    potential_blocks.extend(push_positions)
+    
+      # Remove duplicates and get valid moves
+      potential_blocks = list(set(potential_blocks))
+      valid_blocker_moves = [self.spotToValidDir(x,y,z) for (x,y,z) in potential_blocks if self.spotToValidDir(x,y,z)]
+
+      for blocker_move in valid_blocker_moves:
           (x,y,z,dir) = blocker_move
           self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
           
@@ -828,9 +851,9 @@ class Board:
           if (defending_move and not initial_defending_move) or winning_move:
               self.undo()
               return (blocker_move, False)
-          elif initial_defending_move:
-              return None
           self.undo()
+      if initial_defending_move:
+          return None
       return (self.getGoodIntermediateBlockerMove(player), True)
        
 # Returns a winning move if one exists, otherwise picks a random move
