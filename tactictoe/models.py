@@ -835,7 +835,9 @@ class Board:
             for piece_pos in opponent_pieces:
                 for empty_pos in empty_positions:
                     push_positions = self.getPushablePositions(piece_pos, empty_pos)
-                    potential_blocks.extend(push_positions)
+                    for pos in push_positions:
+                        if self.pieces[pos[0]][pos[1]][pos[2]] == Piece.EMPTY:
+                            potential_blocks.append(pos)
     
       # Remove duplicates and get valid moves
       potential_blocks = list(set(potential_blocks))
@@ -850,7 +852,7 @@ class Board:
           
           if (defending_move and not initial_defending_move) or winning_move:
               self.undo()
-              return (blocker_move, False)
+              return (blocker_move, True)
           self.undo()
       if initial_defending_move:
           return None
