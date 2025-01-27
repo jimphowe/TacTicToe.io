@@ -36,6 +36,7 @@ function createGameOverUI(winner, eloChange, friendRoomCode, buttonAction) {
     const buttonContainer = document.createElement('div');
     buttonContainer.style.display = 'flex';
     buttonContainer.style.flexDirection = 'column';
+    buttonContainer.style.alignItems = 'center';
     buttonContainer.style.gap = '10px';
     buttonContainer.style.marginTop = '20px';
 
@@ -43,7 +44,7 @@ function createGameOverUI(winner, eloChange, friendRoomCode, buttonAction) {
     if (friendRoomCode) {
         const rematchButton = document.createElement('button');
         rematchButton.innerHTML = 'Rematch';
-        rematchButton.style.padding = '10px 20px';
+        rematchButton.style.padding = '10px 28px';
         rematchButton.style.fontSize = '16px';
         rematchButton.style.cursor = 'pointer';
         rematchButton.style.backgroundColor = '#3498DB';
@@ -58,7 +59,7 @@ function createGameOverUI(winner, eloChange, friendRoomCode, buttonAction) {
 
         const leaveButton = document.createElement('button');
         leaveButton.innerHTML = 'Leave Room';
-        leaveButton.style.padding = '10px 20px';
+        leaveButton.style.padding = '10px 28px';
         leaveButton.style.fontSize = '16px';
         leaveButton.style.cursor = 'pointer';
         leaveButton.style.backgroundColor = '#E74C3C';
@@ -74,7 +75,7 @@ function createGameOverUI(winner, eloChange, friendRoomCode, buttonAction) {
         // Regular new game button for random matchmaking
         const newGameButton = document.createElement('button');
         newGameButton.innerHTML = 'New Game';
-        newGameButton.style.padding = '10px 20px';
+        newGameButton.style.padding = '10px 28px';
         newGameButton.style.fontSize = '16px';
         newGameButton.style.cursor = 'pointer';
         newGameButton.style.backgroundColor = '#3498DB';
