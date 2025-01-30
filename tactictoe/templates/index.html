@@ -7,7 +7,7 @@
     {% load static %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/background_pattern.css' %}">
     <link rel="icon" href="{% static 'images/favicon.svg' %}" type="image/png">
     <style>
         html, body {
@@ -17,21 +17,13 @@
             overflow-x: hidden;
             position: relative;
         }
+        
         body {
             display: flex;
             flex-direction: column;
-            min-height: 100%;
-            background: linear-gradient(180deg, #d3d2c0 0%, #fad6a4 100%);
-            color: #fff;
+            min-height: 100vh;
         }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            filter: blur(2px);
-        }
+
         .navbar {
             background-color: rgba(34, 34, 34, 0.9);
             z-index: 3;
@@ -40,14 +32,17 @@
             padding: 10px 20px;
             transition: background-color 0.3s;
         }
+
         .navbar .container-fluid {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+
         .navbar .ms-auto {
             margin-left: auto;
         }
+
         .main-content {
             flex: 1 0 auto;
             display: flex;
@@ -59,11 +54,13 @@
             padding: 20px;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
+
         .main-content .container {
             width: 100%;
         }
+
         .btn-custom {
-            background-color: #333;
+            background-color: rgba(51, 51, 51, 0.9);
             color: #fff;
             transition: background-color 0.3s, transform 0.3s;
             padding: 10px 20px;
@@ -72,11 +69,13 @@
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.8);
         }
+
         .btn-custom:hover {
             background-color: #555;
             color: #fff;
             transform: translateY(-2px);
         }
+
         .footer {
             background-color: rgba(34, 34, 34, 0.9);
             color: #fff;
@@ -84,19 +83,29 @@
             position: relative;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
             transition: background-color 0.3s;
+            margin-top: auto;
         }
+
         .btn-group {
             max-width: 300px;
             width: 100%;
             margin: 0 auto;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
+
         .dropdown-menu {
             background-color: #333;
             border: 1px solid #555;
         }
+
         .dropdown-item {
             color: #fff;
         }
+
         .dropdown-item:hover {
             background-color: #444;
             color: #fff;
@@ -141,7 +150,6 @@
             <a href="/multiplayer/setup" class="btn btn-lg btn-custom rounded">
                 <i class="fas fa-users me-2"></i>MultiPlayer
             </a>
-            </br>
             <a href="/leaderboard" class="btn btn-lg btn-custom rounded">
                 <i class="fas fa-trophy me-2"></i>Leaderboard
             </a>
@@ -156,116 +164,13 @@
             <a href="https://discord.gg/zAtBSvzS4q" class="btn btn-custom me-2">
                 <i class="fab fa-discord me-2"></i>Discord
             </a>
+            <div class="position-absolute bottom-0 start-0" style="font-size: 0.65rem; opacity: 0.7; margin: 0 0 10px 10px;">
+                Background by @BTGorilla
+            </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const isMobile = window.innerWidth <= 768;
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const stars = [];
-        const numStars = isMobile ? 70 : 200;
-        const mouse = { x: 0, y: 0 };
-        const STAR_RADIUS = 8;
-        const LINE_DISTANCE = 150;
-
-        function isOverlapping(newStar) {
-            return stars.some(star => {
-                const dist = distance(newStar, star);
-                return dist < (STAR_RADIUS * 2);
-            });
-        }
-
-        function createStar() {
-            const color = ['#FF0000', '#0000FF', '#000000'][Math.floor(Math.random() * 3)];
-            let newStar = {
-                originalX: Math.random() * canvas.width,
-                originalY: Math.random() * canvas.height,
-                x: 0,
-                y: 0,
-                radius: STAR_RADIUS,
-                color: color,
-                connections: 0
-            };
-
-            newStar.x = newStar.originalX + (Math.random() - 0.5) * 20;
-            newStar.y = newStar.originalY + (Math.random() - 0.5) * 20;
-
-            while (isOverlapping(newStar)) {
-                newStar.originalX = Math.random() * canvas.width;
-                newStar.originalY = Math.random() * canvas.height;
-                newStar.x = newStar.originalX + (Math.random() - 0.5) * 20;
-                newStar.y = newStar.originalY + (Math.random() - 0.5) * 20;
-            }
-
-            return newStar;
-        }
-
-        for (let i = 0; i < numStars; i++) {
-            stars.push(createStar());
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.globalCompositeOperation = "lighter";
-
-            stars.forEach(star => {
-                ctx.fillStyle = star.color;
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.radius, 0, 2 * Math.PI);
-                ctx.fill();
-            });
-
-            ctx.lineWidth = 0.25;
-            ctx.strokeStyle = 'black';
-            ctx.beginPath();
-
-            const MAX_CONNECTIONS = 8;  // Maximum connections per star
-
-            // Sort all possible connections by distance
-            let allConnections = [];
-            stars.forEach((star1, i) => {
-                stars.slice(i + 1).forEach(star2 => {
-                    const dist = distance(star1, star2);
-                    if (dist < LINE_DISTANCE) {
-                        allConnections.push({
-                            star1,
-                            star2,
-                            distance: dist
-                        });
-                    }
-                });
-            });
-
-            // Sort connections by distance (shorter first)
-            allConnections.sort((a, b) => a.distance - b.distance);
-
-            // Draw connections, respecting max connections per star
-            allConnections.forEach(conn => {
-                if (conn.star1.connections < MAX_CONNECTIONS && 
-                    conn.star2.connections < MAX_CONNECTIONS) {
-                    ctx.moveTo(conn.star1.x, conn.star1.y);
-                    ctx.lineTo(conn.star2.x, conn.star2.y);
-                    conn.star1.connections++;
-                    conn.star2.connections++;
-                }
-            });
-
-            ctx.stroke();
-        }
-
-        function distance(point1, point2) {
-            const xs = point2.x - point1.x;
-            const ys = point2.y - point1.y;
-            return Math.sqrt(xs * xs + ys * ys);
-        }
-
-        draw();
-    </script>
+    <script src="{% static 'js/background_pattern.js' %}"></script>
 </body>
 </html>
