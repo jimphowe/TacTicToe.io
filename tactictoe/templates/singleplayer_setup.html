@@ -16,6 +16,7 @@
         .container {
             position: relative;
             z-index: 2;
+            pointer-events: none;
         }
         .form-container {
             background-color: rgba(51, 51, 51, 0.9);
@@ -23,12 +24,22 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             position: relative;
             z-index: 2;
+            pointer-events: auto;
         }
         .home-button {
             position: fixed;
             top: 20px;
             left: 20px;
             z-index: 1000;
+            pointer-events: auto;
+        }
+        .custom-slider,
+        .slider-handle,
+        .player-button,
+        .btn,
+        input,
+        button {
+            pointer-events: auto;
         }
         .custom-slider-container {
             width: 100%;

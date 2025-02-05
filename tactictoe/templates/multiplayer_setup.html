@@ -30,6 +30,10 @@
         .container {
             position: relative;
             z-index: 2;
+            pointer-events: none;
+        }
+        .row, .col-md-8 {
+            pointer-events: none;
         }
         .btn-custom {
             background-color: rgba(51, 51, 51, 0.9);;
@@ -46,11 +50,20 @@
             background-color: #555;
             color: #fff;
         }
+        .btn-custom,
+        .modal,
+        .btn,
+        input,
+        button,
+        .home-button {
+            pointer-events: auto;
+        }
         .home-button {
             position: fixed;
             top: 20px;
             left: 20px;
             z-index: 1000;
+            pointer-events: auto;
         }
         #toast-container {
             position: fixed;
@@ -58,6 +71,7 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
+            pointer-events: auto;
         }
 
         .toast {
