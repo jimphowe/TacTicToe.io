@@ -174,16 +174,29 @@ canvas.addEventListener('mousemove', (e) => {
     });
 });
 
-// Make sure canvas resizes properly
+let resizeTimeout;
+let lastResizeTime = Date.now();
+
 window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    console.log('Canvas resized to:', { width: canvas.width, height: canvas.height });
+    clearTimeout(resizeTimeout);
     
-    stars.length = 0;
-    for (let i = 0; i < (window.innerWidth <= 768 ? 70 : 200); i++) {
-        stars.push(createStar());
+    const now = Date.now();
+    if (now - lastResizeTime < 2000) {
+        return;
     }
+    
+    resizeTimeout = setTimeout(() => {
+        const container = document.documentElement;
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        
+        stars.length = 0;
+        for (let i = 0; i < (window.innerWidth <= 768 ? 70 : 200); i++) {
+            stars.push(createStar());
+        }
+        
+        lastResizeTime = now;
+    }, 250);
 });
 
 function tick() {
