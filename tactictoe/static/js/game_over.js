@@ -209,7 +209,7 @@ function showWaitingForRematch(friendRoomCode) {
                     window.setupSocket.close();
                 }
                 modalDiv.remove();
-                window.location.href = '/multiplayer/setup/';
+                window.location.href = '/';
             }
         })
         .catch(error => {
@@ -261,7 +261,7 @@ function leaveFriendRoom(friendRoomCode) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            window.location.href = '/multiplayer/setup/';
+            window.location.href = '/';
         }
     });
 }

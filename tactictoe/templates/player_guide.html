@@ -15,6 +15,7 @@
             line-height: 1.6;
             min-height: 100vh;
             position: relative;
+            overscroll-behavior-y: none;
         }
         canvas {
             position: fixed;
@@ -26,14 +27,28 @@
             z-index: 1;
         }
         .container {
-            max-width: 800px;
+            max-width: 70%;
             padding: 40px 20px;
             margin-top: 60px;
             position: relative;
             z-index: 2;
         }
+        .title-section {
+            max-width: 55%;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 80px;
+            padding: 20px;
+        }
+        .title-section h1 {
+            margin-bottom: 15px;
+            margin-top: 0;
+        }
+        .title-section h2 {
+            margin-bottom: 0;
+            margin-top: 0;
+        }
         h1, h2 {
-            color: #121212;
             margin-bottom: 30px;
             position: relative;
             z-index: 2;
@@ -70,6 +85,16 @@
             color: #ffffff;
             font-weight: bold;
         }
+        @media (max-width: 768px) {
+            .container {
+                max-width: 97%;
+            }
+            
+            .title-section {
+                max-width: 70%;
+                padding: 25px 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -78,8 +103,9 @@
         <i class="fas fa-home"></i> Home
     </a>
     <div class="container">
-        <h1 class="text-center">Welcome to TacTicToe.io!</h1>
-        <h2 class="text-center">How To Play</h2>
+        <div class="section title-section">
+            <h1 class="text-center highlight">Welcome to TacTicToe!</h1>
+        </div>
         
         <div class="section">
             <h3 class="highlight">Objective</h3>

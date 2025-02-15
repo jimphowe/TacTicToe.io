@@ -53,10 +53,6 @@ def player_guide(request):
     template = loader.get_template('player_guide.html')
     return HttpResponse(template.render({}, request))
 
-def multiplayer_setup_view(request):
-    template = loader.get_template('multiplayer_setup.html')
-    return HttpResponse(template.render({}, request))
-
 def multiplayer_view(request):
     template = loader.get_template('multiplayer.html')
     return HttpResponse(template.render({}, request))
@@ -131,10 +127,6 @@ def handle_local_move(request):
         'red_power': game.red_power,
         'blue_power': game.blue_power,
     })
-
-def singleplayer_setup_view(request):
-    template = loader.get_template('singleplayer_setup.html')
-    return HttpResponse(template.render({}, request))
 
 def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
