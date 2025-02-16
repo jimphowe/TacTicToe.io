@@ -149,7 +149,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.is_game_over) {
-                        handleGameOver(data.winner_name, data.elo_change);
+                        handleGameOver(data.winner_name, data.winner_color, data.winning_run, data.elo_change);
                     }
                 })
                 .catch(error => {
@@ -288,12 +288,14 @@
         });
 
         let displayWinner = winnerName || 'TIE';
-        createGameOverUI(displayWinner, eloChange, '{{ friend_room_code }}', function() {
+        var friendRoomCode = JSON.parse('{{ friend_room_code|safe }}');
+
+        createGameOverUI(displayWinner, eloChange, friendRoomCode, function() {
             const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
             localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
 
-            if ('{{ friend_room_code }}') {
-                const waitingModal = showWaitingForRematch('{{ friend_room_code }}');
+            if (friendRoomCode) {
+                const waitingModal = showWaitingForRematch(friendRoomCode);
                 
                 fetch('/handle-rematch/', {
                     method: 'POST',
@@ -302,7 +304,7 @@
                         'X-CSRFToken': getCookie('csrftoken')
                     },
                     body: JSON.stringify({
-                        friend_room_code: '{{ friend_room_code }}'
+                        friend_room_code: friendRoomCode
                     })
                 })
                 .then(response => response.json())

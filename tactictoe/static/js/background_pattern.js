@@ -181,7 +181,7 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
     
     const now = Date.now();
-    if (now - lastResizeTime < 2000) {
+    if (now - lastResizeTime < 500) {
         return;
     }
     

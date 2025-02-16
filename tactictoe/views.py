@@ -286,11 +286,12 @@ def handle_computer_move(request):
 
 from django.shortcuts import render, get_object_or_404
 from .models import Game
+from json import dumps
 
 def multiplayer_game_view(request, game_code):
     game = get_object_or_404(Game, game_code=game_code)
     player_color = 'RED' if request.user == game.player_one else 'BLUE'
-    friend_room_code = cache.get(f'game_room:{game_code}')
+    friend_room_code = dumps(cache.get(f'game_room:{game_code}'))
 
     rapid_elo_subquery = EloRating.objects.filter(
         user_profile=OuterRef('pk'),
@@ -442,8 +443,16 @@ def game_state(request, game_code):
     if not game.winner.id == request.user.id:
         elo_change *= -1
     if game.completed:
+        board = Board()
+        board.setState(json.loads(game.game_state))
+
+        winner_color = 'RED' if game.winner == game.player_one else 'BLUE'
+        winning_run = board.winningRun(Piece.RED if winner_color == 'RED' else Piece.BLUE)
+
         data.update({
             'winner_name': game.winner.username,
+            'winner_color': winner_color,
+            'winning_run': winning_run,
             'elo_change': elo_change,
         })
     return JsonResponse(data)
