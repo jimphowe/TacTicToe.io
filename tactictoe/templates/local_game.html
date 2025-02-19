@@ -90,7 +90,7 @@
                     window.playerColor = nextPlayer;
                 }
 
-                await updateGameState(data.game_state);
+                await updateGameState(data.game_state, data.push_info);
                 window.updateControlPanel(data.game_state, data.red_power, data.blue_power);
                 playSound("move");
 

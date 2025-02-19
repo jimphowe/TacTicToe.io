@@ -208,6 +208,8 @@
         let ROTATION_DURATION = 600;
         let rotationLastFinished = Date.now();
         const ROTATION_BUFFER = 60;
+        let isAnimating = false;
+        const ANIMATION_DURATION = 1000;
         const isMobile = window.innerWidth <= 768;
         let gameOver = false;
         let highlightMaterial;
@@ -571,6 +573,7 @@
 
         var clickableSpheres = [];
         var gameState = JSON.parse('{{ game_state|safe }}');
+        var currentGameState = gameState;
         gameState.forEach((layer, x) => {
             layer.forEach((row, y) => {
                 row.forEach((cell, z) => {
@@ -1093,82 +1096,244 @@
             }
         }
 
-        function updateGameState(newGameState) {
-            if (isRotating) {
-                return new Promise(resolve => {
-                    const checkRotation = () => {
-                        if (!isRotating) {
-                            performUpdate();
-                            resolve();
-                        } else {
-                            requestAnimationFrame(checkRotation);
-                        }
-                    };
-                    checkRotation();
-                });
-            } else {
-                performUpdate();
-                return Promise.resolve();
+        function animatePush(piece, startPos, endPos) {
+            return new Promise(resolve => {
+                const startTime = Date.now();
+                const duration = 500;
+
+                function update() {
+                    const elapsedTime = Date.now() - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    
+                    // Cubic easing
+                    const easedProgress = progress < 0.5 
+                        ? 4 * progress * progress * progress 
+                        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+                    piece.position.lerpVectors(startPos, endPos, easedProgress);
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        piece.position.copy(endPos);
+                        resolve();
+                    }
+
+                    renderer.render(scene, camera);
+                }
+
+                update();
+            });
+        }
+
+        function getPieceType(piece) {
+            if (piece.material === redMaterial) return 'RED';
+            if (piece.material === blueMaterial) return 'BLUE';
+            if (piece.material === blackMaterial) return 'BLACK';
+            if (piece.children.length > 0) {
+                return piece.children[0].children[1].material === redDotMaterial ? 'RED_BLOCKER' : 'BLUE_BLOCKER';
             }
+            return 'EMPTY';
+        }
 
-            function performUpdate() {
-                gameState = JSON.parse(JSON.stringify(newGameState));
+        function gameToThreePosition(x, y, z) {
+            return new THREE.Vector3(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
+        }
 
-                while (piecesGroup.children.length > 0) {
-                    piecesGroup.remove(piecesGroup.children[0]);
+        function findPieceAtPosition(pos) {
+            return piecesGroup.children.find(sphere => 
+                sphere.userData.originalPosition.x === pos.x && 
+                sphere.userData.originalPosition.y === pos.y && 
+                sphere.userData.originalPosition.z === pos.z
+            );
+        }
+
+        function getRotatedDirection(direction) {
+            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            // Find which face is currently facing which direction
+            for (const [currentFace, originalFace] of Object.entries(directionMapping)) {
+                if (originalFace === direction) {
+                    return currentFace;
+                }
+            }
+            return direction;
+        }
+
+        function calculatePushEndPosition(piece, direction) {
+            const pos = piece.position.clone();
+            const PUSH_DISTANCE = 2;
+
+            // Create base push vector (before any rotations)
+            let pushVector = new THREE.Vector3();
+            
+            // In the base orientation:
+            // BACK means -x in Three.js space
+            // LEFT means +z in Three.js space
+            // UP means +y in Three.js space
+            switch(direction) {
+                case 'BACK':
+                    pushVector.set(-PUSH_DISTANCE, 0, 0);
+                    break;
+                case 'FRONT':
+                    pushVector.set(PUSH_DISTANCE, 0, 0);
+                    break;
+                case 'LEFT':
+                    pushVector.set(0, 0, PUSH_DISTANCE);
+                    break;
+                case 'RIGHT':
+                    pushVector.set(0, 0, -PUSH_DISTANCE);
+                    break;
+                case 'UP':
+                    pushVector.set(0, PUSH_DISTANCE, 0);
+                    break;
+                case 'DOWN':
+                    pushVector.set(0, -PUSH_DISTANCE, 0);
+                    break;
+            }
+            
+            // Add the rotated push vector to the current position
+            pos.add(pushVector);
+            
+            return pos;
+        }
+
+        function getPiecesToPush(origin, direction, count) {
+            console.log('Getting pieces to push:', {
+                origin,
+                direction,
+                count
+            });
+
+            const pieces = [];
+            const firstPiece = findPieceAtPosition(origin);
+            if (!firstPiece || count === 0) return pieces;
+            
+            pieces.push(firstPiece);
+            let currentPos = {...origin};
+
+            for (let i = 1; i < count; i++) {
+                switch (direction) {
+                    case 'BACK': currentPos.y++; break;
+                    case 'FRONT': currentPos.y--; break;
+                    case 'LEFT': currentPos.x--; break;
+                    case 'RIGHT': currentPos.x++; break;
+                    case 'UP': currentPos.z--; break;
+                    case 'DOWN': currentPos.z++; break;
                 }
                 
-                cubeGroup.quaternion.set(0, 0, 0, 1);
-
-                gameState.forEach((layer, x) => {
-                    layer.forEach((row, y) => {
-                        row.forEach((cell, z) => {
-                            let sphere;
-                            switch (cell) {
-                                case "BLACK":
-                                    sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
-                                    break;
-                                case "BLUE":
-                                    sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
-                                    break;
-                                case "RED":
-                                    sphere = new THREE.Mesh(sphereGeometry, redMaterial);
-                                    break;
-                                case "BLUE_BLOCKER":
-                                    sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                                    const blueDotsSphere = createDotsSphere('blue');
-                                    sphere.add(blueDotsSphere);
-                                    break;
-                                case "RED_BLOCKER":
-                                    sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                                    const redDotsSphere = createDotsSphere('red');
-                                    sphere.add(redDotsSphere);
-                                    break;
-                                default:
-                                    sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                            }
-                            sphere.position.set(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
-                            sphere.userData = {
-                                position: { x: x, y: y, z: z },
-                                originalPosition: { x: x, y: y, z: z },
-                                clickable: (y === 0)
-                            };
-
-                            piecesGroup.add(sphere);
-                        });
+                const nextPiece = findPieceAtPosition(currentPos);
+                if (nextPiece) {
+                    console.log('Found next piece:', {
+                        position: currentPos,
+                        piece: nextPiece.position
                     });
-                });
+                    pieces.push(nextPiece);
+                }
+            }
+            
+            console.log('Total pieces to push:', pieces.length);
+            return pieces;
+        }
 
-                if (blockerWidget) {
-                    updateBlockerWidget(gameState);
+        function updateGameState(newGameState, pushInfo = null) {
+            return new Promise(resolve => {
+                if (isAnimating || isRotating) {
+                    requestAnimationFrame(() => {
+                        updateGameState(newGameState, pushInfo).then(resolve);
+                    });
+                    return;
                 }
 
-                highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+                if (pushInfo && pushInfo.pieces_pushed > 0) {  
+                    const {origin, direction, pieces_pushed} = pushInfo;
+                    const piecesToMove = getPiecesToPush(origin, direction, pieces_pushed);
+                    
+                    if (piecesToMove.length > 0) {
+                        isAnimating = true;
+                        const animations = piecesToMove.map(piece => {
+                            const startPos = piece.position.clone();
+                            const endPos = calculatePushEndPosition(piece, direction);
+                            return animatePush(piece, startPos, endPos);
+                        });
+            
+                        Promise.all(animations).then(() => {
+                            isAnimating = false;
+                            updatePiecesFromGameState(newGameState);
+                            reapplyRotations();
+                            resolve();
+                        });
+                    } else {
+                        updatePiecesFromGameState(newGameState);
+                        reapplyRotations();
+                        resolve();
+                    }
+                } else {
+                    updatePiecesFromGameState(newGameState);
+                    reapplyRotations();
+                    resolve();
+                }
+            });
+        }
 
-                reapplyRotations();
-                updateClickableSpheres();
-                renderer.render(scene, camera);
+        function updatePiecesFromGameState(newGameState) {
+            // Update both currentGameState and gameState
+            currentGameState = JSON.parse(JSON.stringify(newGameState));
+            gameState = newGameState;  // Keep gameState synced for backward compatibility
+            
+            // Clear existing pieces
+            while (piecesGroup.children.length > 0) {
+                piecesGroup.remove(piecesGroup.children[0]);
             }
+
+            cubeGroup.quaternion.set(0, 0, 0, 1);
+
+            // Create new pieces in final positions
+            gameState.forEach((layer, x) => {
+                layer.forEach((row, y) => {
+                    row.forEach((cell, z) => {
+                        let sphere;
+                        switch (cell) {
+                            case "BLACK":
+                                sphere = new THREE.Mesh(sphereGeometry, blackMaterial);
+                                break;
+                            case "BLUE":
+                                sphere = new THREE.Mesh(sphereGeometry, blueMaterial);
+                                break;
+                            case "RED":
+                                sphere = new THREE.Mesh(sphereGeometry, redMaterial);
+                                break;
+                            case "BLUE_BLOCKER":
+                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                                const blueDotsSphere = createDotsSphere('blue');
+                                sphere.add(blueDotsSphere);
+                                break;
+                            case "RED_BLOCKER":
+                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                                const redDotsSphere = createDotsSphere('red');
+                                sphere.add(redDotsSphere);
+                                break;
+                            default:
+                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
+                        }
+                        const threePos = gameToThreePosition(x, y, z);
+                        sphere.position.copy(threePos);
+                        sphere.userData = {
+                            position: { x: x, y: y, z: z },
+                            originalPosition: { x: x, y: y, z: z },
+                            clickable: (y === 0)
+                        };
+                        piecesGroup.add(sphere);
+                    });
+                });
+            });
+
+            if (blockerWidget) {
+                updateBlockerWidget(gameState);
+            }
+
+            highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+            updateClickableSpheres();
+            renderer.render(scene, camera);
         }
 
         function sideToDirection(side) {
@@ -1214,3 +1379,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+

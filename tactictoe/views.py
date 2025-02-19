@@ -98,6 +98,7 @@ def handle_local_move(request):
     game = GamePlayer.deserialize(game_player)
 
     try:
+        pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
         game.move(position.get('x'),position.get('y'),position.get('z'),direction,parsePiece(player),isBlockerMove)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
@@ -126,6 +127,11 @@ def handle_local_move(request):
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'push_info': {
+            'origin': {'x': position.get('x'), 'y': position.get('y'), 'z': position.get('z')},
+            'direction': direction,
+            'pieces_pushed': pieces_pushed
+        }
     })
 
 def singleplayer_game_view(request):
@@ -166,6 +172,7 @@ def handle_singleplayer_move(request):
     game = GamePlayer.deserialize(game_player)
 
     try:
+        pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
         game.move(position.get('x'),position.get('y'),position.get('z'),direction,parsePiece(player),isBlockerMove)
     except Exception as e:
         print(e)
@@ -195,6 +202,11 @@ def handle_singleplayer_move(request):
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'push_info': {
+            'origin': {'x': position.get('x'), 'y': position.get('y'), 'z': position.get('z')},
+            'direction': direction,
+            'pieces_pushed': pieces_pushed
+        }
     })
 
 @csrf_exempt
@@ -250,6 +262,8 @@ def handle_computer_blocker_move(request):
             'message': str(e)
         }, status=403)
     
+import copy
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def handle_computer_move(request):
@@ -258,8 +272,11 @@ def handle_computer_move(request):
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
 
     game = GamePlayer.deserialize(game_player)
+    original_board = copy.deepcopy(game.board)
 
-    game.makeComputerMove(isBlockerMove=False)
+    move = game.makeComputerMove(isBlockerMove=False)
+    x,y,z,dir = move
+    pieces_pushed = original_board.count_pieces_pushed(x, y, z, dir)
     game_state = game.board.getState()
     request.session['game_player'] = game.serialize()
     request.session.save()
@@ -282,6 +299,11 @@ def handle_computer_move(request):
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'push_info': {
+            'origin': {'x': x, 'y': y, 'z': z},
+            'direction': dir,
+            'pieces_pushed': pieces_pushed
+        }
     })
 
 from django.shortcuts import render, get_object_or_404
@@ -359,6 +381,7 @@ def handle_multiplayer_move(request):
         player = p1_color if request.user.id == game.player_one.id else p2_color
         
         try:
+            pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
             game.move(position.get('x'), position.get('y'), position.get('z'), direction, player, isBlockerMove)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
@@ -424,6 +447,11 @@ def handle_multiplayer_move(request):
                 'move_player_id': request.user.id,
                 'red_power': game.red_power,
                 'blue_power': game.blue_power,
+                'push_info': {
+                    'origin': {'x': position.get('x'), 'y': position.get('y'), 'z': position.get('z')},
+                    'direction': direction,
+                    'pieces_pushed': pieces_pushed
+                }
             }
         )
         

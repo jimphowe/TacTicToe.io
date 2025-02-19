@@ -113,6 +113,7 @@
         try {
             const currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
             const direction = sideToDirection(currentDirectionMapping['BACK']);
+
             const response = await fetch('/singleplayer/player-move', {
                 method: 'POST',
                 headers: {
@@ -152,7 +153,7 @@
                     window.dispatchEvent(new Event('blockerStateChanged'));
                 }
             } else {
-                await updateGameState(data.game_state);
+                await updateGameState(data.game_state, data.push_info);
                 window.updateControlPanel(data.game_state, data.red_power, data.blue_power);
                 playSound("move");
                 
@@ -209,7 +210,7 @@
 
                         ReactDOM.render(null, indicatorRoot);
 
-                        await updateGameState(moveData.game_state);
+                        await updateGameState(moveData.game_state, moveData.push_info);
                         window.updateControlPanel(moveData.game_state, moveData.red_power, moveData.blue_power);
                         playSound("move");
 
