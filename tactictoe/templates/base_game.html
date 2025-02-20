@@ -1244,7 +1244,7 @@
                     return;
                 }
 
-                if (pushInfo && pushInfo.pieces_pushed > 0) {  
+                if (pushInfo && pushInfo.pieces_pushed > 0) {  // Only animate if pieces are actually being pushed
                     const {origin, direction, pieces_pushed} = pushInfo;
                     const piecesToMove = getPiecesToPush(origin, direction, pieces_pushed);
                     
@@ -1255,21 +1255,18 @@
                             const endPos = calculatePushEndPosition(piece, direction);
                             return animatePush(piece, startPos, endPos);
                         });
-            
+
                         Promise.all(animations).then(() => {
                             isAnimating = false;
                             updatePiecesFromGameState(newGameState);
-                            reapplyRotations();
                             resolve();
                         });
                     } else {
                         updatePiecesFromGameState(newGameState);
-                        reapplyRotations();
                         resolve();
                     }
                 } else {
                     updatePiecesFromGameState(newGameState);
-                    reapplyRotations();
                     resolve();
                 }
             });
@@ -1284,8 +1281,6 @@
             while (piecesGroup.children.length > 0) {
                 piecesGroup.remove(piecesGroup.children[0]);
             }
-
-            cubeGroup.quaternion.set(0, 0, 0, 1);
 
             // Create new pieces in final positions
             gameState.forEach((layer, x) => {

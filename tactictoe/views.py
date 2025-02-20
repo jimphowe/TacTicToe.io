@@ -380,8 +380,11 @@ def handle_multiplayer_move(request):
         
         player = p1_color if request.user.id == game.player_one.id else p2_color
         
+        board = Board()
+        board.setState(json.loads(game.game_state))
+
         try:
-            pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
+            pieces_pushed = board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
             game.move(position.get('x'), position.get('y'), position.get('z'), direction, player, isBlockerMove)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
