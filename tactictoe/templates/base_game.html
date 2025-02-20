@@ -927,18 +927,66 @@
             }
         }
 
+        // function updateClickableSpheres() {
+        //     clickableSpheres = [];
+        //     piecesGroup.children.forEach(sphere => {
+        //         if (sphere.userData.position.y === 0) {
+        //             sphere.userData.clickable = true;
+        //             clickableSpheres.push(sphere);
+        //         }
+        //         else {
+        //             sphere.userData.clickable = false;
+        //         }
+        //     });
+        // }
+
         function updateClickableSpheres() {
             clickableSpheres = [];
+            const currentMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            let clickableCoord, clickableValue;
+
+            // Determine which board coordinate should be considered "front"
+            switch (currentMapping.FRONT) {
+                case 'FRONT':
+                    clickableCoord = 'y';
+                    clickableValue = 0;
+                    break;
+                case 'BACK':
+                    clickableCoord = 'y';
+                    clickableValue = 2;
+                    break;
+                case 'LEFT':
+                    clickableCoord = 'x';
+                    clickableValue = 0;
+                    break;
+                case 'RIGHT':
+                    clickableCoord = 'x';
+                    clickableValue = 2;
+                    break;
+                case 'TOP':
+                    clickableCoord = 'z';
+                    clickableValue = 0;
+                    break;
+                case 'BOTTOM':
+                    clickableCoord = 'z';
+                    clickableValue = 2;
+                    break;
+                default:
+                    clickableCoord = 'y';
+                    clickableValue = 0;
+            }
+
+            // Use originalPosition (which is never modified by rotations)
             piecesGroup.children.forEach(sphere => {
-                if (sphere.userData.position.y === 0) {
+                if (sphere.userData.originalPosition[clickableCoord] === clickableValue) {
                     sphere.userData.clickable = true;
                     clickableSpheres.push(sphere);
-                }
-                else {
+                } else {
                     sphere.userData.clickable = false;
                 }
             });
         }
+
 
         function updatePieceLocations(direction) {
             piecesGroup.children.forEach(sphere => {
@@ -1243,11 +1291,14 @@
                     });
                     return;
                 }
-
-                if (pushInfo && pushInfo.pieces_pushed > 0) {  // Only animate if pieces are actually being pushed
+                // Save the current rotation (for both human and computer moves)
+                const currentRotation = cubeGroup.quaternion.clone();
+                
+                if (pushInfo && pushInfo.pieces_pushed > 0) {
                     const {origin, direction, pieces_pushed} = pushInfo;
+                    const currentMapping = JSON.parse(localStorage.getItem('directionMapping'));
                     const piecesToMove = getPiecesToPush(origin, direction, pieces_pushed);
-                    
+                            
                     if (piecesToMove.length > 0) {
                         isAnimating = true;
                         const animations = piecesToMove.map(piece => {
@@ -1255,10 +1306,18 @@
                             const endPos = calculatePushEndPosition(piece, direction);
                             return animatePush(piece, startPos, endPos);
                         });
-
+            
                         Promise.all(animations).then(() => {
                             isAnimating = false;
+                            localStorage.setItem('directionMapping', JSON.stringify(currentMapping));
+                            // Rebuild board from base orientation
+                            // cubeGroup.quaternion.set(0, 0, 0, 1);
                             updatePiecesFromGameState(newGameState);
+                            // Restore the saved rotation
+                            // cubeGroup.quaternion.copy(currentRotation);
+                            updatePieceLocations(direction);
+                            // reapplyRotations();
+                            // updateClickableSpheres();
                             resolve();
                         });
                     } else {
@@ -1271,6 +1330,7 @@
                 }
             });
         }
+
 
         function updatePiecesFromGameState(newGameState) {
             // Update both currentGameState and gameState
@@ -1327,6 +1387,9 @@
             }
 
             highlightMaterial = (playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+            piecesGroup.children.forEach(sphere => {
+                sphere.userData.position = sphere.position.clone();
+            });
             updateClickableSpheres();
             renderer.render(scene, camera);
         }
