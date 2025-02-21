@@ -251,7 +251,7 @@
             return;
         }
         
-        await updateGameState(JSON.parse(data.game_state, data.push_info));
+        await updateGameState(JSON.parse(data.game_state), data.push_info);
         window.updateControlPanel(JSON.parse(data.game_state), data.red_power, data.blue_power);
         playSound("move");
         

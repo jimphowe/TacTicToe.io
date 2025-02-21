@@ -33,6 +33,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         turn = data['turn']
         red_power = data['red_power']
         blue_power = data['blue_power']
+        push_info = data['push_info']
 
         # Send the new game state to all players in the game group
         await self.channel_layer.group_send(
@@ -48,7 +49,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'elo_change': elo_change,
                 'turn': turn,
                 'red_power': red_power,
-                'blue_power': blue_power
+                'blue_power': blue_power,
+                'push_info': push_info
             }
         )
 
@@ -87,7 +89,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             'turn': turn,
             'is_tie': is_tie,
             'red_power': red_power,
-            'blue_power': blue_power
+            'blue_power': blue_power,
+            'push_info': event['push_info']
         }))
 
 

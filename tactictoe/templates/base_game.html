@@ -257,6 +257,16 @@
             renderer.domElement.addEventListener('touchend', onTouchEnd, false);
 
             highlightMaterial = (window.playerColor === 'RED') ? redHighlightMaterial : blueHighlightMaterial;
+
+            const defaultDirectionMapping = { 
+                'FRONT': 'FRONT', 
+                'BACK': 'BACK', 
+                'LEFT': 'LEFT', 
+                'RIGHT': 'RIGHT', 
+                'TOP': 'TOP', 
+                'BOTTOM': 'BOTTOM'
+            };
+            localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
         });
 
         document.querySelectorAll('.rotation-button').forEach(button => {
