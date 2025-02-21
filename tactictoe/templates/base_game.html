@@ -1291,14 +1291,13 @@
                     });
                     return;
                 }
-                // Save the current rotation (for both human and computer moves)
+                // Save the current local rotation (client’s view)
                 const currentRotation = cubeGroup.quaternion.clone();
                 
                 if (pushInfo && pushInfo.pieces_pushed > 0) {
-                    const {origin, direction, pieces_pushed} = pushInfo;
-                    const currentMapping = JSON.parse(localStorage.getItem('directionMapping'));
+                    const { origin, direction, pieces_pushed } = pushInfo;
                     const piecesToMove = getPiecesToPush(origin, direction, pieces_pushed);
-                            
+                    
                     if (piecesToMove.length > 0) {
                         isAnimating = true;
                         const animations = piecesToMove.map(piece => {
@@ -1306,31 +1305,31 @@
                             const endPos = calculatePushEndPosition(piece, direction);
                             return animatePush(piece, startPos, endPos);
                         });
-            
+                        
                         Promise.all(animations).then(() => {
                             isAnimating = false;
-                            localStorage.setItem('directionMapping', JSON.stringify(currentMapping));
-                            // Rebuild board from base orientation
-                            // cubeGroup.quaternion.set(0, 0, 0, 1);
+                            // Rebuild board from canonical state...
                             updatePiecesFromGameState(newGameState);
-                            // Restore the saved rotation
-                            // cubeGroup.quaternion.copy(currentRotation);
-                            updatePieceLocations(direction);
-                            // reapplyRotations();
-                            // updateClickableSpheres();
+                            // ...then restore the saved rotation.
+                            cubeGroup.quaternion.copy(currentRotation);
+                            updateClickableSpheres();
                             resolve();
                         });
                     } else {
                         updatePiecesFromGameState(newGameState);
+                        cubeGroup.quaternion.copy(currentRotation);
+                        updateClickableSpheres();
                         resolve();
                     }
                 } else {
+                    // Even for non-push moves, rebuild and then restore the local rotation.
                     updatePiecesFromGameState(newGameState);
+                    cubeGroup.quaternion.copy(currentRotation);
+                    updateClickableSpheres();
                     resolve();
                 }
             });
         }
-
 
         function updatePiecesFromGameState(newGameState) {
             // Update both currentGameState and gameState
