@@ -522,7 +522,8 @@ def handle_resignation(request):
             'turn': game.turn.id,
             'red_power': game.red_power,
             'blue_power': game.blue_power,
-            'is_tie': False
+            'is_tie': False,
+            'push_info': None
         }
     )
     
