@@ -79,7 +79,8 @@ class Command(BaseCommand):
                 'elo_change': game.elo_change,
                 'turn': game.turn.id,
                 'red_power': game.red_power,
-                'blue_power': game.blue_power
+                'blue_power': game.blue_power,
+                'push_info': None
             }
         )
 
