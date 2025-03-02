@@ -17,6 +17,7 @@
 <a href="/" class="btn btn-outline-light home-button">
     <i class="fas fa-home"></i> Home
 </a>
+<div id="player-guide-root"></div>
 <script>
     const ComputerMoveIndicator = () => {
         return React.createElement('div', {
@@ -80,6 +81,11 @@
         
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
+        
+        const guideRoot = document.getElementById('player-guide-root');
+        if (guideRoot) {
+            ReactDOM.render(React.createElement(window.PlayerGuide), guideRoot);
+        }
     });
 
     function handleGameOver(winner, winningRun) {
