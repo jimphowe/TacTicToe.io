@@ -469,7 +469,7 @@
     
     <div id="toast-container">
         <div id="mustLoginToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            Login to play online
+            Login required
         </div>
     </div>
 
@@ -522,6 +522,14 @@
                 console.error('Setup socket closed unexpectedly');
             };
         }
+
+        document.getElementById('playFriendButton')?.addEventListener('click', (e) => {
+            if (document.getElementById('loggedIn').getAttribute('data-logged-in') == 'false') {
+                e.stopImmediatePropagation();
+                showToast();
+                return;
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
             const slider = document.getElementById('custom-slider');
