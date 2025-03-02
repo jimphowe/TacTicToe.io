@@ -644,6 +644,17 @@
                 }
             });
 
+            document.getElementById('roomCodeInput')?.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    const roomCode = document.getElementById('roomCodeInput').value.toUpperCase();
+                    if (roomCode.length === 4) {
+                        joinRoom(roomCode);
+                    } else {
+                        alert('Please enter a valid 4-character room code.');
+                    }
+                }
+            });
+
             document.getElementById('cancelCreateRoomBtn')?.addEventListener('click', () => {
                 cancelCreateRoom();
             });
