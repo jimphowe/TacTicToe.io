@@ -153,7 +153,6 @@ canvas.addEventListener('click', (e) => {
     stars.forEach(star => {
         const dist = distance({ x: mouseX, y: mouseY }, star);
         if (dist < STAR_RADIUS) {
-            console.log('Star clicked!');
             popStar(star);
         }
     });

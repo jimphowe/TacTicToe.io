@@ -1256,11 +1256,11 @@
         }
 
         function getPiecesToPush(origin, direction, count) {
-            console.log('Getting pieces to push:', {
-                origin,
-                direction,
-                count
-            });
+            // console.log('Getting pieces to push:', {
+            //     origin,
+            //     direction,
+            //     count
+            // });
 
             const pieces = [];
             const firstPiece = findPieceAtPosition(origin);
@@ -1281,15 +1281,10 @@
                 
                 const nextPiece = findPieceAtPosition(currentPos);
                 if (nextPiece) {
-                    console.log('Found next piece:', {
-                        position: currentPos,
-                        piece: nextPiece.position
-                    });
                     pieces.push(nextPiece);
                 }
             }
             
-            console.log('Total pieces to push:', pieces.length);
             return pieces;
         }
 
