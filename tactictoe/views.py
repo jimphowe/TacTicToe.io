@@ -144,6 +144,7 @@ def singleplayer_game_view(request):
         game.makeComputerMove(isBlockerMove=False)
 
     request.session['game_player'] = game.serialize()
+    request.session.modified = True
     
     context = {
         'game_state': json.dumps(game.board.getState()),
