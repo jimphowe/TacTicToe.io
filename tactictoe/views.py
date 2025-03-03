@@ -62,6 +62,7 @@ def local_game_view(request):
     game = GamePlayer('easy', 'RED')
 
     request.session['game_player'] = game.serialize()
+    request.session.modified = True
 
     context = {
         'game_state': json.dumps(game.board.getState()),

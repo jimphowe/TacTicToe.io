@@ -29,13 +29,12 @@ function createGameOverUI(winner, eloChange, friendRoomCode, buttonAction, isSin
     const closeButton = document.createElement('button');
     closeButton.style.position = 'absolute';
     closeButton.style.right = '10px';
-    closeButton.style.top = '10px';
+    closeButton.style.top = '4px';
     closeButton.style.background = 'none';
     closeButton.style.border = 'none';
     closeButton.style.color = '#999';
     closeButton.style.fontSize = '20px';
     closeButton.style.cursor = 'pointer';
-    closeButton.style.padding = '5px';
     closeButton.innerHTML = '×';
     closeButton.onclick = () => {
         gameOverDiv.remove();
