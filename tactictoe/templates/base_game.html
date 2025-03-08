@@ -745,6 +745,7 @@
                                     start.y + (index % 2 == 0 ? displacement : -displacement),
                                     start.z + (index % 2 == 0 ? displacement : -displacement)
                                 );
+                                break;
                             case 'FRONT':
                             case 'BACK':
                                 piece.position.set(
@@ -752,6 +753,7 @@
                                     start.y,
                                     start.z + (index % 2 == 0 ? displacement : -displacement)
                                 );
+                                break;
                             case 'UP':
                             case 'DOWN':
                                 piece.position.set(
@@ -759,6 +761,7 @@
                                     start.y + (index % 2 == 0 ? displacement : -displacement),
                                     start.z
                                 );
+                                break;
                         }
                     });
 
@@ -778,12 +781,45 @@
         }
 
         function getRowToJiggle(piece) {
-            const { x, y, z } = piece.userData.position;
+            const { x, y, z } = piece.userData.originalPosition;
+            const currentDirectionMapping = JSON.parse(localStorage.getItem('directionMapping'));
+            const backDirection = currentDirectionMapping['BACK'];
             const row = [];
             
             piecesGroup.children.forEach(sphere => {
-                if (sphere.userData.position.x === x && sphere.userData.position.z === z) {
-                    row.push(sphere);
+                const spherePos = sphere.userData.originalPosition;
+                
+                switch(backDirection) {
+                    case 'FRONT':
+                        if (spherePos.x === x && spherePos.z === z) {
+                            row.push(sphere);
+                        }
+                        break;
+                    case 'BACK':
+                        if (spherePos.x === x && spherePos.z === z) {
+                            row.push(sphere);
+                        }
+                        break;
+                    case 'LEFT':
+                        if (spherePos.y === y && spherePos.z === z) {
+                            row.push(sphere);
+                        }
+                        break;
+                    case 'RIGHT':
+                        if (spherePos.y === y && spherePos.z === z) {
+                            row.push(sphere);
+                        }
+                        break;
+                    case 'TOP':
+                        if (spherePos.x === x && spherePos.y === y) {
+                            row.push(sphere);
+                        }
+                        break;
+                    case 'BOTTOM':
+                        if (spherePos.x === x && spherePos.y === y) {
+                            row.push(sphere);
+                        }
+                        break;
                 }
             });
             
