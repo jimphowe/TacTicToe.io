@@ -788,33 +788,20 @@
             
             piecesGroup.children.forEach(sphere => {
                 const spherePos = sphere.userData.originalPosition;
-                
                 switch(backDirection) {
                     case 'FRONT':
-                        if (spherePos.x === x && spherePos.z === z) {
-                            row.push(sphere);
-                        }
-                        break;
                     case 'BACK':
                         if (spherePos.x === x && spherePos.z === z) {
                             row.push(sphere);
                         }
                         break;
                     case 'LEFT':
-                        if (spherePos.y === y && spherePos.z === z) {
-                            row.push(sphere);
-                        }
-                        break;
                     case 'RIGHT':
                         if (spherePos.y === y && spherePos.z === z) {
                             row.push(sphere);
                         }
                         break;
                     case 'TOP':
-                        if (spherePos.x === x && spherePos.y === y) {
-                            row.push(sphere);
-                        }
-                        break;
                     case 'BOTTOM':
                         if (spherePos.x === x && spherePos.y === y) {
                             row.push(sphere);
@@ -822,6 +809,54 @@
                         break;
                 }
             });
+            
+            let sortedRow = [...row];
+            let coordKey;
+            let ascending;
+            
+            switch(backDirection) {
+                case 'FRONT':
+                    coordKey = 'y';
+                    ascending = false;
+                    break;
+                case 'BACK':
+                    coordKey = 'y';
+                    ascending = true;
+                    break;
+                case 'LEFT':
+                    coordKey = 'x';
+                    ascending = false;
+                    break;
+                case 'RIGHT':
+                    coordKey = 'x';
+                    ascending = true;
+                    break;
+                case 'TOP':
+                    coordKey = 'z';
+                    ascending = false;
+                    break;
+                case 'BOTTOM':
+                    coordKey = 'z';
+                    ascending = true;
+                    break;
+            }
+            
+            sortedRow.sort((a, b) => {
+                if (ascending) {
+                    return a.userData.originalPosition[coordKey] - b.userData.originalPosition[coordKey];
+                } else {
+                    return b.userData.originalPosition[coordKey] - a.userData.originalPosition[coordKey];
+                }
+            });
+            
+            if (sortedRow.length === 3) {
+                const middlePiece = sortedRow[1];
+                const middlePieceType = getPieceType(middlePiece);
+                
+                if (middlePieceType === 'EMPTY') {
+                    return sortedRow.slice(0, 2);
+                }
+            }
             
             return row;
         }
