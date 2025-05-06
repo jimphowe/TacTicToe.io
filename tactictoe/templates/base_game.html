@@ -535,12 +535,6 @@
             opacity: 0.0,
             depthWrite: false
         });
-        var mobileClickableMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.25,
-            depthWrite: false
-        });
         var redHighlightMaterial = new THREE.MeshPhongMaterial({
             color: 0xdf7053,
             emissive: 0x333300
@@ -606,11 +600,7 @@
                             sphere = new THREE.Mesh(sphereGeometry, redMaterial);
                             break;
                         default:
-                            if (isMobile && y === 0) {
-                                sphere = new THREE.Mesh(sphereGeometry, mobileClickableMaterial);
-                            } else {
-                                sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
-                            }
+                            sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
                     }
                     sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
                     sphere.userData = {
@@ -1064,19 +1054,7 @@
                     sphere.userData.clickable = false;
                 }
             });
-            // Add visual cue to clickable empty mobile pieces
-            if (isMobile) {
-                piecesGroup.children.forEach(sphere => {
-                    const isEmpty = (getPieceType(sphere) === 'EMPTY');
-                    if (isEmpty && sphere.userData.clickable) {
-                        sphere.material = mobileClickableMaterial;
-                    } else if (isEmpty) {
-                        sphere.material = emptyMaterial;
-                    }
-                });
-            }
         }
-
 
         function updatePieceLocations(direction) {
             piecesGroup.children.forEach(sphere => {
@@ -1475,13 +1453,6 @@
                 sphere.userData.position = sphere.position.clone();
             });
             updateClickableSpheres();
-            if (isMobile) {
-                piecesGroup.children.forEach(s => {
-                    if (getPieceType(s) === 'EMPTY' && s.userData.clickable) {
-                        s.material = mobileClickableMaterial;
-                    }
-                });
-            }
             renderer.render(scene, camera);
         }
 
