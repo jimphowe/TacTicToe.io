@@ -268,6 +268,7 @@
                 'BOTTOM': 'BOTTOM'
             };
             localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
+            if (isMobile) updateMobilePanels();
         });
 
         document.querySelectorAll('.rotation-button').forEach(button => {
@@ -380,17 +381,32 @@
 
         function handleTap(touch) {
             const rect = renderer.domElement.getBoundingClientRect();
-            const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-            const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-            
-            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-            var intersects = raycaster.intersectObjects(clickableSpheres, true);
-            if (intersects.length > 0) {
-                var object = intersects[0].object;
-                if (object.userData && object.userData.clickable) {
-                    handlePieceClick(object);
+            const xNDC = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+            const yNDC = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // First try a panel (mobile only)
+            let target;
+            if (isMobile) {
+                target = getObjectUnderTouch(xNDC, yNDC, mobilePanelGroup.children);
+                if (target) {
+                    const sphere = findPieceAtPosition(target.userData.board);
+                    if (sphere?.userData?.clickable) {
+                        handlePieceClick(sphere);
+                        return;
+                    }
                 }
             }
+
+            // Fallback (desktop or miss-tap)
+            target = getObjectUnderTouch(xNDC, yNDC, clickableSpheres);
+            if (target?.userData?.clickable) {
+                handlePieceClick(target);
+            }
+        }
+
+        function getObjectUnderTouch(xNDC, yNDC, objects) {
+            raycaster.setFromCamera(new THREE.Vector2(xNDC, yNDC), camera);
+            return raycaster.intersectObjects(objects, true)[0]?.object || null;
         }
 
         function handleSwipe() {
@@ -545,6 +561,69 @@
         })
         const redDotMaterial = new THREE.MeshPhongMaterial({ color: 0xdf7053 });
         const blueDotMaterial = new THREE.MeshPhongMaterial({ color: 0x5b95e1 });
+        var mobilePanelMaterial = new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0.0,
+            depthWrite: false
+        });
+        var panelGeometry = new THREE.PlaneGeometry(2, 2);
+
+        const mobilePanelGroup = new THREE.Group();
+        cubeGroup.add(mobilePanelGroup);
+
+        /* =========  Mobile panels (tap targets)  ========= */
+
+        const FACE_CFG = {
+            FRONT : { fixed:{axis:'y',val:0},  normal:new THREE.Vector3( 1, 0, 0),
+                        col:'x', colInv:false, row:'z', rowInv:false },
+
+            BACK  : { fixed:{axis:'y',val:2},  normal:new THREE.Vector3(-1, 0, 0),
+                        col:'x', colInv:true,  row:'z', rowInv:false },
+
+            LEFT  : { fixed:{axis:'x',val:0},  normal:new THREE.Vector3( 0, 0, 1),
+                        col:'y', colInv:true,  row:'z', rowInv:false },
+
+            RIGHT : { fixed:{axis:'x',val:2},  normal:new THREE.Vector3( 0, 0,-1),
+                        col:'y', colInv:false, row:'z', rowInv:false },
+
+            TOP   : { fixed:{axis:'z',val:0},  normal:new THREE.Vector3( 0, 1, 0),
+                        col:'x', colInv:false, row:'y', rowInv:true  },
+
+            BOTTOM: { fixed:{axis:'z',val:2},  normal:new THREE.Vector3( 0,-1, 0),
+                        col:'x', colInv:false, row:'y', rowInv:false }
+        };
+
+        function updateMobilePanels() {
+            if (!isMobile) return;
+
+            const faceKey = JSON.parse(localStorage.getItem('directionMapping')).FRONT;
+            const cfg     = FACE_CFG[faceKey];
+
+            mobilePanelGroup.clear();
+
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+
+                const board = {x:0, y:0, z:0};
+                board[cfg.fixed.axis] = cfg.fixed.val;
+                board[cfg.col] = cfg.colInv ? 2 - col : col;
+                board[cfg.row] = cfg.rowInv ? 2 - row : row;
+
+                const centre = gameToThreePosition(board.x, board.y, board.z);
+                const pos = centre.clone().add(cfg.normal.clone().multiplyScalar(1.05));
+
+                const panel = new THREE.Mesh(panelGeometry, mobilePanelMaterial);
+                panel.position.copy(pos);
+
+                panel.quaternion
+                    .setFromUnitVectors(new THREE.Vector3(0,0,1), cfg.normal.clone());
+
+                panel.userData = { board };
+                mobilePanelGroup.add(panel);
+                }
+            }
+        }
+
         function createDotsSphere(color) {
             const sphere = new THREE.Group();
             const blackSphere = new THREE.Mesh(sphereGeometry, blackMaterial);
@@ -565,15 +644,12 @@
                     dot = new THREE.Mesh(dotGeometry, redDotMaterial);
                 }
                 
-                // Position the dot on the surface of the sphere
-                const radius = 0.7;  // Matches the radius of the main sphere
+                const radius = 0.7;
                 dot.position.set(pos[0] * radius, pos[1] * radius, pos[2] * radius);
                 
-                // Scale the dot to make it appear as a circle on the surface
                 const scale = 1;
                 dot.scale.set(scale, scale, 0.01);
                 
-                // Rotate the dot to align with the sphere's surface
                 dot.lookAt(0, 0, 0);
                 
                 sphere.add(dot);
@@ -1044,6 +1120,8 @@
                     clickableCoord = 'y';
                     clickableValue = 0;
             }
+
+            updateMobilePanels();
 
             // Use originalPosition (which is never modified by rotations)
             piecesGroup.children.forEach(sphere => {
