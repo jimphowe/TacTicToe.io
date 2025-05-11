@@ -218,6 +218,8 @@
         const SNAP_DURATION    = 400;     // ms
 
         let isPointerDragging  = false;
+        let draggedThisGesture = false;
+        let suppressNextClick  = false;
         let lastPointerXY      = {x:0, y:0};
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
@@ -305,11 +307,9 @@
         });
 
         function handleRotation(direction) {
-            console.log("111")
             if (isRotating || (Date.now() - rotationLastFinished < ROTATION_BUFFER)) {
                 return;
             }
-            console.log("222")
 
             isRotating = true;
 
@@ -387,6 +387,7 @@
         }
 
         function handleTap(touch) {
+            if (draggedThisGesture) suppressNextClick = true;
             const rect = renderer.domElement.getBoundingClientRect();
             const xNDC = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
             const yNDC = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
@@ -643,6 +644,14 @@
             updatePieceLocations(direction);        // also refreshes clickables+panels
         }
 
+        /* Update mapping + userData.position without touching meshes */
+        function logicQuarterTurn(dir){
+            const map = JSON.parse(localStorage.getItem('directionMapping'));
+            updateDirectionMapping(map, dir);
+            localStorage.setItem('directionMapping', JSON.stringify(map));
+            updatePieceLocations(dir);          // rotates logical grid only
+        }
+
         function snapToNearest90(){
             const currentQ   = cubeGroup.quaternion.clone();
             const currentE   = new THREE.Euler().setFromQuaternion(currentQ, 'YXZ');
@@ -668,37 +677,69 @@
                     requestAnimationFrame(animateSnap);
                     renderer.render(scene, camera);
                 } else {
-                    /* ------- 3b. bring logic state in line ------- */
-                    cubeGroup.quaternion.copy(targetQ);
+                    /* ------- 3b.   bring logic state in line (camera-aware) ------- */
 
-                    /*  Compute the Δ-rotation between the last canonical
-                        orientation and the new one, then call handleRotation
-                        the appropriate number of times so that piece arrays,
-                        directionMapping, clickableSpheres, etc. match.         */
-                    const diffQ   = baseQuaternion.clone().invert().multiply(targetQ);
-                    const diffE   = new THREE.Euler().setFromQuaternion(diffQ,'YXZ');
-
-                    const tol = 1e-3;
-                    const quarterTurns = angle => {
-                        /* 1.57 rad  (π/2) per turn.  Noise-robust (±0.05 rad) */
-                        const turns = Math.round(angle / (Math.PI / 2));
-                        return turns;          // keeps sign – –2, –1, 0, 1, 2
+                    // 1.  Figure out which original face vectors are now pointing
+                    //     toward camera-forward, camera-right, camera-up, etc.
+                    const CANON = {
+                    FRONT : new THREE.Vector3( 1, 0, 0),
+                    BACK  : new THREE.Vector3(-1, 0, 0),
+                    LEFT  : new THREE.Vector3( 0, 0, 1),
+                    RIGHT : new THREE.Vector3( 0, 0,-1),
+                    TOP   : new THREE.Vector3( 0, 1, 0),
+                    BOTTOM: new THREE.Vector3( 0,-1, 0),
                     };
 
-                    const yTurns = quarterTurns(diffE.y);
-                    const xTurns = quarterTurns(diffE.x);
-
-                    for (let i = 0; i < Math.abs(yTurns); i++){
-                        applyQuarterTurn(yTurns > 0 ? 'RIGHT'  : 'LEFT');
-                    }
-                    for (let i = 0; i < Math.abs(xTurns); i++){
-                        applyQuarterTurn(xTurns > 0 ? 'UP'    : 'DOWN');
+                    // world vectors after snap
+                    const worldVec = {};
+                    for (const k in CANON){
+                    worldVec[k] = CANON[k].clone().applyQuaternion(targetQ);
                     }
 
-                    /*  Update references for the next drag  */
+                    // camera basis
+                    const camFwd   = new THREE.Vector3();
+                    camera.getWorldDirection(camFwd).normalize();        // points FROM cube TO camera
+                    const camToCube = camFwd.clone().multiplyScalar(-1); // opposite
+                    const camRight = new THREE.Vector3()
+                                        .crossVectors(new THREE.Vector3(0,1,0), camFwd)
+                                        .normalize();
+                    const camUp    = new THREE.Vector3()
+                                        .crossVectors(camFwd, camRight)
+                                        .normalize();
+
+                    // helper to pick & remove the vector with largest dot to an axis
+                    function takeMax(axis, pool){
+                    let bestKey = null, bestDot = -Infinity;
+                    for (const k of pool){
+                        const d = worldVec[k].dot(axis);
+                        if (d > bestDot){ bestDot = d; bestKey = k; }
+                    }
+                    pool.splice(pool.indexOf(bestKey),1);
+                    return bestKey;
+                    }
+
+                    // 2.  Build a brand-new directionMapping from scratch
+                    const pool = Object.keys(worldVec);
+                    const newMap = {};                      // world-face ⇒ original‐face
+                    newMap.FRONT   = takeMax(camToCube, pool);   // most facing camera
+                    newMap.BACK    = takeMax(camFwd,    pool);
+                    newMap.RIGHT   = takeMax(camRight,  pool);
+                    newMap.LEFT    = takeMax(camRight.clone().negate(), pool);
+                    newMap.TOP     = takeMax(camUp,     pool);
+                    newMap.BOTTOM  = pool[0];                 // whatever is left
+
+                    // 3.  Persist it and realign the *logical* board
+                    localStorage.setItem('directionMapping', JSON.stringify(newMap));
+                    /* rotate the logical board to match the new mapping, no visuals */
+                    let cur = JSON.parse(localStorage.getItem('directionMapping'));
+                    while (cur.TOP   !== newMap.TOP)   { logicQuarterTurn('UP');    cur = newMap; }
+                    while (cur.FRONT !== newMap.FRONT) { logicQuarterTurn('RIGHT'); cur = newMap; }
+
+
+                    // 4.  House-keeping for the next drag
                     baseQuaternion.copy(targetQ);
-                    updateClickableSpheres();      // make the new FRONT layer clickable
-                    updateMobilePanels();           
+                    updateClickableSpheres();
+                    updateMobilePanels();
                     isRotating = false;
                 }
             })(startT);
@@ -718,6 +759,7 @@
         function onPointerDown(e){
             if (isRotating || isAnimating) return;      // already busy
             isPointerDragging = true;
+            draggedThisGesture = false;
             isRotating        = true;                   // blocks moves / clicks
             lastPointerXY     = clientXY(e);
             dragQuaternion.identity();
@@ -734,6 +776,9 @@
             const dx      = x - lastPointerXY.x;         // +dx  = drag-right
             const dy      = y - lastPointerXY.y;         // +dy  = drag-down
             lastPointerXY = {x, y};
+
+            const movePx2 = dx*dx + dy*dy;
+            if (movePx2 > 16) draggedThisGesture = true;
 
             // —— build camera-local axes ———————————————————————
             const forward = new THREE.Vector3();         // camera –Z
@@ -767,6 +812,7 @@
             document.removeEventListener('pointerup',   onPointerUp);
 
             snapToNearest90();
+            if (draggedThisGesture) suppressNextClick = true;
         }
 
         function createDotsSphere(color) {
@@ -1148,6 +1194,7 @@
         window.addEventListener('keydown', onKeyDown, false);
 
         function onMouseClick(event) {
+            if (suppressNextClick) { suppressNextClick = false; return; }
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1530,19 +1577,12 @@
                     break;
             }
             
-            // Add the rotated push vector to the current position
             pos.add(pushVector);
             
             return pos;
         }
 
         function getPiecesToPush(origin, direction, count) {
-            // console.log('Getting pieces to push:', {
-            //     origin,
-            //     direction,
-            //     count
-            // });
-
             const pieces = [];
             const firstPiece = findPieceAtPosition(origin);
             if (!firstPiece || count === 0) return pieces;
@@ -1691,32 +1731,32 @@
         }
 
         // ON SCREEN CONSOLE
-        // let onScreenConsole;
-        // function initOnScreenConsole() {
-        //     onScreenConsole = document.createElement('div');
-        //     onScreenConsole.style.position = 'fixed';
-        //     onScreenConsole.style.bottom = '0';
-        //     onScreenConsole.style.left = '0';
-        //     onScreenConsole.style.right = '0';
-        //     onScreenConsole.style.backgroundColor = 'rgba(0,0,0,0.7)';
-        //     onScreenConsole.style.color = 'white';
-        //     onScreenConsole.style.padding = '10px';
-        //     onScreenConsole.style.fontFamily = 'monospace';
-        //     onScreenConsole.style.fontSize = '12px';
-        //     onScreenConsole.style.maxHeight = '30%';
-        //     onScreenConsole.style.overflowY = 'auto';
-        //     onScreenConsole.style.zIndex = '9999';
-        //     document.body.appendChild(onScreenConsole);
+        let onScreenConsole;
+        function initOnScreenConsole() {
+            onScreenConsole = document.createElement('div');
+            onScreenConsole.style.position = 'fixed';
+            onScreenConsole.style.bottom = '0';
+            onScreenConsole.style.left = '0';
+            onScreenConsole.style.right = '0';
+            onScreenConsole.style.backgroundColor = 'rgba(0,0,0,0.7)';
+            onScreenConsole.style.color = 'white';
+            onScreenConsole.style.padding = '10px';
+            onScreenConsole.style.fontFamily = 'monospace';
+            onScreenConsole.style.fontSize = '12px';
+            onScreenConsole.style.maxHeight = '30%';
+            onScreenConsole.style.overflowY = 'auto';
+            onScreenConsole.style.zIndex = '9999';
+            document.body.appendChild(onScreenConsole);
 
-        //     onScreenConsole.innerHTML = 'On-screen console initialized.<br>';
-        // }
-        // console.log = function() {
-        //     const msg = Array.from(arguments).join(' ');
-        //     if (onScreenConsole) {
-        //         onScreenConsole.innerHTML += msg + '<br>';
-        //         onScreenConsole.scrollTop = onScreenConsole.scrollHeight;
-        //     }
-        // }
+            onScreenConsole.innerHTML = 'On-screen console initialized.<br>';
+        }
+        console.log = function() {
+            const msg = Array.from(arguments).join(' ');
+            if (onScreenConsole) {
+                onScreenConsole.innerHTML += msg + '<br>';
+                onScreenConsole.scrollTop = onScreenConsole.scrollHeight;
+            }
+        }
         // initOnScreenConsole();
     </script>
     {% block scripts %}{% endblock %}
