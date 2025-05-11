@@ -214,6 +214,11 @@
         const isMobile = window.innerWidth <= 768;
         let gameOver = false;
         let highlightMaterial;
+        const DRAG_SENSITIVITY = 0.004;   // rad / px
+        const SNAP_DURATION    = 400;     // ms
+
+        let isPointerDragging  = false;
+        let lastPointerXY      = {x:0, y:0};
         // ---------------------Scene setup----------------------------------------------------------
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -300,9 +305,11 @@
         });
 
         function handleRotation(direction) {
+            console.log("111")
             if (isRotating || (Date.now() - rotationLastFinished < ROTATION_BUFFER)) {
                 return;
             }
+            console.log("222")
 
             isRotating = true;
 
@@ -410,22 +417,22 @@
         }
 
         function handleSwipe() {
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
+            // const deltaX = touchEndX - touchStartX;
+            // const deltaY = touchEndY - touchStartY;
             
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                if (deltaX > 0) {
-                    onKeyDown({ key: 'ArrowLeft' });
-                } else {
-                    onKeyDown({ key: 'ArrowRight' });
-                }
-            } else {
-                if (deltaY > 0) {
-                    onKeyDown({ key: 'ArrowUp' });
-                } else {
-                    onKeyDown({ key: 'ArrowDown' });
-                }
-            }
+            // if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            //     if (deltaX > 0) {
+            //         onKeyDown({ key: 'ArrowLeft' });
+            //     } else {
+            //         onKeyDown({ key: 'ArrowRight' });
+            //     }
+            // } else {
+            //     if (deltaY > 0) {
+            //         onKeyDown({ key: 'ArrowUp' });
+            //     } else {
+            //         onKeyDown({ key: 'ArrowDown' });
+            //     }
+            // }
         }
 
         let neutralPiecesHidden = false;
@@ -540,6 +547,9 @@
             }
         }
 
+        let baseQuaternion     = new THREE.Quaternion().copy(cubeGroup.quaternion);
+        let dragQuaternion     = new THREE.Quaternion();
+
         // Set Up Balls
         var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
         var redMaterial = new THREE.MeshPhongMaterial({color: 0xdf7053});
@@ -622,6 +632,141 @@
                 mobilePanelGroup.add(panel);
                 }
             }
+        }
+
+        function applyQuarterTurn(direction){
+            console.log("TURNING")
+            // updateDirectionMapping ➜ updatePieceLocations ➜ updateClickableSpheres
+            const map = JSON.parse(localStorage.getItem('directionMapping'));
+            updateDirectionMapping(map, direction);
+            localStorage.setItem('directionMapping', JSON.stringify(map));
+            updatePieceLocations(direction);        // also refreshes clickables+panels
+        }
+
+        function snapToNearest90(){
+            const currentQ   = cubeGroup.quaternion.clone();
+            const currentE   = new THREE.Euler().setFromQuaternion(currentQ, 'YXZ');
+
+            const snap = Math.PI / 2;
+
+            const targetE = new THREE.Euler(
+                Math.round(currentE.x / snap) * snap,
+                Math.round(currentE.y / snap) * snap,
+                Math.round(currentE.z / snap) * snap,
+                'YXZ'
+            );
+            const targetQ = new THREE.Quaternion().setFromEuler(targetE);
+
+            /* ------- 3a. smooth tween  ------- */
+            const startQ   = currentQ.clone();
+            const startT   = performance.now();
+
+            (function animateSnap(now){
+                const t = Math.min(1, (now - startT) / SNAP_DURATION);
+                THREE.Quaternion.slerp(startQ, targetQ, cubeGroup.quaternion, t);
+                if (t < 1){
+                    requestAnimationFrame(animateSnap);
+                    renderer.render(scene, camera);
+                } else {
+                    /* ------- 3b. bring logic state in line ------- */
+                    cubeGroup.quaternion.copy(targetQ);
+
+                    /*  Compute the Δ-rotation between the last canonical
+                        orientation and the new one, then call handleRotation
+                        the appropriate number of times so that piece arrays,
+                        directionMapping, clickableSpheres, etc. match.         */
+                    const diffQ   = baseQuaternion.clone().invert().multiply(targetQ);
+                    const diffE   = new THREE.Euler().setFromQuaternion(diffQ,'YXZ');
+
+                    const tol = 1e-3;
+                    const quarterTurns = angle => {
+                        /* 1.57 rad  (π/2) per turn.  Noise-robust (±0.05 rad) */
+                        const turns = Math.round(angle / (Math.PI / 2));
+                        return turns;          // keeps sign – –2, –1, 0, 1, 2
+                    };
+
+                    const yTurns = quarterTurns(diffE.y);
+                    const xTurns = quarterTurns(diffE.x);
+
+                    for (let i = 0; i < Math.abs(yTurns); i++){
+                        applyQuarterTurn(yTurns > 0 ? 'RIGHT'  : 'LEFT');
+                    }
+                    for (let i = 0; i < Math.abs(xTurns); i++){
+                        applyQuarterTurn(xTurns > 0 ? 'UP'    : 'DOWN');
+                    }
+
+                    /*  Update references for the next drag  */
+                    baseQuaternion.copy(targetQ);
+                    updateClickableSpheres();      // make the new FRONT layer clickable
+                    updateMobilePanels();           
+                    isRotating = false;
+                }
+            })(startT);
+        }
+
+        renderer.domElement.addEventListener('pointerdown', onPointerDown, {passive:false});
+
+        function clientXY(evt){
+            if (evt.touches && evt.touches.length) {
+                return {x: evt.touches[0].clientX, y: evt.touches[0].clientY};
+            } else if (evt.changedTouches && evt.changedTouches.length){
+                return {x: evt.changedTouches[0].clientX, y: evt.changedTouches[0].clientY};
+            }
+            return {x: evt.clientX, y: evt.clientY};
+        }
+
+        function onPointerDown(e){
+            if (isRotating || isAnimating) return;      // already busy
+            isPointerDragging = true;
+            isRotating        = true;                   // blocks moves / clicks
+            lastPointerXY     = clientXY(e);
+            dragQuaternion.identity();
+
+            document.addEventListener('pointermove', onPointerMove, {passive:false});
+            document.addEventListener('pointerup',   onPointerUp,   {passive:false});
+        }
+
+        function onPointerMove(e){
+            if (!isPointerDragging) return;
+            e.preventDefault();                          // stop page-scroll on mobile
+
+            const {x, y}  = clientXY(e);
+            const dx      = x - lastPointerXY.x;         // +dx  = drag-right
+            const dy      = y - lastPointerXY.y;         // +dy  = drag-down
+            lastPointerXY = {x, y};
+
+            // —— build camera-local axes ———————————————————————
+            const forward = new THREE.Vector3();         // camera –Z
+            camera.getWorldDirection(forward).normalize();
+
+            const right   = new THREE.Vector3()
+                            .crossVectors(new THREE.Vector3(0,1,0), forward)
+                            .normalize();              // camera +X
+
+            const up      = new THREE.Vector3()
+                            .crossVectors(forward, right)
+                            .normalize();              // camera +Y
+            // ————————————————————————————————————————————————
+
+            /*  Drag-right  ⇒ spin cube to the right   (intuitive)
+                Drag-down   ⇒ pitch cube forward / toward you        */
+            const qHoriz = new THREE.Quaternion()
+                            .setFromAxisAngle(up,    dx * DRAG_SENSITIVITY);
+            const qVert  = new THREE.Quaternion()
+                            .setFromAxisAngle(right, -dy * DRAG_SENSITIVITY);
+
+            dragQuaternion.premultiply(qHoriz).premultiply(qVert);
+            cubeGroup.quaternion.copy(dragQuaternion).multiply(baseQuaternion);
+        }
+
+        function onPointerUp(){
+            if (!isPointerDragging) return;
+            isPointerDragging = false;
+
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup',   onPointerUp);
+
+            snapToNearest90();
         }
 
         function createDotsSphere(color) {
