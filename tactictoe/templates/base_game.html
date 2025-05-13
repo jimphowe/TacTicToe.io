@@ -313,12 +313,10 @@
 
             isRotating = true;
 
-            const directionMapping = JSON.parse(localStorage.getItem('directionMapping'));
-            updateDirectionMapping(directionMapping, direction);
-            localStorage.setItem('directionMapping', JSON.stringify(directionMapping));
-            updatePieceLocations(direction);
-
             animateRotation(direction, () => {
+                applyQuarterTurn(direction);   // updates mapping, piece positions, clickables, mobile panels
+
+                baseQuaternion.copy(cubeGroup.quaternion);      // keeps next drag smooth
                 isRotating = false;
                 rotationLastFinished = Date.now();
             });
@@ -637,19 +635,18 @@
 
         function applyQuarterTurn(direction){
             console.log("TURNING")
-            // updateDirectionMapping ➜ updatePieceLocations ➜ updateClickableSpheres
             const map = JSON.parse(localStorage.getItem('directionMapping'));
-            updateDirectionMapping(map, direction);
+            updateDirectionMapping(map, effectiveDir(direction));
             localStorage.setItem('directionMapping', JSON.stringify(map));
-            updatePieceLocations(direction);        // also refreshes clickables+panels
+            updatePieceLocations(effectiveDir(direction));        // also refreshes clickables+panels
         }
 
         /* Update mapping + userData.position without touching meshes */
         function logicQuarterTurn(dir){
             const map = JSON.parse(localStorage.getItem('directionMapping'));
-            updateDirectionMapping(map, dir);
+            updateDirectionMapping(map, effectiveDir(dir));
             localStorage.setItem('directionMapping', JSON.stringify(map));
-            updatePieceLocations(dir);          // rotates logical grid only
+            updatePieceLocations(effectiveDir(dir));          // rotates logical grid only
         }
 
         function snapToNearest90(){
@@ -1127,6 +1124,21 @@
             
             return row;
         }
+
+        function needsYawFlip() {
+            return true
+            // Rounded quarter-turn counts around X and Z
+            const xQ = Math.round(cubeGroup.rotation.x / (Math.PI / 2)) & 1;
+            const zQ = Math.round(cubeGroup.rotation.z / (Math.PI / 2)) & 1;
+            return xQ ^ zQ;          // XOR → true when the cube lies on its side
+        }
+
+        function effectiveDir(dir) {
+            return (needsYawFlip() && (dir === "LEFT" || dir === "RIGHT"))
+                    ? (dir === "LEFT" ? "RIGHT" : "LEFT")
+                    : dir;
+        }
+
 
         var lastIntersected = null;
 
