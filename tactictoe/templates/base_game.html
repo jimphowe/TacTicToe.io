@@ -636,17 +636,16 @@
         function applyQuarterTurn(direction){
             console.log("TURNING")
             const map = JSON.parse(localStorage.getItem('directionMapping'));
-            updateDirectionMapping(map, effectiveDir(direction));
+            updateDirectionMapping(map, logicalDir(direction));
             localStorage.setItem('directionMapping', JSON.stringify(map));
-            updatePieceLocations(effectiveDir(direction));        // also refreshes clickables+panels
+            updatePieceLocations(direction);
         }
 
-        /* Update mapping + userData.position without touching meshes */
         function logicQuarterTurn(dir){
             const map = JSON.parse(localStorage.getItem('directionMapping'));
-            updateDirectionMapping(map, effectiveDir(dir));
+            updateDirectionMapping(map, logicalDir(dir));
             localStorage.setItem('directionMapping', JSON.stringify(map));
-            updatePieceLocations(effectiveDir(dir));          // rotates logical grid only
+            updatePieceLocations(dir);
         }
 
         function snapToNearest90(){
@@ -754,10 +753,10 @@
         }
 
         function onPointerDown(e){
-            if (isRotating || isAnimating) return;      // already busy
+            if (isRotating || isAnimating) return;
             isPointerDragging = true;
             draggedThisGesture = false;
-            isRotating        = true;                   // blocks moves / clicks
+            isRotating        = true;
             lastPointerXY     = clientXY(e);
             dragQuaternion.identity();
 
@@ -767,35 +766,21 @@
 
         function onPointerMove(e){
             if (!isPointerDragging) return;
-            e.preventDefault();                          // stop page-scroll on mobile
+            e.preventDefault();
 
             const {x, y}  = clientXY(e);
-            const dx      = x - lastPointerXY.x;         // +dx  = drag-right
-            const dy      = y - lastPointerXY.y;         // +dy  = drag-down
+            const dx      = x - lastPointerXY.x;
+            const dy      = y - lastPointerXY.y;
             lastPointerXY = {x, y};
 
             const movePx2 = dx*dx + dy*dy;
             if (movePx2 > 16) draggedThisGesture = true;
 
-            // —— build camera-local axes ———————————————————————
-            const forward = new THREE.Vector3();         // camera –Z
-            camera.getWorldDirection(forward).normalize();
+            const worldYawAxis   = new THREE.Vector3(0, 1, 0);
+            const worldRollAxis  = new THREE.Vector3(0, 0, 1);
 
-            const right   = new THREE.Vector3()
-                            .crossVectors(new THREE.Vector3(0,1,0), forward)
-                            .normalize();              // camera +X
-
-            const up      = new THREE.Vector3()
-                            .crossVectors(forward, right)
-                            .normalize();              // camera +Y
-            // ————————————————————————————————————————————————
-
-            /*  Drag-right  ⇒ spin cube to the right   (intuitive)
-                Drag-down   ⇒ pitch cube forward / toward you        */
-            const qHoriz = new THREE.Quaternion()
-                            .setFromAxisAngle(up,    dx * DRAG_SENSITIVITY);
-            const qVert  = new THREE.Quaternion()
-                            .setFromAxisAngle(right, -dy * DRAG_SENSITIVITY);
+            const qHoriz = new THREE.Quaternion().setFromAxisAngle(worldYawAxis,   dx * DRAG_SENSITIVITY);
+            const qVert  = new THREE.Quaternion().setFromAxisAngle(worldRollAxis, -dy * DRAG_SENSITIVITY);
 
             dragQuaternion.premultiply(qHoriz).premultiply(qVert);
             cubeGroup.quaternion.copy(dragQuaternion).multiply(baseQuaternion);
@@ -1125,18 +1110,12 @@
             return row;
         }
 
-        function needsYawFlip() {
-            return true
-            // Rounded quarter-turn counts around X and Z
-            const xQ = Math.round(cubeGroup.rotation.x / (Math.PI / 2)) & 1;
-            const zQ = Math.round(cubeGroup.rotation.z / (Math.PI / 2)) & 1;
-            return xQ ^ zQ;          // XOR → true when the cube lies on its side
-        }
-
-        function effectiveDir(dir) {
-            return (needsYawFlip() && (dir === "LEFT" || dir === "RIGHT"))
-                    ? (dir === "LEFT" ? "RIGHT" : "LEFT")
-                    : dir;
+        function logicalDir(dir) {
+            switch (dir) {
+                case "LEFT":  return "RIGHT";
+                case "RIGHT": return "LEFT";
+                default:      return dir;
+            }
         }
 
 
