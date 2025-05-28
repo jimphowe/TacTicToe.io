@@ -214,7 +214,7 @@
         const isMobile = window.innerWidth <= 768;
         let gameOver = false;
         let highlightMaterial;
-        const DRAG_SENSITIVITY = 0.004;   // rad / px
+        const DRAG_SENSITIVITY = 0.006;   // rad / px
         const SNAP_DURATION    = 400;     // ms
 
         let isPointerDragging  = false;
@@ -654,15 +654,72 @@
 
             const snap = Math.PI / 2;
 
-            const targetE = new THREE.Euler(
-                Math.round(currentE.x / snap) * snap,
-                Math.round(currentE.y / snap) * snap,
-                Math.round(currentE.z / snap) * snap,
-                'YXZ'
-            );
-            const targetQ = new THREE.Quaternion().setFromEuler(targetE);
+            // Generate the few closest 90-degree orientations (not all possible ones)
+            const baseX = Math.round(currentE.x / snap) * snap;
+            const baseY = Math.round(currentE.y / snap) * snap;
+            const baseZ = Math.round(currentE.z / snap) * snap;
 
-            /* ------- 3a. smooth tween  ------- */
+            // Consider the nearest snap and its immediate neighbors
+            const candidates = [];
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dz = -1; dz <= 1; dz++) {
+                        const candidateE = new THREE.Euler(
+                            baseX + dx * snap,
+                            baseY + dy * snap, 
+                            baseZ + dz * snap,
+                            'YXZ'
+                        );
+                        const candidateQ = new THREE.Quaternion().setFromEuler(candidateE);
+                        candidates.push({
+                            quaternion: candidateQ,
+                            euler: candidateE
+                        });
+                    }
+                }
+            }
+
+            // Get camera direction
+            const camFwd = new THREE.Vector3();
+            camera.getWorldDirection(camFwd).normalize();
+            const camToCube = camFwd.clone().multiplyScalar(-1);
+
+            const FACE_NORMALS = {
+                FRONT : new THREE.Vector3( 1, 0, 0),
+                BACK  : new THREE.Vector3(-1, 0, 0),
+                LEFT  : new THREE.Vector3( 0, 0, 1),
+                RIGHT : new THREE.Vector3( 0, 0,-1),
+                TOP   : new THREE.Vector3( 0, 1, 0),
+                BOTTOM: new THREE.Vector3( 0,-1, 0),
+            };
+
+            // Score each candidate based on rotation distance + camera visibility
+            let bestCandidate = null;
+            let bestScore = -Infinity;
+
+            for (const candidate of candidates) {
+                // Calculate rotation distance (smaller is better)
+                const rotationDistance = currentQ.angleTo(candidate.quaternion);
+                
+                // Calculate best face visibility for this orientation
+                let maxVisibility = -Infinity;
+                for (const normal of Object.values(FACE_NORMALS)) {
+                    const worldNormal = normal.clone().applyQuaternion(candidate.quaternion);
+                    const visibility = worldNormal.dot(camToCube);
+                    maxVisibility = Math.max(maxVisibility, visibility);
+                }
+
+                // Combined score: prioritize good visibility, but don't ignore rotation distance
+                const score = maxVisibility * 2 - rotationDistance;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestCandidate = candidate;
+                }
+            }
+
+            const targetQ = bestCandidate ? bestCandidate.quaternion : new THREE.Quaternion().setFromEuler(new THREE.Euler(baseX, baseY, baseZ, 'YXZ'));
+
             const startQ   = currentQ.clone();
             const startT   = performance.now();
 
@@ -673,29 +730,25 @@
                     requestAnimationFrame(animateSnap);
                     renderer.render(scene, camera);
                 } else {
-                    /* ------- 3b.   bring logic state in line (camera-aware) ------- */
-
-                    // 1.  Figure out which original face vectors are now pointing
-                    //     toward camera-forward, camera-right, camera-up, etc.
                     const CANON = {
-                    FRONT : new THREE.Vector3( 1, 0, 0),
-                    BACK  : new THREE.Vector3(-1, 0, 0),
-                    LEFT  : new THREE.Vector3( 0, 0, 1),
-                    RIGHT : new THREE.Vector3( 0, 0,-1),
-                    TOP   : new THREE.Vector3( 0, 1, 0),
-                    BOTTOM: new THREE.Vector3( 0,-1, 0),
+                        FRONT : new THREE.Vector3( 1, 0, 0),
+                        BACK  : new THREE.Vector3(-1, 0, 0),
+                        LEFT  : new THREE.Vector3( 0, 0, 1),
+                        RIGHT : new THREE.Vector3( 0, 0,-1),
+                        TOP   : new THREE.Vector3( 0, 1, 0),
+                        BOTTOM: new THREE.Vector3( 0,-1, 0),
                     };
 
                     // world vectors after snap
                     const worldVec = {};
                     for (const k in CANON){
-                    worldVec[k] = CANON[k].clone().applyQuaternion(targetQ);
+                        worldVec[k] = CANON[k].clone().applyQuaternion(targetQ);
                     }
 
                     // camera basis
                     const camFwd   = new THREE.Vector3();
-                    camera.getWorldDirection(camFwd).normalize();        // points FROM cube TO camera
-                    const camToCube = camFwd.clone().multiplyScalar(-1); // opposite
+                    camera.getWorldDirection(camFwd).normalize();
+                    const camToCube = camFwd.clone().multiplyScalar(-1);
                     const camRight = new THREE.Vector3()
                                         .crossVectors(new THREE.Vector3(0,1,0), camFwd)
                                         .normalize();
@@ -705,34 +758,26 @@
 
                     // helper to pick & remove the vector with largest dot to an axis
                     function takeMax(axis, pool){
-                    let bestKey = null, bestDot = -Infinity;
-                    for (const k of pool){
-                        const d = worldVec[k].dot(axis);
-                        if (d > bestDot){ bestDot = d; bestKey = k; }
-                    }
-                    pool.splice(pool.indexOf(bestKey),1);
-                    return bestKey;
+                        let bestKey = null, bestDot = -Infinity;
+                        for (const k of pool){
+                            const d = worldVec[k].dot(axis);
+                            if (d > bestDot){ bestDot = d; bestKey = k; }
+                        }
+                        pool.splice(pool.indexOf(bestKey),1);
+                        return bestKey;
                     }
 
-                    // 2.  Build a brand-new directionMapping from scratch
                     const pool = Object.keys(worldVec);
-                    const newMap = {};                      // world-face ⇒ original‐face
-                    newMap.FRONT   = takeMax(camToCube, pool);   // most facing camera
+                    const newMap = {};
+                    newMap.FRONT   = takeMax(camToCube, pool);
                     newMap.BACK    = takeMax(camFwd,    pool);
                     newMap.RIGHT   = takeMax(camRight,  pool);
                     newMap.LEFT    = takeMax(camRight.clone().negate(), pool);
                     newMap.TOP     = takeMax(camUp,     pool);
-                    newMap.BOTTOM  = pool[0];                 // whatever is left
+                    newMap.BOTTOM  = pool[0];
 
-                    // 3.  Persist it and realign the *logical* board
                     localStorage.setItem('directionMapping', JSON.stringify(newMap));
-                    /* rotate the logical board to match the new mapping, no visuals */
-                    let cur = JSON.parse(localStorage.getItem('directionMapping'));
-                    while (cur.TOP   !== newMap.TOP)   { logicQuarterTurn('UP');    cur = newMap; }
-                    while (cur.FRONT !== newMap.FRONT) { logicQuarterTurn('RIGHT'); cur = newMap; }
 
-
-                    // 4.  House-keeping for the next drag
                     baseQuaternion.copy(targetQ);
                     updateClickableSpheres();
                     updateMobilePanels();
