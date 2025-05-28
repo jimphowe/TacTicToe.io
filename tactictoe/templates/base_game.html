@@ -214,7 +214,6 @@
         const isMobile = window.innerWidth <= 768;
         let gameOver = false;
         let highlightMaterial;
-        const DRAG_SENSITIVITY = 0.006;   // rad / px
         const SNAP_DURATION    = 400;     // ms
 
         let isPointerDragging  = false;
@@ -824,8 +823,9 @@
             const worldYawAxis   = new THREE.Vector3(0, 1, 0);
             const worldRollAxis  = new THREE.Vector3(0, 0, 1);
 
-            const qHoriz = new THREE.Quaternion().setFromAxisAngle(worldYawAxis,   dx * DRAG_SENSITIVITY);
-            const qVert  = new THREE.Quaternion().setFromAxisAngle(worldRollAxis, -dy * DRAG_SENSITIVITY);
+            const dragSensitivity = isMobile ? 0.006 : 0.005;
+            const qHoriz = new THREE.Quaternion().setFromAxisAngle(worldYawAxis,   dx * dragSensitivity);
+            const qVert  = new THREE.Quaternion().setFromAxisAngle(worldRollAxis, -dy * dragSensitivity);
 
             dragQuaternion.premultiply(qHoriz).premultiply(qVert);
             cubeGroup.quaternion.copy(dragQuaternion).multiply(baseQuaternion);
