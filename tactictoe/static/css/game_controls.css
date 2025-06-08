@@ -1,0 +1,144 @@
+.game-controls-container {
+    position: fixed;
+    background-color: rgba(30, 41, 59, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+  }
+  
+  /* Positioning for desktop */
+  .game-controls-desktop {
+    top: 50%;
+    left: 60px;
+    transform: translateY(-50%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px 28px;
+    min-width: 300px;
+  }
+  
+  /* Positioning for mobile */
+  .game-controls-mobile {
+    bottom: 4%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 16px;
+    min-width: 260px;
+  }
+  
+  /* Shared section styles */
+  .section-header {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 28px;
+    text-align: center;
+    color: #ffffff;
+  }
+  
+  .player-label {
+    color: #d1d5db;
+    font-size: 16px;
+    min-width: 50px;
+    display: block;
+  }
+  
+  .player-label.mobile {
+    display: none;
+  }
+  
+  .power-bar-container {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .power-bar-segment {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background-color: #374151;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .power-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transition: width 300ms, background-color 300ms;
+  }
+  
+  .power-bar-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    transition: background-color 300ms;
+  }
+  
+  .shield-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  
+  .blocker-button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .blocker-button {
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #4a5568;
+    transition: all 300ms;
+  }
+  
+  .blocker-button img {
+    display: block;
+  }
+  
+  .blocker-button.active {
+    background-color: #e7e470;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .blocker-button.inactive {
+    background-color: #1f2937;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transform: scale(1);
+  }
+  
+  .blocker-caption {
+    font-size: 12px;
+    color: #9ca3af;
+    text-align: center;
+  }
+  
+  .desktop-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  .desktop-shields {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .desktop-shield-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
