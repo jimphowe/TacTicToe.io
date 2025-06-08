@@ -864,6 +864,11 @@ class EasyAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
+        threat = board.getWinInOne(Board.otherPlayer(self, self.player), power_dict)
+        if threat:
+            x,y,z,_ = threat
+            if board.pieces[x][y][z] == Piece.EMPTY:
+                return threat
         if move_num > 3:
            winningMove = board.getWinInOne(self.player, power_dict)
            if winningMove:
@@ -887,16 +892,16 @@ class MediumAgent:
            return board.getGoodStartMove(self.player, power_dict)
         winningMove = board.getWinInOne(self.player, power_dict)
         if move_num <= 2 or move_num > 3:
-          if winningMove:
-            return winningMove
-          else:
-            defendingMove = board.getGoodDefendingMove(self.player, power_dict)
-            if defendingMove:
-              return defendingMove
+            if winningMove:
+                return winningMove
             else:
-              return board.getRandomMove(self.player, power_dict)
+                defendingMove = board.getGoodDefendingMove(self.player, power_dict)
+                if defendingMove:
+                    return defendingMove
+                else:
+                    return board.getRandomMove(self.player, power_dict)
         else:
-          return board.getRandomMove(self.player, power_dict)
+            return board.getRandomMove(self.player, power_dict)
           
     def getBlockerMove(self, board: Board, power_dict):
        return (board.getRandomBlockerMove(), False)
@@ -913,7 +918,7 @@ class HardAgent:
           if winInTwo:
             return winInTwo
           else:
-            defendingMove = board.getBestDefendingMove(self.player, power_dict)
+            defendingMove = board.getGoodDefendingMove(self.player, power_dict)
             if defendingMove:
               return defendingMove
             else:
@@ -924,10 +929,10 @@ class HardAgent:
             return winningMove
           else:
             winInTwo = board.getWinInTwo(self.player, power_dict)
-            if winInTwo and (random.random() < 0.5 or self.player == Piece.BLUE):
+            if winInTwo:
               return winInTwo
             else:
-              defendingMove = board.getGoodDefendingMove(self.player, power_dict)
+              defendingMove = board.getBestDefendingMove(self.player, power_dict)
               if defendingMove:
                 return defendingMove
               else:
