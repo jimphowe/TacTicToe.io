@@ -569,25 +569,31 @@ from asgiref.sync import async_to_sync
 def find_opponent(request):
     current_user = request.user
     user_id = str(current_user.id)
+    board_size = int(request.GET.get('board_size', 3))
+    if board_size not in [3, 4]:
+        board_size = 3
+
     redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
-    
-    redis_client.rpush('waiting_users', user_id)
-    waiting_users = redis_client.lrange('waiting_users', 0, -1)
-    
+
+    # Use separate queues for different board sizes
+    queue_key = f'waiting_users:{board_size}'
+    redis_client.rpush(queue_key, user_id)
+    waiting_users = redis_client.lrange(queue_key, 0, -1)
+
     if len(waiting_users) == 1:
         return JsonResponse({'status': 'waiting'})
     else:
         opponent_id = waiting_users[0].decode()
-        
-        redis_client.lrem('waiting_users', 0, opponent_id)
-        redis_client.lrem('waiting_users', 0, user_id)
-        
+
+        redis_client.lrem(queue_key, 0, opponent_id)
+        redis_client.lrem(queue_key, 0, user_id)
+
         try:
             opponent = User.objects.get(id=opponent_id)
             players = [current_user, opponent]
             random.shuffle(players)
             player_one, player_two = players
-            game = Game.start_new_game(player_one, player_two, 'rapid')
+            game = Game.start_new_game(player_one, player_two, 'rapid', board_size)
 
             game_key = f"game:{game.game_code}"
             
@@ -619,8 +625,13 @@ def find_opponent(request):
 @login_required
 def cancel_search(request):
     current_user = request.user
+    board_size = int(request.GET.get('board_size', 3))
+    if board_size not in [3, 4]:
+        board_size = 3
     redis_client = redis.Redis(host=settings.REDIS_HOST, port=6379, db=0)
-    redis_client.lrem('waiting_users', 0, str(current_user.id))
+    # Remove from the board-size-specific queue
+    queue_key = f'waiting_users:{board_size}'
+    redis_client.lrem(queue_key, 0, str(current_user.id))
     return JsonResponse({'status': 'success'})
  
 from django.core.cache import cache
@@ -635,16 +646,20 @@ def add_to_waiting_queue(user):
 @login_required
 def create_room(request):
     current_user = request.user
+    board_size = int(request.GET.get('board_size', 3))
+    if board_size not in [3, 4]:
+        board_size = 3
     room_code = generate_room_code()
-    
+
     # Store the room code and creator in cache as before
     cache.set(f'room:{room_code}', current_user.id, timeout=1200)  # 20 min timeout for initial matching
     cache.set(f'user_room:{current_user.id}', room_code, timeout=1200)
-    
-    # Create a new key to track this as an ongoing friend match room
+
+    # Create a new key to track this as an ongoing friend match room (include board_size)
     cache.set(f'friend_room:{room_code}', {
         'creator_id': current_user.id,
-        'joiner_id': None
+        'joiner_id': None,
+        'board_size': board_size
     }, timeout=3600)
     return JsonResponse({'status': 'success', 'room_code': room_code})
 
@@ -653,22 +668,24 @@ def join_room(request):
     if request.method == 'POST':
         room_code = request.POST.get('room_code')
         current_user = request.user
-        
+
         creator_id = cache.get(f'room:{room_code}')
         if creator_id is None:
             return JsonResponse({'status': 'error', 'message': 'Room not found or expired.'})
-        
+
         if creator_id == current_user.id:
             return JsonResponse({'status': 'error', 'message': 'You cannot join your own room.'})
-        
-        # Update friend room tracking
+
+        # Update friend room tracking and get board_size
         friend_room = cache.get(f'friend_room:{room_code}')
+        board_size = 3  # default
         if friend_room:
             friend_room['joiner_id'] = current_user.id
+            board_size = friend_room.get('board_size', 3)
             cache.set(f'friend_room:{room_code}', friend_room, timeout=3600)
-        
+
         creator = User.objects.get(id=creator_id)
-        game = Game.start_new_game(creator, current_user, 'rapid')
+        game = Game.start_new_game(creator, current_user, 'rapid', board_size)
         
         # Store mapping from game code to friend room code
         cache.set(f'game_room:{game.game_code}', room_code, timeout=3600)
@@ -739,8 +756,10 @@ def handle_rematch(request):
         else:
             new_player_one = player_one
             new_player_two = player_two
-        
-        game = Game.start_new_game(new_player_one, new_player_two, 'rapid')
+
+        # Use board_size from friend_room (set when room was created) or previous game
+        board_size = friend_room.get('board_size', previous_game.board_size)
+        game = Game.start_new_game(new_player_one, new_player_two, 'rapid', board_size)
         cache.set(f'game_room:{game.game_code}', friend_room_code, timeout=3600)
         
         # Set up Redis timer

@@ -322,7 +322,7 @@
             }
 
             startWebSocket();
-            findOpponent().done(function(response) {
+            findOpponent(BOARD_SIZE).done(function(response) {
                 if (response.status === 'success') {
                     playSound("start");
                     window.location.href = '/game/' + response.game_code;
@@ -335,7 +335,7 @@
         });
 
         $('#cancelSearchBtn').click(function() {
-            cancelSearch().done(function(response) {
+            cancelSearch(BOARD_SIZE).done(function(response) {
                 if (response.status === 'success') {
                     matchmakingModal.hide();
                     if (setupSocket) {

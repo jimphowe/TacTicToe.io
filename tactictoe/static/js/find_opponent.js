@@ -1,13 +1,17 @@
-function findOpponent() {
+// boardSize is optional, defaults to 3 for backwards compatibility
+function findOpponent(boardSize) {
+    boardSize = boardSize || 3;
     return $.ajax({
-        url: findOpponentUrl,
+        url: findOpponentUrl + '?board_size=' + boardSize,
         type: 'GET'
     });
 }
 
-function cancelSearch() {
+// boardSize is optional, defaults to 3 for backwards compatibility
+function cancelSearch(boardSize) {
+    boardSize = boardSize || 3;
     return $.ajax({
-        url: '/cancel-search/',
+        url: '/cancel-search/?board_size=' + boardSize,
         type: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')

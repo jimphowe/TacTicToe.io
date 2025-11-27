@@ -489,9 +489,54 @@
                 <div class="modal-header justify-content-center border-0">
                     <h5 class="modal-title" id="friendGameModalLabel">Play with Friend</h5>
                 </div>
-                <div class="modal-body text-center">
-                    <button id="createRoomBtn" class="btn btn-custom me-2">Create Room</button>
-                    <button id="joinRoomBtn" class="btn btn-custom">Join Room</button>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 class="text-center mb-3">Choose board size</h6>
+                        <div class="board-size-selector">
+                            <button type="button" class="board-size-btn active" onclick="selectBoardSize(3, 'friend')">
+                                3x3x3
+                                <span class="size-label">Classic</span>
+                            </button>
+                            <button type="button" class="board-size-btn" onclick="selectBoardSize(4, 'friend')">
+                                4x4x4
+                                <span class="size-label">Extended</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="friend-board-size-value" value="3">
+                    </div>
+                    <div class="text-center">
+                        <button id="createRoomBtn" class="btn btn-custom me-2">Create Room</button>
+                        <button id="joinRoomBtn" class="btn btn-custom">Join Room</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="onlineGameModal" tabindex="-1" aria-labelledby="onlineGameModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header justify-content-center border-0">
+                    <h5 class="modal-title" id="onlineGameModalLabel">Online Game Setup</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 class="text-center mb-3">Choose board size</h6>
+                        <div class="board-size-selector">
+                            <button type="button" class="board-size-btn active" onclick="selectBoardSize(3, 'online')">
+                                3x3x3
+                                <span class="size-label">Classic</span>
+                            </button>
+                            <button type="button" class="board-size-btn" onclick="selectBoardSize(4, 'online')">
+                                4x4x4
+                                <span class="size-label">Extended</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="online-board-size-value" value="3">
+                    </div>
+                    <div class="text-center">
+                        <button id="startOnlineSearchBtn" class="btn btn-custom">Find Opponent</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -586,6 +631,10 @@
         const friendGameModal = new bootstrap.Modal(document.getElementById('friendGameModal'));
         const joinRoomModal = new bootstrap.Modal(document.getElementById('joinRoomModal'));
         const createRoomModal = new bootstrap.Modal(document.getElementById('createRoomModal'));
+        const onlineGameModal = new bootstrap.Modal(document.getElementById('onlineGameModal'));
+
+        // Track selected board size for online matchmaking (used by cancel)
+        let currentOnlineBoardSize = 3;
 
         function startWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -689,9 +738,16 @@
                     return;
                 }
                 multiplayerModal.hide();
+                onlineGameModal.show();
+            });
+
+            document.getElementById('startOnlineSearchBtn')?.addEventListener('click', () => {
+                const boardSize = document.getElementById('online-board-size-value').value;
+                currentOnlineBoardSize = boardSize;
+                onlineGameModal.hide();
                 startWebSocket();
-                
-                fetch(findOpponentUrl)
+
+                fetch(findOpponentUrl + '?board_size=' + boardSize)
                     .then(response => response.json())
                     .then(response => {
                         if (response.status === 'success') {
@@ -744,7 +800,7 @@
             });
 
             document.getElementById('cancelSearchBtn')?.addEventListener('click', () => {
-                fetch('/cancel-search/', {
+                fetch('/cancel-search/?board_size=' + currentOnlineBoardSize, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken')
@@ -778,18 +834,26 @@
 
         function selectBoardSize(size, context) {
             // Update the hidden input based on context
+            let container;
+            let inputId;
             if (context === 'singleplayer') {
-                document.getElementById('board-size-value').value = size;
-                // Update button states within singleplayer modal
-                const container = document.getElementById('singleplayerModal');
-                container.querySelectorAll('.board-size-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                event.target.closest('.board-size-btn').classList.add('active');
+                inputId = 'board-size-value';
+                container = document.getElementById('singleplayerModal');
             } else if (context === 'local') {
-                document.getElementById('local-board-size-value').value = size;
-                // Update button states within local modal
-                const container = document.getElementById('localGameModal');
+                inputId = 'local-board-size-value';
+                container = document.getElementById('localGameModal');
+            } else if (context === 'friend') {
+                inputId = 'friend-board-size-value';
+                container = document.getElementById('friendGameModal');
+            } else if (context === 'online') {
+                inputId = 'online-board-size-value';
+                container = document.getElementById('onlineGameModal');
+            }
+
+            if (inputId) {
+                document.getElementById(inputId).value = size;
+            }
+            if (container) {
                 container.querySelectorAll('.board-size-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
@@ -811,8 +875,9 @@
         }
 
         function createRoom() {
+            const boardSize = document.getElementById('friend-board-size-value').value;
             startWebSocket();
-            fetch(createRoomUrl)
+            fetch(createRoomUrl + '?board_size=' + boardSize)
                 .then(response => response.json())
                 .then(response => {
                     if (response.status === 'success') {
