@@ -9,28 +9,44 @@ class Piece(Enum):
     BLUE_BLOCKER = "BLUE_BLOCKER"
     RED_BLOCKER = "RED_BLOCKER"
 
+# Board size configuration: 3 for 3x3x3, 4 for 4x4x4
+DEFAULT_BOARD_SIZE = 3
+
 class Board:
-    def __init__(self):
-        # A 3x3x3 grid of pieces (empty, red, black, blue)
-        self.setupBoard(8)
+    def __init__(self, board_size=DEFAULT_BOARD_SIZE):
+        self.size = board_size
+        self.max_coord = board_size - 1  # 2 for 3x3x3, 3 for 4x4x4
+        # Number of starting neutral pieces scales with board size
+        starting_pieces = 8 if board_size == 3 else 16
+        self.setupBoard(starting_pieces)
         while self.hasSuperCorners() or self.hasSuperFaces():
-           self.setupBoard(8)
+           self.setupBoard(starting_pieces)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
+        # Build index: for each position, which runs contain it
+        self._runsByPosition = {}
+        for run in self.winningRuns:
+            for pos in run:
+                if pos not in self._runsByPosition:
+                    self._runsByPosition[pos] = []
+                self._runsByPosition[pos].append(run)
 
     def setupBoard(self,pieces):
-        self.pieces = [[[Piece.EMPTY for _ in range(3)] for _ in range(3)] for _ in range(3)]
+        self.pieces = [[[Piece.EMPTY for _ in range(self.size)] for _ in range(self.size)] for _ in range(self.size)]
         for _ in range(pieces):
-          x = random.randrange(3)
-          y = random.randrange(3)
-          z = random.randrange(3)
+          x = random.randrange(self.size)
+          y = random.randrange(self.size)
+          z = random.randrange(self.size)
           while (self.pieces[x][y][z] == Piece.BLACK):
-            x = random.randrange(3)
-            y = random.randrange(3)
-            z = random.randrange(3)
+            x = random.randrange(self.size)
+            y = random.randrange(self.size)
+            z = random.randrange(self.size)
           self.pieces[x][y][z] = Piece.BLACK
 
     def hasSuperCorners(self):
+        # Super corner detection only applies to 3x3x3 boards
+        if self.size != 3:
+            return False
         superRuns = []
         superRuns.append([(0,0,0),(1,0,0),(2,0,0),(0,1,0),(0,2,0),(0,0,1),(0,0,2)])
         superRuns.append([(2,0,0),(1,0,0),(0,0,0),(2,1,0),(2,2,0),(2,0,1),(2,0,2)])
@@ -45,8 +61,11 @@ class Board:
             if sum(1 for position in run if self.pieces[position[0]][position[1]][position[2]] == Piece.BLACK) == 6:
                 return True
         return False
-    
+
     def hasSuperFaces(self):
+        # Super face detection only applies to 3x3x3 boards
+        if self.size != 3:
+            return False
         superRuns = []
         superRuns.append(([(1,0,0),(2,0,1),(1,0,2),(0,0,1)],[(1,0,1),(1,1,1),(1,2,1)]))
         superRuns.append(([(1,0,0),(0,1,0),(1,2,0),(2,1,0)],[(1,1,0),(1,1,1),(1,1,2)]))
@@ -67,123 +86,128 @@ class Board:
     def setState(self, state):
         self.pieces = [[[Piece(piece_string) for piece_string in row] for row in layer] for layer in state]
 
-    # Returns a list of all 3 in a rows in the board, used to check if the game is over
+    # Returns a list of all N-in-a-row lines in the board (N = board size)
+    # Used to check if the game is over
     def getWinningRuns(self):
         runs = []
+        n = self.size
+        max_c = self.max_coord
 
-        runs.append([(0,0,0),(0,0,1),(0,0,2)])
-        runs.append([(0,0,0),(0,1,0),(0,2,0)])
-        runs.append([(0,0,0),(1,0,0),(2,0,0)])
+        # Generate all straight lines along each axis
+        for i in range(n):
+            for j in range(n):
+                # Lines along x-axis
+                runs.append([(k, i, j) for k in range(n)])
+                # Lines along y-axis
+                runs.append([(i, k, j) for k in range(n)])
+                # Lines along z-axis
+                runs.append([(i, j, k) for k in range(n)])
 
-        runs.append([(2,2,0),(1,2,0),(0,2,0)])
-        runs.append([(2,2,0),(2,1,0),(2,0,0)])
-        runs.append([(2,2,0),(2,2,1),(2,2,2)])
+        # Generate face diagonals (diagonals on each 2D face)
+        for i in range(n):
+            # XY plane diagonals (for each z)
+            runs.append([(k, k, i) for k in range(n)])
+            runs.append([(k, max_c - k, i) for k in range(n)])
+            # XZ plane diagonals (for each y)
+            runs.append([(k, i, k) for k in range(n)])
+            runs.append([(k, i, max_c - k) for k in range(n)])
+            # YZ plane diagonals (for each x)
+            runs.append([(i, k, k) for k in range(n)])
+            runs.append([(i, k, max_c - k) for k in range(n)])
 
-        runs.append([(0,2,2),(0,1,2),(0,0,2)])
-        runs.append([(0,2,2),(1,2,2),(2,2,2)])
-        runs.append([(0,2,2),(0,2,1),(0,2,0)])
+        # Generate space diagonals (4 body diagonals through the cube)
+        runs.append([(k, k, k) for k in range(n)])
+        runs.append([(k, k, max_c - k) for k in range(n)])
+        runs.append([(k, max_c - k, k) for k in range(n)])
+        runs.append([(max_c - k, k, k) for k in range(n)])
 
-        runs.append([(2,0,2),(2,0,1),(2,0,0)])
-        runs.append([(2,0,2),(1,0,2),(0,0,2)])
-        runs.append([(2,0,2),(2,1,2),(2,2,2)])
-        # Front
-        runs.append([(0,0,0),(1,0,1),(2,0,2)])
-        runs.append([(0,0,2),(1,0,1),(2,0,0)])
-        runs.append([(1,0,0),(1,0,1),(1,0,2)])
-        runs.append([(0,0,1),(1,0,1),(2,0,1)])
-        # Top
-        runs.append([(0,0,0),(1,1,0),(2,2,0)])
-        runs.append([(0,2,0),(1,1,0),(2,0,0)])
-        runs.append([(0,1,0),(1,1,0),(2,1,0)])
-        runs.append([(1,2,0),(1,1,0),(1,0,0)])
-        # Left
-        runs.append([(0,0,0),(0,1,1),(0,2,2)])
-        runs.append([(0,0,2),(0,1,1),(0,2,0)])
-        runs.append([(0,0,1),(0,1,1),(0,2,1)])
-        runs.append([(0,1,0),(0,1,1),(0,1,2)])
-        # Back
-        runs.append([(0,2,2),(1,2,1),(2,2,0)])
-        runs.append([(0,2,0),(1,2,1),(2,2,2)])
-        runs.append([(1,2,0),(1,2,1),(1,2,2)])
-        runs.append([(0,2,1),(1,2,1),(2,2,1)])
-        # Right
-        runs.append([(2,0,2),(2,1,1),(2,2,0)])
-        runs.append([(2,0,0),(2,1,1),(2,2,2)])
-        runs.append([(2,0,1),(2,1,1),(2,2,1)])
-        runs.append([(2,1,0),(2,1,1),(2,1,2)])
-        # Bottom
-        runs.append([(2,0,2),(1,1,2),(0,2,2)])
-        runs.append([(0,0,2),(1,1,2),(2,2,2)])
-        runs.append([(0,1,2),(1,1,2),(2,1,2)])
-        runs.append([(1,0,2),(1,1,2),(1,2,2)])
-        # Corners
-        runs.append([(0,0,0),(1,1,1),(2,2,2)])
-        runs.append([(2,0,0),(1,1,1),(0,2,2)])
-        runs.append([(2,2,0),(1,1,1),(0,0,2)])
-        runs.append([(0,2,0),(1,1,1),(2,0,2)])
-        # Edges
-        runs.append([(1,0,0),(1,1,1),(1,2,2)])
-        runs.append([(2,1,0),(1,1,1),(0,1,2)])
-        runs.append([(1,2,0),(1,1,1),(1,0,2)])
-        runs.append([(0,1,0),(1,1,1),(2,1,2)])
-        runs.append([(0,0,1),(1,1,1),(2,2,1)])
-        runs.append([(2,0,1),(1,1,1),(0,2,1)])
-        # Middles
-        runs.append([(1,1,0),(1,1,1),(1,1,2)])
-        runs.append([(1,0,1),(1,1,1),(1,2,1)])
-        runs.append([(0,1,1),(1,1,1),(2,1,1)])
+        # Remove duplicates (some lines may be generated multiple times)
+        unique_runs = []
+        seen = set()
+        for run in runs:
+            # Normalize: sort the tuple representation
+            key = tuple(sorted(run))
+            if key not in seen:
+                seen.add(key)
+                unique_runs.append(run)
 
-        return runs
+        return unique_runs
     
     # Assumes that the move is valid
     def count_pieces_pushed(self, x, y, z, dir):
       if self.pieces[x][y][z] == Piece.EMPTY:
           return 0
-          
-      count = 1
-      
-      if dir == 'UP':
-          if self.pieces[x][y][z-1] != Piece.EMPTY:
-              count += 1
-      elif dir == 'DOWN':
-          if self.pieces[x][y][z+1] != Piece.EMPTY:
-              count += 1
-      elif dir == 'LEFT':
-          if self.pieces[x-1][y][z] != Piece.EMPTY:
-              count += 1
-      elif dir == 'RIGHT':
-          if self.pieces[x+1][y][z] != Piece.EMPTY:
-              count += 1
-      elif dir == 'FRONT':
-          if self.pieces[x][y-1][z] != Piece.EMPTY:
-              count += 1
-      elif dir == 'BACK':
-          if self.pieces[x][y+1][z] != Piece.EMPTY:
-              count += 1
-              
+
+      count = 0
+      # Define direction deltas
+      deltas = {
+          'UP': (0, 0, -1),
+          'DOWN': (0, 0, 1),
+          'LEFT': (-1, 0, 0),
+          'RIGHT': (1, 0, 0),
+          'FRONT': (0, -1, 0),
+          'BACK': (0, 1, 0)
+      }
+      dx, dy, dz = deltas[dir]
+
+      # Count consecutive non-empty pieces in the push direction
+      cx, cy, cz = x, y, z
+      while 0 <= cx < self.size and 0 <= cy < self.size and 0 <= cz < self.size:
+          if self.pieces[cx][cy][cz] == Piece.EMPTY:
+              break
+          count += 1
+          cx += dx
+          cy += dy
+          cz += dz
+
       return count
     
     def validMove(self,x,y,z,dir,isBlocker):
        return self.pieces[x][y][z] == Piece.EMPTY or (not isBlocker and self.valid(x,y,z,dir))
 
-    # Return true if the specified location is empty, or is pieces can be pushed without pushing a piece out of the board"
+    def isCenter(self, x, y, z):
+        """Check if position is in the center (excluded from blocker placement).
+        For 3x3x3: single center at (1,1,1)
+        For 4x4x4: 2x2x2 center cube at (1,1,1), (1,1,2), (1,2,1), (1,2,2), (2,1,1), (2,1,2), (2,2,1), (2,2,2)
+        """
+        if self.size == 3:
+            return x == 1 and y == 1 and z == 1
+        else:  # size == 4
+            return (x in [1, 2]) and (y in [1, 2]) and (z in [1, 2])
+
+    # Return true if the specified location is empty, or if pieces can be pushed without pushing a piece out of the board
     def valid(self,x,y,z,dir):
-        if not x in range(3) or not y in range(3) or not z in range(3):
+        if not x in range(self.size) or not y in range(self.size) or not z in range(self.size):
               return False
-        if x == 1 and y == 1 and z == 1:
+        if self.isCenter(x, y, z):
               return False
+        # Check if position is on the correct boundary face and there's room to push
+        max_c = self.max_coord
         if dir == 'UP':
-              return (z == 2) and (self.pieces[x][y][z] == Piece.EMPTY or self.pieces[x][y][z-1] == Piece.EMPTY or self.pieces[x][y][z-2] == Piece.EMPTY)
+              if z != max_c:
+                  return False
+              # Check if there's an empty spot along the push path
+              return any(self.pieces[x][y][z-i] == Piece.EMPTY for i in range(self.size))
         if dir == 'DOWN':
-              return (z == 0) and (self.pieces[x][y][z] == Piece.EMPTY or self.pieces[x][y][z+1] == Piece.EMPTY or self.pieces[x][y][z+2] == Piece.EMPTY)
+              if z != 0:
+                  return False
+              return any(self.pieces[x][y][z+i] == Piece.EMPTY for i in range(self.size))
         if dir == 'LEFT':
-              return (x == 2) and (self.pieces[x][y][z] == Piece.EMPTY or self.pieces[x-1][y][z] == Piece.EMPTY or self.pieces[x-2][y][z] == Piece.EMPTY)
+              if x != max_c:
+                  return False
+              return any(self.pieces[x-i][y][z] == Piece.EMPTY for i in range(self.size))
         if dir == 'RIGHT':
-              return (x == 0) and (self.pieces[x][y][z] == Piece.EMPTY or self.pieces[x+1][y][z] == Piece.EMPTY or self.pieces[x+2][y][z] == Piece.EMPTY)
+              if x != 0:
+                  return False
+              return any(self.pieces[x+i][y][z] == Piece.EMPTY for i in range(self.size))
         if dir == 'FRONT':
-              return (y == 2) and (self.pieces[x][y][z] == Piece.EMPTY or self.pieces[x][y-1][z] == Piece.EMPTY or self.pieces[x][y-2][z] == Piece.EMPTY)
+              if y != max_c:
+                  return False
+              return any(self.pieces[x][y-i][z] == Piece.EMPTY for i in range(self.size))
         if dir == 'BACK':
-              return (y == 0) and (self.pieces[x][y][z] == Piece.EMPTY or self.pieces[x][y+1][z] == Piece.EMPTY or self.pieces[x][y+2][z] == Piece.EMPTY)
+              if y != 0:
+                  return False
+              return any(self.pieces[x][y+i][z] == Piece.EMPTY for i in range(self.size))
         else:
               return False
         
@@ -191,9 +215,9 @@ class Board:
     def getPossibleMoves(self,available_power):
         directions = ['UP','DOWN','LEFT','RIGHT','FRONT','BACK']
         moves = []
-        for x in range(3):
-          for y in range(3):
-            for z in range(3):
+        for x in range(self.size):
+          for y in range(self.size):
+            for z in range(self.size):
               for dir in directions:
                 if self.valid(x,y,z,dir):
                   pieces_pushed = self.count_pieces_pushed(x,y,z,dir)
@@ -201,20 +225,20 @@ class Board:
                       continue
                   moves.append((x,y,z,dir))
         return moves
-    
+
     def spotToValidDir(self,x,y,z):
         directions = ['UP','DOWN','LEFT','RIGHT','FRONT','BACK']
         for dir in directions:
            if self.valid(x,y,z,dir):
               return (x,y,z,dir)
-    
+
     def getPossibleBlockerMoves(self):
         moves = []
-        for x in range(3):
-          for y in range(3):
-            for z in range(3):
+        for x in range(self.size):
+          for y in range(self.size):
+            for z in range(self.size):
               if self.pieces[x][y][z] == Piece.EMPTY:
-                if not (x,y,z) == (1,1,1):
+                if not self.isCenter(x, y, z):
                   moves.append((x,y,z))
         return [self.spotToValidDir(x,y,z) for (x,y,z) in moves]
 
@@ -227,54 +251,26 @@ class Board:
         if pushed_pieces == 0:
           self.pieces[x][y][z] = Piece.EMPTY
         else:
-          if dir == 'UP':
-            if pushed_pieces == 1:
-              self.pieces[x][y][z] = self.pieces[x][y][z-1]
-              self.pieces[x][y][z-1] = Piece.EMPTY
-            else:
-              self.pieces[x][y][z] = self.pieces[x][y][z-1]
-              self.pieces[x][y][z-1] = self.pieces[x][y][z-2]
-              self.pieces[x][y][z-2] = Piece.EMPTY
-          elif dir == 'DOWN':
-            if pushed_pieces == 1:
-              self.pieces[x][y][z] = self.pieces[x][y][z+1]
-              self.pieces[x][y][z+1] = Piece.EMPTY
-            else:
-              self.pieces[x][y][z] = self.pieces[x][y][z+1]
-              self.pieces[x][y][z+1] = self.pieces[x][y][z+2]
-              self.pieces[x][y][z+2] = Piece.EMPTY
-          elif dir == 'LEFT':
-            if pushed_pieces == 1:
-              self.pieces[x][y][z] = self.pieces[x-1][y][z]
-              self.pieces[x-1][y][z] = Piece.EMPTY
-            else:
-              self.pieces[x][y][z] = self.pieces[x-1][y][z]
-              self.pieces[x-1][y][z] = self.pieces[x-2][y][z]
-              self.pieces[x-2][y][z] = Piece.EMPTY
-          elif dir == 'RIGHT':
-            if pushed_pieces == 1:
-              self.pieces[x][y][z] = self.pieces[x+1][y][z]
-              self.pieces[x+1][y][z] = Piece.EMPTY
-            else:
-              self.pieces[x][y][z] = self.pieces[x+1][y][z]
-              self.pieces[x+1][y][z] = self.pieces[x+2][y][z]
-              self.pieces[x+2][y][z] = Piece.EMPTY
-          elif dir == 'FRONT':
-            if pushed_pieces == 1:
-              self.pieces[x][y][z] = self.pieces[x][y-1][z]
-              self.pieces[x][y-1][z] = Piece.EMPTY
-            else:
-              self.pieces[x][y][z] = self.pieces[x][y-1][z]
-              self.pieces[x][y-1][z] = self.pieces[x][y-2][z]
-              self.pieces[x][y-2][z] = Piece.EMPTY
-          elif dir == 'BACK':
-            if pushed_pieces == 1:
-              self.pieces[x][y][z] = self.pieces[x][y+1][z]
-              self.pieces[x][y+1][z] = Piece.EMPTY
-            else:
-              self.pieces[x][y][z] = self.pieces[x][y+1][z]
-              self.pieces[x][y+1][z] = self.pieces[x][y+2][z]
-              self.pieces[x][y+2][z] = Piece.EMPTY
+          # Define direction deltas for reverse movement
+          deltas = {
+              'UP': (0, 0, -1),
+              'DOWN': (0, 0, 1),
+              'LEFT': (-1, 0, 0),
+              'RIGHT': (1, 0, 0),
+              'FRONT': (0, -1, 0),
+              'BACK': (0, 1, 0)
+          }
+          dx, dy, dz = deltas[dir]
+
+          # Shift pieces back from furthest to nearest
+          # The empty spot is at position (x + dx*pushed_pieces, y + dy*pushed_pieces, z + dz*pushed_pieces)
+          for i in range(pushed_pieces, 0, -1):
+            src_x, src_y, src_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
+            dst_x, dst_y, dst_z = x + dx * i, y + dy * i, z + dz * i
+            self.pieces[src_x][src_y][src_z] = self.pieces[dst_x][dst_y][dst_z]
+
+          # Clear the position where the new piece was (furthest pushed position)
+          self.pieces[x + dx * pushed_pieces][y + dy * pushed_pieces][z + dz * pushed_pieces] = Piece.EMPTY
             
     def moveAI(self,x,y,z,dir,player):
         if player == "RED":
@@ -285,69 +281,40 @@ class Board:
                 self.pieces[x][y][z] = player
                 self.moveHistory.append((x,y,z,dir,0))
         else:
-            if dir == 'UP':
-                if (self.pieces[x][y][z-1] == Piece.EMPTY):
-                    self.pieces[x][y][z-1] = self.pieces[x][y][z]
-                    self.pieces[x][y][z] = player
-                    self.moveHistory.append((x,y,z,dir,1))
-                else:
-                    self.pieces[x][y][z-2] = self.pieces[x][y][z-1]
-                    self.pieces[x][y][z-1] = self.pieces[x][y][z]
-                    self.pieces[x][y][z] = player
-                    self.moveHistory.append((x,y,z,dir,2))
-            elif dir == 'DOWN':
-                  if (self.pieces[x][y][z+1] == Piece.EMPTY):
-                      self.pieces[x][y][z+1] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,1))
-                  else:
-                      self.pieces[x][y][z+2] = self.pieces[x][y][z+1]
-                      self.pieces[x][y][z+1] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,2))
-            elif dir == 'LEFT':
-                  if (self.pieces[x-1][y][z] == Piece.EMPTY):
-                      self.pieces[x-1][y][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,1))
-                  else:
-                      self.pieces[x-2][y][z] = self.pieces[x-1][y][z]
-                      self.pieces[x-1][y][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,2))
-            elif dir == 'RIGHT':
-                  if (self.pieces[x+1][y][z] == Piece.EMPTY):
-                      self.pieces[x+1][y][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,1))
-                  else:
-                      self.pieces[x+2][y][z] = self.pieces[x+1][y][z]
-                      self.pieces[x+1][y][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,2))
-            elif dir == 'FRONT':
-                  if (self.pieces[x][y-1][z] == Piece.EMPTY):
-                      self.pieces[x][y-1][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,1))
-                  else:
-                      self.pieces[x][y-2][z] = self.pieces[x][y-1][z]
-                      self.pieces[x][y-1][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,2))
-            elif dir == 'BACK':
-                  if (self.pieces[x][y+1][z] == Piece.EMPTY):
-                      self.pieces[x][y+1][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,1))
-                  else:
-                      self.pieces[x][y+2][z] = self.pieces[x][y+1][z]
-                      self.pieces[x][y+1][z] = self.pieces[x][y][z]
-                      self.pieces[x][y][z] = player
-                      self.moveHistory.append((x,y,z,dir,2))
+            # Define direction deltas
+            deltas = {
+                'UP': (0, 0, -1),
+                'DOWN': (0, 0, 1),
+                'LEFT': (-1, 0, 0),
+                'RIGHT': (1, 0, 0),
+                'FRONT': (0, -1, 0),
+                'BACK': (0, 1, 0)
+            }
+            dx, dy, dz = deltas[dir]
+
+            # Find how many pieces to push (count until we hit empty)
+            pushed_pieces = 0
+            cx, cy, cz = x, y, z
+            while 0 <= cx < self.size and 0 <= cy < self.size and 0 <= cz < self.size:
+                if self.pieces[cx][cy][cz] == Piece.EMPTY:
+                    break
+                pushed_pieces += 1
+                cx += dx
+                cy += dy
+                cz += dz
+
+            # Shift pieces from furthest to nearest
+            for i in range(pushed_pieces, 0, -1):
+                src_x, src_y, src_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
+                dst_x, dst_y, dst_z = x + dx * i, y + dy * i, z + dz * i
+                self.pieces[dst_x][dst_y][dst_z] = self.pieces[src_x][src_y][src_z]
+
+            # Place the new piece
+            self.pieces[x][y][z] = player
+            self.moveHistory.append((x,y,z,dir,pushed_pieces))
 
     # Makes a move after checking if it is valid
-    # If there is a piece in the specified location, it is pushed in the specified direction, along with the piece behind it if one exists 
+    # If there is a piece in the specified location, it is pushed in the specified direction, along with any pieces behind it
     def move(self,x,y,z,dir,player,isBlocker):
         if isBlocker:
            if player == Piece.RED:
@@ -367,66 +334,37 @@ class Board:
                 self.pieces[x][y][z] = player
                 self.moveHistory.append((x,y,z,dir,0))
             else:
-                if dir == 'UP':
-                    if (self.pieces[x][y][z-1] == Piece.EMPTY):
-                        self.pieces[x][y][z-1] = self.pieces[x][y][z]
-                        self.pieces[x][y][z] = player
-                        self.moveHistory.append((x,y,z,dir,1))
-                    else:
-                        self.pieces[x][y][z-2] = self.pieces[x][y][z-1]
-                        self.pieces[x][y][z-1] = self.pieces[x][y][z]
-                        self.pieces[x][y][z] = player
-                        self.moveHistory.append((x,y,z,dir,2))
-                elif dir == 'DOWN':
-                      if (self.pieces[x][y][z+1] == Piece.EMPTY):
-                          self.pieces[x][y][z+1] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,1))
-                      else:
-                          self.pieces[x][y][z+2] = self.pieces[x][y][z+1]
-                          self.pieces[x][y][z+1] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,2))
-                elif dir == 'LEFT':
-                      if (self.pieces[x-1][y][z] == Piece.EMPTY):
-                          self.pieces[x-1][y][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,1))
-                      else:
-                          self.pieces[x-2][y][z] = self.pieces[x-1][y][z]
-                          self.pieces[x-1][y][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,2))
-                elif dir == 'RIGHT':
-                      if (self.pieces[x+1][y][z] == Piece.EMPTY):
-                          self.pieces[x+1][y][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,1))
-                      else:
-                          self.pieces[x+2][y][z] = self.pieces[x+1][y][z]
-                          self.pieces[x+1][y][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,2))
-                elif dir == 'FRONT':
-                      if (self.pieces[x][y-1][z] == Piece.EMPTY):
-                          self.pieces[x][y-1][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,1))
-                      else:
-                          self.pieces[x][y-2][z] = self.pieces[x][y-1][z]
-                          self.pieces[x][y-1][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,2))
-                elif dir == 'BACK':
-                      if (self.pieces[x][y+1][z] == Piece.EMPTY):
-                          self.pieces[x][y+1][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,1))
-                      else:
-                          self.pieces[x][y+2][z] = self.pieces[x][y+1][z]
-                          self.pieces[x][y+1][z] = self.pieces[x][y][z]
-                          self.pieces[x][y][z] = player
-                          self.moveHistory.append((x,y,z,dir,2))
+                # Define direction deltas
+                deltas = {
+                    'UP': (0, 0, -1),
+                    'DOWN': (0, 0, 1),
+                    'LEFT': (-1, 0, 0),
+                    'RIGHT': (1, 0, 0),
+                    'FRONT': (0, -1, 0),
+                    'BACK': (0, 1, 0)
+                }
+                dx, dy, dz = deltas[dir]
+
+                # Find how many pieces to push (count until we hit empty)
+                pushed_pieces = 0
+                cx, cy, cz = x, y, z
+                while 0 <= cx < self.size and 0 <= cy < self.size and 0 <= cz < self.size:
+                    if self.pieces[cx][cy][cz] == Piece.EMPTY:
+                        break
+                    pushed_pieces += 1
+                    cx += dx
+                    cy += dy
+                    cz += dz
+
+                # Shift pieces from furthest to nearest
+                for i in range(pushed_pieces, 0, -1):
+                    src_x, src_y, src_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
+                    dst_x, dst_y, dst_z = x + dx * i, y + dy * i, z + dz * i
+                    self.pieces[dst_x][dst_y][dst_z] = self.pieces[src_x][src_y][src_z]
+
+                # Place the new piece
+                self.pieces[x][y][z] = player
+                self.moveHistory.append((x,y,z,dir,pushed_pieces))
 
     # Returns a string representation of the gameboard, for debugging purposes
     def getStatePretty(self):
@@ -458,40 +396,67 @@ class Board:
     
     def neighbor_positions(self, x, y, z):
         neighbors = []
-        for i in range(3):
+        for i in range(self.size):
             if i != x:
                 neighbors.append((i, y, z))
-        for j in range(3):
+        for j in range(self.size):
             if j != y:
                 neighbors.append((x, j, z))
-        for k in range(3):
+        for k in range(self.size):
             if k != z:
                 neighbors.append((x, y, k))
         return neighbors
     
     def getTwoInARows(self, player: Piece):
-      count = 0
-      for run in self.winningRuns:
-          player_count = sum(1 for x, y, z in run if self.pieces[x][y][z] == player)
-          
-          if player_count == 2:
-              empty_spot = any(self.pieces[x][y][z] == Piece.EMPTY for x, y, z in run)
-              count += 1.0 if empty_spot else 0.5
-    
-      return count
-
-    def numPieces(self,player: Piece):
-        count = 0
-        for layer in self.pieces:
-            for row in layer:
-                for piece in row:
-                    if piece == player:
-                        count += 1
-        return count
-    
-    def hasWon(self,player: Piece):
+        """Count near-complete runs. For 3x3x3: 2-in-a-row, for 4x4x4: 3-in-a-row."""
+        count = 0.0
+        target = self.size - 1  # 2 for 3x3x3, 3 for 4x4x4
+        pieces = self.pieces  # Local lookup
         for run in self.winningRuns:
-            if all(self.pieces[x][y][z] == player for (x,y,z) in run):
+            player_count = 0
+            has_empty = False
+            blocked = False
+            for pos in run:
+                piece = pieces[pos[0]][pos[1]][pos[2]]
+                if piece == player:
+                    player_count += 1
+                elif piece == Piece.EMPTY:
+                    has_empty = True
+                else:
+                    blocked = True
+                    break  # Opponent or blocker in the way
+            if not blocked and player_count == target:
+                count += 1.0 if has_empty else 0.5
+        return count
+
+    def numPieces(self, player: Piece):
+        # Flattened sum is faster than triple nested loop
+        return sum(piece == player for layer in self.pieces for row in layer for piece in row)
+
+    def hasWon(self, player: Piece):
+        pieces = self.pieces  # Local variable lookup is faster
+        for run in self.winningRuns:
+            won = True
+            for pos in run:
+                if pieces[pos[0]][pos[1]][pos[2]] != player:
+                    won = False
+                    break
+            if won:
+                return True
+        return False
+
+    def hasWonAt(self, player: Piece, x: int, y: int, z: int):
+        """Check if player has won, only checking runs that contain position (x,y,z).
+        Much faster than hasWon() when we know which position just changed."""
+        pieces = self.pieces
+        runs = self._runsByPosition.get((x, y, z), [])
+        for run in runs:
+            won = True
+            for pos in run:
+                if pieces[pos[0]][pos[1]][pos[2]] != player:
+                    won = False
+                    break
+            if won:
                 return True
         return False
     
@@ -512,13 +477,21 @@ class Board:
       return random.choice(possible_moves)
 
     # Loops through possible moves and returns if a move wins the game, else returns None
-    def getWinInOne(self,player: Piece, power_dict):
-        for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
-          self.moveAI(x,y,z,dir,player)
-          if self.hasWon(player):
+    def getWinInOne(self, player: Piece, power_dict):
+        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+            self.moveAI(x, y, z, dir, player)
+            # Check how many pieces were pushed (stored in moveHistory)
+            pieces_pushed = self.moveHistory[-1][4] if self.moveHistory else 0
+            if pieces_pushed == 0:
+                # No push - can use fast check, only runs containing (x,y,z) matter
+                won = self.hasWonAt(player, x, y, z)
+            else:
+                # Pieces were pushed - need full check as pushed pieces could form wins
+                won = self.hasWon(player)
+            if won:
+                self.undo()
+                return (x, y, z, dir)
             self.undo()
-            return (x,y,z,dir)
-          self.undo()
         return None
     
     # Loops through possible moves and returns a move which prevents the opponent from winning 
@@ -557,48 +530,93 @@ class Board:
 
         return potential_moves[0][0]
     
+    def getCorners(self):
+        """Get all corner positions for the current board size."""
+        m = self.max_coord
+        return frozenset([
+            (0, 0, 0), (0, 0, m), (0, m, 0), (0, m, m),
+            (m, 0, 0), (m, 0, m), (m, m, 0), (m, m, m)
+        ])
+
+    def getMiddles(self):
+        """Get middle/edge positions for the current board size.
+        For 3x3x3: face centers
+        For 4x4x4: similar strategic positions on faces
+        """
+        if self.size == 3:
+            return frozenset([(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)])
+        else:  # size == 4
+            # Face center positions for 4x4x4 (positions on faces that aren't corners or edges)
+            middles = set()
+            m = self.max_coord
+            # For each face, add the inner 2x2 positions
+            for i in [1, 2]:
+                for j in [1, 2]:
+                    middles.add((0, i, j))  # left face
+                    middles.add((m, i, j))  # right face
+                    middles.add((i, 0, j))  # front face
+                    middles.add((i, m, j))  # back face
+                    middles.add((i, j, 0))  # top face
+                    middles.add((i, j, m))  # bottom face
+            return frozenset(middles)
+
     def getBestDefendingMove(self, player: Piece, power_dict):
         opponent = self.otherPlayer(player)
-        corners = frozenset([(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-                       (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)])
-        middles = frozenset([(1, 0, 1), (2, 1, 1), (1, 2, 2), (0, 1, 1), (1, 1, 0), (1, 1, 2)])
+        corners = self.getCorners()
+        middles = self.getMiddles()
         potential_moves = []
         available_power = power_dict[player.value]
-        for (x, y, z, dir) in self.getPossibleMoves(available_power):
+
+        all_moves = self.getPossibleMoves(available_power)
+
+        # For 4x4x4, limit initial move evaluation to avoid slowdown
+        if self.size == 4 and len(all_moves) > 40:
+            all_moves = random.sample(all_moves, 40)
+
+        for (x, y, z, dir) in all_moves:
             points = 0
             power_cost = self.count_pieces_pushed(x, y, z, dir)
-        
+
             if available_power > 0:
-              power_efficiency = 15 * (1 - power_cost/available_power)
-              points += power_efficiency
+                power_efficiency = 15 * (1 - power_cost / available_power)
+                points += power_efficiency
             self.moveAI(x, y, z, dir, player)
             if self.getWinInOne(opponent, power_dict) == None:
                 points += 100
             points += self.getTwoInARows(player) * 5
             neighbors = self.neighbor_positions(x, y, z)
             non_empty_neighbors = sum(1 for i, j, k in neighbors
-                                       if self.pieces[i][j][k] != Piece.EMPTY)
-            for (i,j,k) in neighbors:
-               if self.pieces[i][j][k] == opponent:
-                  points += 6
+                                      if self.pieces[i][j][k] != Piece.EMPTY)
+            for (i, j, k) in neighbors:
+                if self.pieces[i][j][k] == opponent:
+                    points += 6
             if self.pieces[x][y][z] == opponent:
-               points += 15
+                points += 15
             if non_empty_neighbors == 6:
-               points += 10
-            if (x,y,z) in middles:
-               points += 2
-            if (x,y,z) in corners:
-               points -= 1
+                points += 10
+            if (x, y, z) in middles:
+                points += 2
+            if (x, y, z) in corners:
+                points -= 1
             potential_moves.append(((x, y, z, dir), points))
             self.undo()
 
         potential_moves.sort(key=lambda move: move[1], reverse=True)
 
-        # Check top 5 moves for getWinInTwo condition
-        top_moves = potential_moves[:5]
+        # Check top moves for getWinInTwo condition
+        # For 4x4x4, check fewer moves and skip this expensive check early game
+        num_to_check = 3 if self.size == 4 else 5
+        top_moves = potential_moves[:num_to_check]
+
+        # Skip getWinInTwo check for 4x4x4 in early game (too slow, less critical)
+        if self.size == 4 and self.numPieces(player) < 3:
+            if potential_moves:
+                return potential_moves[0][0]
+            return None
+
         for move, _ in top_moves:
             x, y, z, dir = move
-            self.moveAI(x,y,z,dir,player)
+            self.moveAI(x, y, z, dir, player)
             if self.getWinInTwo(opponent, power_dict) is None:
                 self.undo()
                 return move
@@ -609,41 +627,54 @@ class Board:
         return None
 
     # Loops through possible moves and for each one examines all possible opponent moves.
-    # If there are any moves which allow the given player to win after any opponent move, 
+    # If there are any moves which allow the given player to win after any opponent move,
     # return one at random. Otherwise, return None
-    def getWinInTwo(self,player: Piece, power_dict):
+    def getWinInTwo(self, player: Piece, power_dict):
         winningMove = self.getWinInOne(player, power_dict)
         if winningMove:
-          return winningMove
+            return winningMove
         potential_moves = []
         opponent = self.otherPlayer(player)
 
         moves_made = self.numPieces(Piece.RED) + self.numPieces(Piece.BLUE)
 
-        for (x,y,z,dir) in self.getPossibleMoves(power_dict[player.value]):
-          first_move_cost = self.count_pieces_pushed(x, y, z, dir)
-          remaining_power = power_dict[player.value] - first_move_cost + GamePlayer.get_power_gain(moves_made)
-          self.moveAI(x,y,z,dir,player)
-          if self.getWinInOne(opponent, power_dict) == None:
-            winner = True
-            for (x2,y2,z2,dir2) in self.getPossibleMoves(power_dict[opponent.value]):
-              self.moveAI(x2,y2,z2,dir2,opponent)
-              if self.getWinInOne(player, {player.value: remaining_power, opponent.value: power_dict[opponent.value]}) == None:
-                winner = False
-              self.undo()
-            if winner:
-              potential_moves.append((x,y,z,dir))
-          self.undo()
+        all_moves = self.getPossibleMoves(power_dict[player.value])
+
+        # For 4x4x4, limit search to avoid exponential blowup
+        # Sample moves if there are too many
+        if self.size == 4 and len(all_moves) > 30:
+            all_moves = random.sample(all_moves, 30)
+
+        for (x, y, z, dir) in all_moves:
+            first_move_cost = self.count_pieces_pushed(x, y, z, dir)
+            remaining_power = power_dict[player.value] - first_move_cost + GamePlayer.get_power_gain(moves_made)
+            self.moveAI(x, y, z, dir, player)
+            if self.getWinInOne(opponent, power_dict) == None:
+                winner = True
+                opponent_moves = self.getPossibleMoves(power_dict[opponent.value])
+
+                # For 4x4x4, also limit opponent move checking
+                if self.size == 4 and len(opponent_moves) > 25:
+                    opponent_moves = random.sample(opponent_moves, 25)
+
+                for (x2, y2, z2, dir2) in opponent_moves:
+                    self.moveAI(x2, y2, z2, dir2, opponent)
+                    if self.getWinInOne(player, {player.value: remaining_power, opponent.value: power_dict[opponent.value]}) == None:
+                        winner = False
+                        self.undo()
+                        break  # Early termination - no need to check more opponent moves
+                    self.undo()
+                if winner:
+                    potential_moves.append((x, y, z, dir))
+            self.undo()
         if potential_moves:
-          return random.choice(potential_moves)
+            return random.choice(potential_moves)
         return None
     
     # Returns a random move which is either a middle or edge
     def getGoodStartMove(self, player: Piece, power_dict):
-        # Define corner positions
-        corners = [(0, 0, 0), (0, 0, 2), (0, 2, 0), (0, 2, 2),
-                  (2, 0, 0), (2, 0, 2), (2, 2, 0), (2, 2, 2)]
-        
+        corners = self.getCorners()
+
         # Collect valid moves from middles and edges
         potential_moves = []
         for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
@@ -672,31 +703,34 @@ class Board:
     def getGoodIntermediateBlockerMove(self, player: Piece):
       opponent = self.otherPlayer(player)
       potential_positions = []
-      
+      max_c = self.max_coord
+      # For 4x4x4, look for N-1 pieces in a row instead of just 2
+      target_count = self.size - 1
+
       # Look through all winning runs
       for run in self.winningRuns:
-          # Check if opponent has 2 pieces in this run
+          # Check if opponent has target_count pieces in this run
           opponent_pieces = [(x,y,z) for (x,y,z) in run if self.pieces[x][y][z] == opponent]
-          if len(opponent_pieces) == 2:
-              # Get the third position in the run
-              third_pos = [pos for pos in run if pos not in opponent_pieces][0]
-              x, y, z = third_pos
-              
+          if len(opponent_pieces) == target_count:
+              # Get the remaining positions in the run
+              remaining_pos = [pos for pos in run if pos not in opponent_pieces][0]
+              x, y, z = remaining_pos
+
               if self.pieces[x][y][z] == Piece.EMPTY:
-                  # Case 1: Third spot is empty - highest priority
-                  if not (x == 1 and y == 1 and z == 1):  # Avoid center
-                      potential_positions.append((third_pos, 15))  # Highest priority
-                      
+                  # Case 1: Remaining spot is empty - highest priority
+                  if not self.isCenter(x, y, z):
+                      potential_positions.append((remaining_pos, 15))  # Highest priority
+
                   # Also consider positions where pieces could be pushed to this empty spot
                   for piece_pos in opponent_pieces:
-                      push_positions = self.getPushablePositions(piece_pos, third_pos)
+                      push_positions = self.getPushablePositions(piece_pos, remaining_pos)
                       for pos in push_positions:
                           if self.pieces[pos[0]][pos[1]][pos[2]] == Piece.EMPTY:
-                              if not (pos[0] == 1 and pos[1] == 1 and pos[2] == 1):
+                              if not self.isCenter(pos[0], pos[1], pos[2]):
                                   potential_positions.append((pos, 10))
-                                  
+
               else:
-                  # Case 2: Third spot is filled - check if it's pushable
+                  # Case 2: Remaining spot is filled - check if it's pushable
                   pushable = False
                   directions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'FRONT', 'BACK']
                   for dir in directions:
@@ -705,42 +739,42 @@ class Board:
                           # Get positions where the filled piece could be pushed to
                           if dir == 'UP' and z > 0:
                               block_pos = (x, y, z-1)
-                          elif dir == 'DOWN' and z < 2:
+                          elif dir == 'DOWN' and z < max_c:
                               block_pos = (x, y, z+1)
                           elif dir == 'LEFT' and x > 0:
                               block_pos = (x-1, y, z)
-                          elif dir == 'RIGHT' and x < 2:
+                          elif dir == 'RIGHT' and x < max_c:
                               block_pos = (x+1, y, z)
                           elif dir == 'FRONT' and y > 0:
                               block_pos = (x, y-1, z)
-                          elif dir == 'BACK' and y < 2:
+                          elif dir == 'BACK' and y < max_c:
                               block_pos = (x, y+1, z)
                           else:
                               continue
-                              
+
                           if self.pieces[block_pos[0]][block_pos[1]][block_pos[2]] == Piece.EMPTY:
-                              if not (block_pos[0] == 1 and block_pos[1] == 1 and block_pos[2] == 1):
+                              if not self.isCenter(block_pos[0], block_pos[1], block_pos[2]):
                                   potential_positions.append((block_pos, 8))  # Medium priority
-                                  
+
                   if pushable:
                       # Also look for positions to block the push path
                       for piece_pos in opponent_pieces:
-                          push_positions = self.getPushablePositions(piece_pos, third_pos)
+                          push_positions = self.getPushablePositions(piece_pos, remaining_pos)
                           for pos in push_positions:
                               if self.pieces[pos[0]][pos[1]][pos[2]] == Piece.EMPTY:
-                                  if not (pos[0] == 1 and pos[1] == 1 and pos[2] == 1):
+                                  if not self.isCenter(pos[0], pos[1], pos[2]):
                                       potential_positions.append((pos, 5))  # Lower priority
 
       if not potential_positions:
           return self.getRandomBlockerMove()
-      
+
       # Sort by priority and pick highest priority position
       potential_positions.sort(key=lambda x: x[1], reverse=True)
       for pos, _ in potential_positions:
           blocker_move = self.spotToValidDir(pos[0], pos[1], pos[2])
           if blocker_move:
               return blocker_move
-              
+
       return self.getRandomBlockerMove()
 
     # Find positions where pieces could be pushed from to reach target
@@ -748,27 +782,28 @@ class Board:
         x1, y1, z1 = piece_pos
         x2, y2, z2 = target_pos
         positions = []
-        
+        max_c = self.max_coord
+
         # Check if pieces are in same row/column/diagonal and find pushable positions
         if x1 == x2:
             if y1 == y2:  # Same vertical line
                 if z1 < z2:
                     positions.append((x1, y1, max(0, z1-1)))
                 else:
-                    positions.append((x1, y1, min(2, z1+1)))
+                    positions.append((x1, y1, min(max_c, z1+1)))
             elif z1 == z2:  # Same horizontal line in x-plane
                 if y1 < y2:
                     positions.append((x1, max(0, y1-1), z1))
                 else:
-                    positions.append((x1, min(2, y1+1), z1))
-                    
+                    positions.append((x1, min(max_c, y1+1), z1))
+
         elif y1 == y2:
             if z1 == z2:  # Same horizontal line in y-plane
                 if x1 < x2:
                     positions.append((max(0, x1-1), y1, z1))
                 else:
-                    positions.append((min(2, x1+1), y1, z1))
-                    
+                    positions.append((min(max_c, x1+1), y1, z1))
+
         # For diagonal lines, add positions on both sides
         if abs(x2-x1) == abs(y2-y1) == 1:
             positions.extend([
@@ -785,11 +820,11 @@ class Board:
                 (x1, 2*y1-y2, 2*z1-z2),
                 (x1, 2*y2-y1, 2*z2-z1)
             ])
-            
+
         # Filter out invalid positions
-        return [(x,y,z) for (x,y,z) in positions 
-                if 0 <= x <= 2 and 0 <= y <= 2 and 0 <= z <= 2
-                and not (x == 1 and y == 1 and z == 1)]  # Exclude center
+        return [(x,y,z) for (x,y,z) in positions
+                if 0 <= x <= max_c and 0 <= y <= max_c and 0 <= z <= max_c
+                and not self.isCenter(x, y, z)]
     
     def getGoodBlockerMove(self, player: Piece, power_dict):
       defending_move = self.getDefendingMove(player, power_dict)
@@ -799,10 +834,10 @@ class Board:
       for blocker_move in self.getPossibleBlockerMoves():
           (x,y,z,dir) = blocker_move
           self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
-          
+
           defending_move = self.getDefendingMove(player, power_dict)
           winning_move = self.getWinInOne(player, power_dict)
-          
+
           if defending_move or winning_move:
               self.undo()
               return (blocker_move, False)
@@ -818,7 +853,7 @@ class Board:
       initial_winning_move = self.getWinInOne(player, power_dict) or self.getWinInTwo(player, power_dict)
       if initial_winning_move:
           return None
-      
+
       potential_blocks = []
 
       for run in self.winningRuns:
@@ -828,9 +863,9 @@ class Board:
             # Get the empty positions in the run
             empty_positions = [(x,y,z) for (x,y,z) in run if self.pieces[x][y][z] == Piece.EMPTY]
             for pos in empty_positions:
-                if pos not in [(1,1,1)]:  # Avoid center
+                if not self.isCenter(pos[0], pos[1], pos[2]):
                     potential_blocks.append(pos)
-                    
+
             # Also consider positions that could block pushes
             for piece_pos in opponent_pieces:
                 for empty_pos in empty_positions:
@@ -838,7 +873,7 @@ class Board:
                     for pos in push_positions:
                         if self.pieces[pos[0]][pos[1]][pos[2]] == Piece.EMPTY:
                             potential_blocks.append(pos)
-    
+
       # Remove duplicates and get valid moves
       potential_blocks = list(set(potential_blocks))
       valid_blocker_moves = [self.spotToValidDir(x,y,z) for (x,y,z) in potential_blocks if self.spotToValidDir(x,y,z)]
@@ -846,10 +881,10 @@ class Board:
       for blocker_move in valid_blocker_moves:
           (x,y,z,dir) = blocker_move
           self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
-          
+
           defending_move = self.getDefendingMove(player, power_dict)
           winning_move = self.getWinInOne(player, power_dict) or self.getWinInTwo(player, power_dict)
-          
+
           if (defending_move and not initial_defending_move) or winning_move:
               self.undo()
               return (blocker_move, True)
@@ -864,6 +899,10 @@ class EasyAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
+        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
+        if board.size == 4:
+            return board.getRandomMove(self.player, power_dict)
+
         threat = board.getWinInOne(Board.otherPlayer(self, self.player), power_dict)
         if threat:
             x,y,z,_ = threat
@@ -877,17 +916,21 @@ class EasyAgent:
         if simpleDefendingMove:
             return simpleDefendingMove
         return board.getRandomMove(self.player, power_dict)
-    
+
     def getBlockerMove(self, board: Board, power_dict):
        return None
-        
-# Returns a winning move if one exists, otherwise a move preventing the opponent from 
+
+# Returns a winning move if one exists, otherwise a move preventing the opponent from
 # winning if one exists, otherwise a random move
 class MediumAgent:
     def __init__(self,player):
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
+        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
+        if board.size == 4:
+            return board.getRandomMove(self.player, power_dict)
+
         if move_num == 0:
            return board.getGoodStartMove(self.player, power_dict)
         winningMove = board.getWinInOne(self.player, power_dict)
@@ -902,15 +945,22 @@ class MediumAgent:
                     return board.getRandomMove(self.player, power_dict)
         else:
             return board.getRandomMove(self.player, power_dict)
-          
+
     def getBlockerMove(self, board: Board, power_dict):
+       # For 4x4x4 boards, skip blocker moves for now
+       if board.size == 4:
+           return None
        return (board.getRandomBlockerMove(), False)
           
 class HardAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num, power_dict):  
+    def getMove(self, board: Board, move_num, power_dict):
+        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
+        if board.size == 4:
+            return board.getRandomMove(self.player, power_dict)
+
         if move_num == 0:
            return board.getBestDefendingMove(self.player, power_dict)
         elif move_num == 1:
@@ -937,15 +987,22 @@ class HardAgent:
                 return defendingMove
               else:
                 return board.getRandomMove(self.player, power_dict)
-        
+
     def getBlockerMove(self, board: Board, power_dict):
+       # For 4x4x4 boards, skip blocker moves for now
+       if board.size == 4:
+           return None
        return board.getGoodBlockerMove(self.player, power_dict)
 
 class ExpertAgent:
     def __init__(self,player):
         self.player = player
 
-    def getMove(self, board: Board, move_num, power_dict):  
+    def getMove(self, board: Board, move_num, power_dict):
+        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
+        if board.size == 4:
+            return board.getRandomMove(self.player, power_dict)
+
         if move_num == 0:
            return board.getBestDefendingMove(self.player, power_dict)
         elif move_num == 1:
@@ -972,13 +1029,17 @@ class ExpertAgent:
                 return defendingMove
               else:
                 return board.getRandomMove(self.player, power_dict)
-              
+
     def getBlockerMove(self, board: Board, power_dict):
+       # For 4x4x4 boards, skip blocker moves for now
+       if board.size == 4:
+           return None
        return board.getBetterBlockerMove(self.player, power_dict)
     
 class GamePlayer:
-    def __init__(self, difficulty, computerColor):
-        self.board = Board()
+    def __init__(self, difficulty, computerColor, board_size=DEFAULT_BOARD_SIZE):
+        self.board_size = board_size
+        self.board = Board(board_size)
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
         self.red_power = 0
         self.blue_power = 1
@@ -986,6 +1047,9 @@ class GamePlayer:
         self.blue_blocker_count = 0
         self.moves_made = 0
         self.difficulty = difficulty
+        # Set blocker limits based on board size
+        self.max_red_blockers = 3 if board_size == 3 else 4
+        self.max_blue_blockers = 4 if board_size == 3 else 5
         match(difficulty):
             case 'easy':
                 self.computer = EasyAgent(self.computer_color)
@@ -1004,6 +1068,7 @@ class GamePlayer:
     def serialize(self):
         return json.dumps({
             'board_state': self.board.getState(),
+            'board_size': self.board_size,
             'computer_color': self.computer_color.value,
             'red_blocker_count': self.red_blocker_count,
             'blue_blocker_count': self.blue_blocker_count,
@@ -1012,11 +1077,12 @@ class GamePlayer:
             'difficulty': self.difficulty,
             'moves_made': self.moves_made
         })
-    
+
     @classmethod
     def deserialize(cls, serialized_data):
         data = json.loads(serialized_data)
-        game_player = cls(data['difficulty'], data['computer_color'])
+        board_size = data.get('board_size', DEFAULT_BOARD_SIZE)
+        game_player = cls(data['difficulty'], data['computer_color'], board_size)
         game_player.board.setState(data['board_state'])
         game_player.red_blocker_count = data['red_blocker_count']
         game_player.blue_blocker_count = data['blue_blocker_count']
@@ -1062,11 +1128,11 @@ class GamePlayer:
               raise Exception("invalid_move")
         if isBlockerMove:
            if player == Piece.RED:
-              if self.red_blocker_count >= 3:
+              if self.red_blocker_count >= self.max_red_blockers:
                  raise Exception("max_blocker_moves")
               self.red_blocker_count += 1
            else:
-              if self.blue_blocker_count >= 4:
+              if self.blue_blocker_count >= self.max_blue_blockers:
                  raise Exception("max_blocker_moves")
               self.blue_blocker_count += 1
         else:
@@ -1114,6 +1180,11 @@ import string
 from datetime import timedelta
 from django.db import IntegrityError
 
+BOARD_SIZE_CHOICES = [
+    (3, '3x3x3'),
+    (4, '4x4x4'),
+]
+
 class Game(models.Model):
     # Player fields
     player_one = models.ForeignKey(User, related_name='games_as_player_one', on_delete=models.CASCADE)
@@ -1121,7 +1192,8 @@ class Game(models.Model):
 
     game_type = models.CharField(max_length=20, choices=GAME_TYPES)
     game_code = models.CharField(max_length=6, unique=True)
-    
+    board_size = models.IntegerField(choices=BOARD_SIZE_CHOICES, default=3)
+
     # Game state and status
     game_state = models.JSONField(default=list)
     turn = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -1138,10 +1210,17 @@ class Game(models.Model):
     blue_power = models.IntegerField(default=1)
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
+
+    def get_max_blockers(self, color):
+        """Get max blocker count based on board size and color."""
+        if self.board_size == 3:
+            return 3 if color == 'RED' else 4
+        else:  # 4x4x4
+            return 4 if color == 'RED' else 5
 
     @classmethod
     def create(cls, **kwargs):
@@ -1155,26 +1234,27 @@ class Game(models.Model):
                     raise
 
     @classmethod
-    def start_new_game(cls, player_one, player_two, game_type):
-        board = Board() 
+    def start_new_game(cls, player_one, player_two, game_type, board_size=DEFAULT_BOARD_SIZE):
+        board = Board(board_size)
         game = cls.create(
             player_one=player_one,
             player_two=player_two,
             game_type=game_type,
-            game_state=json.dumps(board.getState()),  
+            board_size=board_size,
+            game_state=json.dumps(board.getState()),
             turn=player_one,
             completed=False
         )
         game.save()
         return game
-    
+
     @staticmethod
     def get_power_gain(moves_made):
         turn = (moves_made + 1) // 2
         return 1 if turn % 2 == 0 else 0
-    
+
     def move(self, x, y, z, dir, player, isBlockerMove):
-        board = Board()
+        board = Board(self.board_size)
         board.setState(json.loads(self.game_state))
         if not board.validMove(x,y,z,dir,isBlockerMove):
            raise Exception("invalid_move")
@@ -1182,11 +1262,11 @@ class Game(models.Model):
            if player == Piece.RED:
                 if self.moves_made < 1:
                     raise Exception("red_first_move")
-                if self.red_blocker_count >= 3:
+                if self.red_blocker_count >= self.get_max_blockers('RED'):
                     raise Exception("max_blocker_moves")
                 self.red_blocker_count += 1
            else:
-                if self.blue_blocker_count >= 4:
+                if self.blue_blocker_count >= self.get_max_blockers('BLUE'):
                     raise Exception("max_blocker_moves")
                 self.blue_blocker_count += 1
         else:

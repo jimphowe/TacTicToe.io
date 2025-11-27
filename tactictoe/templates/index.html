@@ -258,6 +258,48 @@
             background-color: #007bff;
         }
 
+        .board-size-selector {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 1rem 0;
+        }
+
+        .board-size-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            border: 2px solid #555;
+            background-color: #444;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .board-size-btn:hover {
+            transform: scale(1.05);
+            border-color: #888;
+        }
+
+        .board-size-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(255,255,255,0.4);
+            border-color: #fff;
+            background-color: #555;
+        }
+
+        .board-size-btn .size-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
         #toast-container {
             position: fixed;
             top: 90px;
@@ -366,6 +408,20 @@
                             </div>
                             <input type="hidden" name="firstPlayer" id="player-value" value="human">
                         </div>
+                        <div class="mb-4">
+                            <h6 class="text-center mb-3">Choose board size</h6>
+                            <div class="board-size-selector">
+                                <button type="button" class="board-size-btn active" onclick="selectBoardSize(3, 'singleplayer')">
+                                    3x3x3
+                                    <span class="size-label">Classic</span>
+                                </button>
+                                <button type="button" class="board-size-btn" onclick="selectBoardSize(4, 'singleplayer')">
+                                    4x4x4
+                                    <span class="size-label">Extended</span>
+                                </button>
+                            </div>
+                            <input type="hidden" name="board_size" id="board-size-value" value="3">
+                        </div>
                         <div class="text-center">
                             <button type="submit" class="btn btn-custom">Start Game</button>
                         </div>
@@ -383,7 +439,7 @@
                 </div>
                 <div class="modal-body text-center">
                     <div class="d-grid gap-3">
-                        <button id="localButton" class="btn btn-custom">
+                        <button id="localButton" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#localGameModal">
                             <i class="fas fa-desktop me-2"></i>Local Game
                         </button>
                         <button id="playFriendButton" class="btn btn-custom">
@@ -392,6 +448,35 @@
                         <button id="onlineButton" class="btn btn-custom">
                             <i class="fas fa-globe me-2"></i>Online Game
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="localGameModal" tabindex="-1" aria-labelledby="localGameModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header justify-content-center border-0">
+                    <h5 class="modal-title" id="localGameModalLabel">Local Game Setup</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 class="text-center mb-3">Choose board size</h6>
+                        <div class="board-size-selector">
+                            <button type="button" class="board-size-btn active" onclick="selectBoardSize(3, 'local')">
+                                3x3x3
+                                <span class="size-label">Classic</span>
+                            </button>
+                            <button type="button" class="board-size-btn" onclick="selectBoardSize(4, 'local')">
+                                4x4x4
+                                <span class="size-label">Extended</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="local-board-size-value" value="3">
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-custom" onclick="startLocalGame()">Start Game</button>
                     </div>
                 </div>
             </div>
@@ -591,7 +676,6 @@
 
             document.getElementById('localButton')?.addEventListener('click', () => {
                 multiplayerModal.hide();
-                window.location.href = '/local/play';
             });
 
             document.getElementById('playFriendButton')?.addEventListener('click', () => {
@@ -690,6 +774,32 @@
                 document.getElementById('secondPlayer').classList.add('active');
                 document.getElementById('firstPlayer').classList.remove('active');
             }
+        }
+
+        function selectBoardSize(size, context) {
+            // Update the hidden input based on context
+            if (context === 'singleplayer') {
+                document.getElementById('board-size-value').value = size;
+                // Update button states within singleplayer modal
+                const container = document.getElementById('singleplayerModal');
+                container.querySelectorAll('.board-size-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.closest('.board-size-btn').classList.add('active');
+            } else if (context === 'local') {
+                document.getElementById('local-board-size-value').value = size;
+                // Update button states within local modal
+                const container = document.getElementById('localGameModal');
+                container.querySelectorAll('.board-size-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.closest('.board-size-btn').classList.add('active');
+            }
+        }
+
+        function startLocalGame() {
+            const boardSize = document.getElementById('local-board-size-value').value;
+            window.location.href = '/local/play?board_size=' + boardSize;
         }
 
         function showToast() {

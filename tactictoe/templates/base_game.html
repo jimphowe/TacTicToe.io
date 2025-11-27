@@ -84,6 +84,10 @@
         let highlightMaterial;
         const SNAP_DURATION    = 400;     // ms
 
+        // Board size configuration - passed from Django template
+        const BOARD_SIZE = {{ board_size|default:3 }};
+        const MAX_COORD = BOARD_SIZE - 1;
+
         let isPointerDragging  = false;
         let draggedThisGesture = false;
         let suppressNextClick  = false;
@@ -195,15 +199,17 @@
 
         function adjustCameraForScreenSize() {
             const aspect = window.innerWidth / window.innerHeight;
+            // Increase camera distance for 4x4x4 boards
+            const boardSizeMultiplier = BOARD_SIZE === 4 ? 1.35 : 1.0;
 
             if (isMobile) {
                 camera.fov = mobileFOV;
-                cameraDistance = 14;
-                camera.position.set(10, 6, 4);
+                cameraDistance = 14 * boardSizeMultiplier;
+                camera.position.set(10 * boardSizeMultiplier, 6 * boardSizeMultiplier, 4 * boardSizeMultiplier);
             } else {
                 camera.fov = desktopFOV;
-                cameraDistance = 10;
-                camera.position.set(7, 4, 3);
+                cameraDistance = 10 * boardSizeMultiplier;
+                camera.position.set(7 * boardSizeMultiplier, 4 * boardSizeMultiplier, 3 * boardSizeMultiplier);
             }
 
             camera.lookAt(scene.position);
@@ -379,28 +385,30 @@
         tubeMaterial = new THREE.MeshPhongMaterial({ color: boardColor });
 
         // var tubeMaterial = new THREE.MeshPhongMaterial({ color: 0xedd8a8});
+        // Calculate cube dimensions based on board size
+        var cubeSize = BOARD_SIZE * 2;  // 6 for 3x3x3, 8 for 4x4x4
+        var halfCubeSize = cubeSize / 2;
+
         var edgePaths = [
-            new THREE.Vector3(-3, -3, -3),
-            new THREE.Vector3(3, -3, -3),
-            new THREE.Vector3(3, 3, -3),
-            new THREE.Vector3(-3, 3, -3),
-            new THREE.Vector3(-3, -3, 3),
-            new THREE.Vector3(3, -3, 3),
-            new THREE.Vector3(3, 3, 3),
-            new THREE.Vector3(-3, 3, 3),
+            new THREE.Vector3(-halfCubeSize, -halfCubeSize, -halfCubeSize),
+            new THREE.Vector3(halfCubeSize, -halfCubeSize, -halfCubeSize),
+            new THREE.Vector3(halfCubeSize, halfCubeSize, -halfCubeSize),
+            new THREE.Vector3(-halfCubeSize, halfCubeSize, -halfCubeSize),
+            new THREE.Vector3(-halfCubeSize, -halfCubeSize, halfCubeSize),
+            new THREE.Vector3(halfCubeSize, -halfCubeSize, halfCubeSize),
+            new THREE.Vector3(halfCubeSize, halfCubeSize, halfCubeSize),
+            new THREE.Vector3(-halfCubeSize, halfCubeSize, halfCubeSize),
         ];
 
         edgePaths.forEach((start, index) => {
             edgePaths.forEach((end, subIndex) => {
-                if (start.distanceTo(end) === 6) {
+                if (start.distanceTo(end) === cubeSize) {
                     addTube(start.toArray(), end.toArray());
                 }
             });
         });
 
-        var cubeSize = 6;
-        var halfCubeSize = cubeSize / 2;
-        var divisionSize = cubeSize / 3;
+        var divisionSize = cubeSize / BOARD_SIZE;
         for (let offset = -halfCubeSize; offset <= halfCubeSize; offset += divisionSize) {
             for (let z = -halfCubeSize; z <= halfCubeSize; z += divisionSize) {
                 addTube([-halfCubeSize, offset, z], [halfCubeSize, offset, z]);
@@ -416,7 +424,6 @@
         let baseQuaternion     = new THREE.Quaternion().copy(cubeGroup.quaternion);
         let dragQuaternion     = new THREE.Quaternion();
 
-        // Set Up Balls
         var sphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
         var redMaterial = new THREE.MeshPhongMaterial({color: 0xdf7053});
         var blueMaterial = new THREE.MeshPhongMaterial({color: 0x5b95e1});
@@ -453,19 +460,19 @@
             FRONT : { fixed:{axis:'y',val:0},  normal:new THREE.Vector3( 1, 0, 0),
                         col:'x', colInv:false, row:'z', rowInv:false },
 
-            BACK  : { fixed:{axis:'y',val:2},  normal:new THREE.Vector3(-1, 0, 0),
+            BACK  : { fixed:{axis:'y',val:MAX_COORD},  normal:new THREE.Vector3(-1, 0, 0),
                         col:'x', colInv:true,  row:'z', rowInv:false },
 
             LEFT  : { fixed:{axis:'x',val:0},  normal:new THREE.Vector3( 0, 0, 1),
                         col:'y', colInv:true,  row:'z', rowInv:false },
 
-            RIGHT : { fixed:{axis:'x',val:2},  normal:new THREE.Vector3( 0, 0,-1),
+            RIGHT : { fixed:{axis:'x',val:MAX_COORD},  normal:new THREE.Vector3( 0, 0,-1),
                         col:'y', colInv:false, row:'z', rowInv:false },
 
             TOP   : { fixed:{axis:'z',val:0},  normal:new THREE.Vector3( 0, 1, 0),
                         col:'x', colInv:false, row:'y', rowInv:true  },
 
-            BOTTOM: { fixed:{axis:'z',val:2},  normal:new THREE.Vector3( 0,-1, 0),
+            BOTTOM: { fixed:{axis:'z',val:MAX_COORD},  normal:new THREE.Vector3( 0,-1, 0),
                         col:'x', colInv:false, row:'y', rowInv:false }
         };
 
@@ -477,13 +484,13 @@
 
             mobilePanelGroup.clear();
 
-            for (let row = 0; row < 3; row++) {
-                for (let col = 0; col < 3; col++) {
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
 
                 const board = {x:0, y:0, z:0};
                 board[cfg.fixed.axis] = cfg.fixed.val;
-                board[cfg.col] = cfg.colInv ? 2 - col : col;
-                board[cfg.row] = cfg.rowInv ? 2 - row : row;
+                board[cfg.col] = cfg.colInv ? MAX_COORD - col : col;
+                board[cfg.row] = cfg.rowInv ? MAX_COORD - row : row;
 
                 const centre = gameToThreePosition(board.x, board.y, board.z);
                 const pos = centre.clone().add(cfg.normal.clone().multiplyScalar(1.05));
@@ -716,12 +723,15 @@
             sphere.add(blackSphere);
 
             const dotPositions = [
-                [0, 1, 0], [0, -1, 0], [1, 0, 0], 
+                [0, 1, 0], [0, -1, 0], [1, 0, 0],
                 [-1, 0, 0], [0, 0, 1], [0, 0, -1]
             ];
 
+            // Scale dot size proportionally to sphere size
+            const dotSize = BOARD_SIZE === 4 ? 0.12 : 0.15;
+
             dotPositions.forEach(pos => {
-                const dotGeometry = new THREE.SphereGeometry(0.15, 32, 32);
+                const dotGeometry = new THREE.SphereGeometry(dotSize, 32, 32);
                 let dot;
                 if (color == "blue") {
                     dot = new THREE.Mesh(dotGeometry, blueDotMaterial);
@@ -729,15 +739,16 @@
                 else {
                     dot = new THREE.Mesh(dotGeometry, redDotMaterial);
                 }
-                
-                const radius = 0.7;
-                dot.position.set(pos[0] * radius, pos[1] * radius, pos[2] * radius);
-                
+
+                // Use sphereRadius for dot positioning
+                const sphereRadius = 0.7;
+                dot.position.set(pos[0] * sphereRadius, pos[1] * sphereRadius, pos[2] * sphereRadius);
+
                 const scale = 1;
                 dot.scale.set(scale, scale, 0.01);
-                
+
                 dot.lookAt(0, 0, 0);
-                
+
                 sphere.add(dot);
             });
 
@@ -764,7 +775,7 @@
                         default:
                             sphere = new THREE.Mesh(sphereGeometry, emptyMaterial);
                     }
-                    sphere.position.set(-y*2+2, -z*2+2, -x*2+2);
+                    sphere.position.set(-y*2+MAX_COORD, -z*2+MAX_COORD, -x*2+MAX_COORD);
                     sphere.userData = {
                         position: {x: x, y: y, z: z},
                         originalPosition: {x: x, y: y, z: z},
@@ -773,7 +784,7 @@
                     if (y == 0) {
                         clickableSpheres.push(sphere);
                     }
-                    piecesGroup.add(sphere); 
+                    piecesGroup.add(sphere);
                 });
             });
         });
@@ -784,8 +795,9 @@
         var raycaster = new THREE.Raycaster();
         var mouse = new THREE.Vector2();
 
-        // Camera position
-        camera.position.set(7, 4, 3);
+        // Camera position - adjusted for board size
+        const initialCameraMultiplier = BOARD_SIZE === 4 ? 1.35 : 1.0;
+        camera.position.set(7 * initialCameraMultiplier, 4 * initialCameraMultiplier, 3 * initialCameraMultiplier);
         camera.lookAt(scene.position);
 
         function resizeRenderer() {
@@ -1011,15 +1023,17 @@
                 }
             });
             
-            if (sortedRow.length === 3) {
-                const middlePiece = sortedRow[1];
+            if (sortedRow.length === BOARD_SIZE) {
+                // For visual effect, if there's an empty middle we only jiggle the first pieces
+                const middleIndex = Math.floor(BOARD_SIZE / 2);
+                const middlePiece = sortedRow[middleIndex];
                 const middlePieceType = getPieceType(middlePiece);
-                
+
                 if (middlePieceType === 'EMPTY') {
-                    return sortedRow.slice(0, 2);
+                    return sortedRow.slice(0, middleIndex);
                 }
             }
-            
+
             return row;
         }
 
@@ -1194,7 +1208,7 @@
                     break;
                 case 'BACK':
                     clickableCoord = 'y';
-                    clickableValue = 2;
+                    clickableValue = MAX_COORD;
                     break;
                 case 'LEFT':
                     clickableCoord = 'x';
@@ -1202,7 +1216,7 @@
                     break;
                 case 'RIGHT':
                     clickableCoord = 'x';
-                    clickableValue = 2;
+                    clickableValue = MAX_COORD;
                     break;
                 case 'TOP':
                     clickableCoord = 'z';
@@ -1210,7 +1224,7 @@
                     break;
                 case 'BOTTOM':
                     clickableCoord = 'z';
-                    clickableValue = 2;
+                    clickableValue = MAX_COORD;
                     break;
                 default:
                     clickableCoord = 'y';
@@ -1237,16 +1251,16 @@
                 var z = sphere.userData.position.z;
                 switch (direction) {
                     case 'UP':
-                        sphere.userData.position = { x: x, y: -z + 2, z: y };
+                        sphere.userData.position = { x: x, y: -z + MAX_COORD, z: y };
                         break;
                     case 'DOWN':
-                        sphere.userData.position = { x: x, y: z, z: -y + 2 };
+                        sphere.userData.position = { x: x, y: z, z: -y + MAX_COORD };
                         break;
                     case 'LEFT':
-                        sphere.userData.position = { x: y, y: -x + 2, z: z };
+                        sphere.userData.position = { x: y, y: -x + MAX_COORD, z: z };
                         break;
                     case 'RIGHT':
-                        sphere.userData.position = { x: -y + 2, y: x, z: z };
+                        sphere.userData.position = { x: -y + MAX_COORD, y: x, z: z };
                         break;
                 }
             });
@@ -1427,7 +1441,9 @@
         }
 
         function gameToThreePosition(x, y, z) {
-            return new THREE.Vector3(-y * 2 + 2, -z * 2 + 2, -x * 2 + 2);
+            // Convert game coordinates to Three.js world coordinates
+            // For 3x3x3: ranges from -2 to +2, for 4x4x4: ranges from -3 to +3
+            return new THREE.Vector3(-y * 2 + MAX_COORD, -z * 2 + MAX_COORD, -x * 2 + MAX_COORD);
         }
 
         function findPieceAtPosition(pos) {

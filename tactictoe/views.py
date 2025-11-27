@@ -59,7 +59,8 @@ def multiplayer_view(request):
 
 def local_game_view(request):
     template = loader.get_template('local_game.html')
-    game = GamePlayer('easy', 'RED')
+    board_size = int(request.GET.get('board_size', 3))
+    game = GamePlayer('easy', 'RED', board_size)
 
     request.session['game_player'] = game.serialize()
     request.session.modified = True
@@ -69,6 +70,7 @@ def local_game_view(request):
         'player_color': 'RED',
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'board_size': board_size,
     }
 
     return HttpResponse(template.render(context, request))
@@ -138,21 +140,23 @@ def handle_local_move(request):
 def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
     firstPlayer = request.GET.get('firstPlayer', 'human')
+    board_size = int(request.GET.get('board_size', 3))
     humanColor = 'RED' if firstPlayer == 'human' else 'BLUE'
     computerColor = 'RED' if firstPlayer == 'computer' else 'BLUE'
-    game = GamePlayer(difficulty, computerColor)
+    game = GamePlayer(difficulty, computerColor, board_size)
     if firstPlayer == 'computer':
         game.makeComputerMove(isBlockerMove=False)
 
     request.session['game_player'] = game.serialize()
     request.session.modified = True
-    
+
     context = {
         'game_state': json.dumps(game.board.getState()),
         'difficulty': difficulty,
         'player_color': humanColor,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'board_size': board_size,
     }
 
     template = loader.get_template('singleplayer_game.html')
@@ -217,10 +221,14 @@ def handle_computer_blocker_move(request):
     game_player = request.session.get('game_player')
     if not game_player:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
-    
+
     game = GamePlayer.deserialize(game_player)
 
-    if (game.computer_color == Piece.BLUE and game.blue_blocker_count >= 3) or (game.computer_color == Piece.RED and game.red_blocker_count >= 3) or json.loads(game_player).get('difficulty') == 'easy':
+    # Use dynamic blocker limits based on board size
+    max_blockers = game.max_blue_blockers if game.computer_color == Piece.BLUE else game.max_red_blockers
+    current_count = game.blue_blocker_count if game.computer_color == Piece.BLUE else game.red_blocker_count
+
+    if current_count >= max_blockers or json.loads(game_player).get('difficulty') == 'easy':
         return JsonResponse({
             'status': 'forbidden',
             'message': 'Computer cannot place blocker'
@@ -350,7 +358,8 @@ def multiplayer_game_view(request, game_code):
         'is_game_over': game.completed,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
-        'friend_room_code': friend_room_code
+        'friend_room_code': friend_room_code,
+        'board_size': game.board_size,
     }
     return render(request, 'multiplayer_game.html', context)
 
@@ -376,13 +385,13 @@ def handle_multiplayer_move(request):
     
     with transaction.atomic():
         game = get_object_or_404(Game, game_code=game_code)
-        
+
         if request.user.id != game.turn.id:
             return JsonResponse({'status': 'error', 'message': 'not_your_turn'}, status=403)
-        
+
         player = p1_color if request.user.id == game.player_one.id else p2_color
-        
-        board = Board()
+
+        board = Board(game.board_size)
         board.setState(json.loads(game.game_state))
 
         try:
@@ -407,14 +416,14 @@ def handle_multiplayer_move(request):
                 game.turn = game.player_one
             game.last_move_time = now
 
-        board = Board()
+        board = Board(game.board_size)
         board.setState(json.loads(game.game_state))
-        
+
         winner = None
         winner_color = None
         winning_run = None
         is_tie = False
-        
+
         if board.hasWon(p1_color):
             winner = game.player_one
             winner_color = p1_color.value
@@ -476,7 +485,7 @@ def game_state(request, game_code):
     if not game.winner.id == request.user.id:
         elo_change *= -1
     if game.completed:
-        board = Board()
+        board = Board(game.board_size)
         board.setState(json.loads(game.game_state))
 
         winner_color = 'RED' if game.winner == game.player_one else 'BLUE'
