@@ -12,6 +12,27 @@ class Piece(Enum):
 # Board size configuration: 3 for 3x3x3, 4 for 4x4x4
 DEFAULT_BOARD_SIZE = 3
 
+# Zobrist hashing tables for efficient board state hashing
+# Initialized lazily per board size
+_zobrist_tables = {}
+
+def _init_zobrist_table(size):
+    """Initialize Zobrist hash table for a given board size."""
+    if size in _zobrist_tables:
+        return _zobrist_tables[size]
+
+    random.seed(42)  # Fixed seed for reproducibility
+    table = {}
+    pieces = list(Piece)
+    for x in range(size):
+        for y in range(size):
+            for z in range(size):
+                for piece in pieces:
+                    table[(x, y, z, piece)] = random.getrandbits(64)
+    random.seed()  # Reset to random seed
+    _zobrist_tables[size] = table
+    return table
+
 class Board:
     def __init__(self, board_size=DEFAULT_BOARD_SIZE):
         self.size = board_size
@@ -31,6 +52,18 @@ class Board:
                     self._runsByPosition[pos] = []
                 self._runsByPosition[pos].append(run)
 
+        # Initialize Zobrist hashing for efficient state caching
+        self._zobrist_table = _init_zobrist_table(board_size)
+        self._zobrist_hash = self._compute_full_hash()
+
+        # Transposition table for caching evaluated positions
+        # Key: (zobrist_hash, player, depth) -> result
+        self._win_in_one_cache = {}
+        self._win_in_two_cache = {}
+
+        # Cache for run statistics (invalidated on moves)
+        self._run_stats_cache = {}
+
     def setupBoard(self,pieces):
         self.pieces = [[[Piece.EMPTY for _ in range(self.size)] for _ in range(self.size)] for _ in range(self.size)]
         for _ in range(pieces):
@@ -42,6 +75,30 @@ class Board:
             y = random.randrange(self.size)
             z = random.randrange(self.size)
           self.pieces[x][y][z] = Piece.BLACK
+
+    def _compute_full_hash(self):
+        """Compute the full Zobrist hash of the current board state."""
+        h = 0
+        table = self._zobrist_table
+        pieces = self.pieces
+        for x in range(self.size):
+            for y in range(self.size):
+                for z in range(self.size):
+                    piece = pieces[x][y][z]
+                    h ^= table[(x, y, z, piece)]
+        return h
+
+    def _update_hash(self, x, y, z, old_piece, new_piece):
+        """Incrementally update the Zobrist hash after a piece change."""
+        table = self._zobrist_table
+        self._zobrist_hash ^= table[(x, y, z, old_piece)]
+        self._zobrist_hash ^= table[(x, y, z, new_piece)]
+
+    def _invalidate_caches(self):
+        """Invalidate position-dependent caches after a move."""
+        self._win_in_one_cache.clear()
+        self._win_in_two_cache.clear()
+        self._run_stats_cache.clear()
 
     def hasSuperCorners(self):
         # Super corner detection only applies to 3x3x3 boards
@@ -85,6 +142,10 @@ class Board:
     
     def setState(self, state):
         self.pieces = [[[Piece(piece_string) for piece_string in row] for row in layer] for layer in state]
+        # Recompute hash and clear caches after state change
+        self._zobrist_hash = self._compute_full_hash()
+        self._invalidate_caches()
+        self.moveHistory = []  # Clear move history since we can't undo past state loads
 
     # Returns a list of all N-in-a-row lines in the board (N = board size)
     # Used to check if the game is over
@@ -247,11 +308,13 @@ class Board:
         raise ValueError
       else:
         lastMove = self.moveHistory.pop()
-        x, y, z, dir, pushed_pieces = lastMove
+        x, y, z, dir, pushed_pieces, old_hash = lastMove
+        self._invalidate_caches()
+
         if pushed_pieces == 0:
           self.pieces[x][y][z] = Piece.EMPTY
         else:
-          # Define direction deltas for reverse movement
+          # Define direction deltas for the original push direction
           deltas = {
               'UP': (0, 0, -1),
               'DOWN': (0, 0, 1),
@@ -262,24 +325,40 @@ class Board:
           }
           dx, dy, dz = deltas[dir]
 
-          # Shift pieces back from furthest to nearest
-          # The empty spot is at position (x + dx*pushed_pieces, y + dy*pushed_pieces, z + dz*pushed_pieces)
-          for i in range(pushed_pieces, 0, -1):
-            src_x, src_y, src_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
-            dst_x, dst_y, dst_z = x + dx * i, y + dy * i, z + dz * i
-            self.pieces[src_x][src_y][src_z] = self.pieces[dst_x][dst_y][dst_z]
+          # To undo a push, we need to shift pieces back in reverse order
+          # Move started at (x,y,z) and pushed pieces in direction (dx,dy,dz)
+          # After move: [NEW_PIECE, old_piece_0, old_piece_1, ..., old_piece_n-1]
+          # We need to restore: [old_piece_0, old_piece_1, ..., old_piece_n-1, EMPTY]
 
-          # Clear the position where the new piece was (furthest pushed position)
+          # Shift pieces back from position 0 outward (nearest to furthest)
+          for i in range(1, pushed_pieces + 1):
+            # Source is where the piece ended up (i positions from start)
+            src_x, src_y, src_z = x + dx * i, y + dy * i, z + dz * i
+            # Destination is one position back toward start
+            dst_x, dst_y, dst_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
+            self.pieces[dst_x][dst_y][dst_z] = self.pieces[src_x][src_y][src_z]
+
+          # Clear the furthest position (where the last piece was pushed to)
           self.pieces[x + dx * pushed_pieces][y + dy * pushed_pieces][z + dz * pushed_pieces] = Piece.EMPTY
+
+        # Restore the hash directly (must be after piece restoration)
+        self._zobrist_hash = old_hash
             
     def moveAI(self,x,y,z,dir,player):
         if player == "RED":
             player = Piece.RED
         elif player == "BLUE":
             player = Piece.BLUE
+
+        # Save hash before move for undo
+        old_hash = self._zobrist_hash
+        self._invalidate_caches()
+
         if (self.pieces[x][y][z] == Piece.EMPTY):
+                old_piece = self.pieces[x][y][z]
                 self.pieces[x][y][z] = player
-                self.moveHistory.append((x,y,z,dir,0))
+                self._update_hash(x, y, z, old_piece, player)
+                self.moveHistory.append((x,y,z,dir,0,old_hash))
         else:
             # Define direction deltas
             deltas = {
@@ -303,15 +382,20 @@ class Board:
                 cy += dy
                 cz += dz
 
-            # Shift pieces from furthest to nearest
+            # Shift pieces from furthest to nearest, updating hash incrementally
             for i in range(pushed_pieces, 0, -1):
                 src_x, src_y, src_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
                 dst_x, dst_y, dst_z = x + dx * i, y + dy * i, z + dz * i
-                self.pieces[dst_x][dst_y][dst_z] = self.pieces[src_x][src_y][src_z]
+                old_dst = self.pieces[dst_x][dst_y][dst_z]
+                src_piece = self.pieces[src_x][src_y][src_z]
+                self._update_hash(dst_x, dst_y, dst_z, old_dst, src_piece)
+                self.pieces[dst_x][dst_y][dst_z] = src_piece
 
             # Place the new piece
+            old_piece = self.pieces[x][y][z]
+            self._update_hash(x, y, z, old_piece, player)
             self.pieces[x][y][z] = player
-            self.moveHistory.append((x,y,z,dir,pushed_pieces))
+            self.moveHistory.append((x,y,z,dir,pushed_pieces,old_hash))
 
     # Makes a move after checking if it is valid
     # If there is a piece in the specified location, it is pushed in the specified direction, along with any pieces behind it
@@ -330,9 +414,15 @@ class Board:
              print(exc)
              raise ValueError(exc)
         else:
+            # Save hash before move for undo
+            old_hash = self._zobrist_hash
+            self._invalidate_caches()
+
             if (self.pieces[x][y][z] == Piece.EMPTY):
+                old_piece = self.pieces[x][y][z]
                 self.pieces[x][y][z] = player
-                self.moveHistory.append((x,y,z,dir,0))
+                self._update_hash(x, y, z, old_piece, player)
+                self.moveHistory.append((x,y,z,dir,0,old_hash))
             else:
                 # Define direction deltas
                 deltas = {
@@ -356,15 +446,20 @@ class Board:
                     cy += dy
                     cz += dz
 
-                # Shift pieces from furthest to nearest
+                # Shift pieces from furthest to nearest, updating hash incrementally
                 for i in range(pushed_pieces, 0, -1):
                     src_x, src_y, src_z = x + dx * (i - 1), y + dy * (i - 1), z + dz * (i - 1)
                     dst_x, dst_y, dst_z = x + dx * i, y + dy * i, z + dz * i
-                    self.pieces[dst_x][dst_y][dst_z] = self.pieces[src_x][src_y][src_z]
+                    old_dst = self.pieces[dst_x][dst_y][dst_z]
+                    src_piece = self.pieces[src_x][src_y][src_z]
+                    self._update_hash(dst_x, dst_y, dst_z, old_dst, src_piece)
+                    self.pieces[dst_x][dst_y][dst_z] = src_piece
 
                 # Place the new piece
+                old_piece = self.pieces[x][y][z]
+                self._update_hash(x, y, z, old_piece, player)
                 self.pieces[x][y][z] = player
-                self.moveHistory.append((x,y,z,dir,pushed_pieces))
+                self.moveHistory.append((x,y,z,dir,pushed_pieces,old_hash))
 
     # Returns a string representation of the gameboard, for debugging purposes
     def getStatePretty(self):
@@ -476,22 +571,81 @@ class Board:
       possible_moves = self.getPossibleMoves(power_dict[player.value])
       return random.choice(possible_moves)
 
+    def _get_near_complete_runs(self, player: Piece):
+        """Find runs where player has N-1 pieces and 1 empty spot (can win in one move)."""
+        cache_key = ('near_complete', player)
+        if cache_key in self._run_stats_cache:
+            return self._run_stats_cache[cache_key]
+
+        near_complete = []
+        pieces = self.pieces
+        target = self.size - 1  # Need N-1 pieces to win in one
+
+        for run in self.winningRuns:
+            player_count = 0
+            empty_pos = None
+            blocked = False
+            for pos in run:
+                piece = pieces[pos[0]][pos[1]][pos[2]]
+                if piece == player:
+                    player_count += 1
+                elif piece == Piece.EMPTY:
+                    if empty_pos is None:
+                        empty_pos = pos
+                    else:
+                        blocked = True  # More than one empty
+                        break
+                else:
+                    blocked = True  # Opponent or blocker
+                    break
+            if not blocked and player_count == target and empty_pos is not None:
+                near_complete.append((run, empty_pos))
+
+        self._run_stats_cache[cache_key] = near_complete
+        return near_complete
+
     # Loops through possible moves and returns if a move wins the game, else returns None
     def getWinInOne(self, player: Piece, power_dict):
-        for (x, y, z, dir) in self.getPossibleMoves(power_dict[player.value]):
+        # Check cache first
+        cache_key = (self._zobrist_hash, player, power_dict[player.value])
+        if cache_key in self._win_in_one_cache:
+            return self._win_in_one_cache[cache_key]
+
+        available_power = power_dict[player.value]
+
+        # Fast path: check near-complete runs first (most likely to have winning moves)
+        near_complete = self._get_near_complete_runs(player)
+        for _run, empty_pos in near_complete:
+            x, y, z = empty_pos
+            # Check if we can place at this empty position
+            for dir in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'FRONT', 'BACK']:
+                if self.valid(x, y, z, dir):
+                    cost = self.count_pieces_pushed(x, y, z, dir)
+                    if cost <= available_power:
+                        # This move should win - verify
+                        self.moveAI(x, y, z, dir, player)
+                        if self.hasWonAt(player, x, y, z):
+                            self.undo()
+                            self._win_in_one_cache[cache_key] = (x, y, z, dir)
+                            return (x, y, z, dir)
+                        self.undo()
+                    break  # Only need one valid direction per position
+
+        # Also check push-based wins (where pushing creates a line)
+        for (x, y, z, dir) in self.getPossibleMoves(available_power):
+            # Skip empty positions (already checked above)
+            if self.pieces[x][y][z] == Piece.EMPTY:
+                continue
+
             self.moveAI(x, y, z, dir, player)
-            # Check how many pieces were pushed (stored in moveHistory)
-            pieces_pushed = self.moveHistory[-1][4] if self.moveHistory else 0
-            if pieces_pushed == 0:
-                # No push - can use fast check, only runs containing (x,y,z) matter
-                won = self.hasWonAt(player, x, y, z)
-            else:
-                # Pieces were pushed - need full check as pushed pieces could form wins
-                won = self.hasWon(player)
-            if won:
+            # Push moves need full check since pushed pieces can form wins
+            if self.hasWon(player):
                 self.undo()
+                self._win_in_one_cache[cache_key] = (x, y, z, dir)
                 return (x, y, z, dir)
             self.undo()
+
+        self._win_in_one_cache[cache_key] = None
         return None
     
     # Loops through possible moves and returns a move which prevents the opponent from winning 
@@ -626,49 +780,94 @@ class Board:
             return potential_moves[0][0]
         return None
 
+    def _score_move_for_ordering(self, x, y, z, _dir, player: Piece):
+        """Quick heuristic score for move ordering - higher is better."""
+        score = 0
+        pieces = self.pieces
+
+        # Prefer moves that place near our pieces
+        for run in self._runsByPosition.get((x, y, z), []):
+            player_count = sum(1 for pos in run if pieces[pos[0]][pos[1]][pos[2]] == player)
+            score += player_count * 10
+
+        # Prefer empty positions (cheaper)
+        if pieces[x][y][z] == Piece.EMPTY:
+            score += 5
+
+        # Prefer strategic positions
+        if self.size == 3 and (x, y, z) == (1, 1, 1):
+            score += 15
+        elif self.size == 4 and x in [1, 2] and y in [1, 2] and z in [1, 2]:
+            score += 10
+
+        return score
+
     # Loops through possible moves and for each one examines all possible opponent moves.
     # If there are any moves which allow the given player to win after any opponent move,
     # return one at random. Otherwise, return None
     def getWinInTwo(self, player: Piece, power_dict):
+        # Check cache first
+        cache_key = (self._zobrist_hash, player, power_dict[player.value])
+        if cache_key in self._win_in_two_cache:
+            return self._win_in_two_cache[cache_key]
+
         winningMove = self.getWinInOne(player, power_dict)
         if winningMove:
+            self._win_in_two_cache[cache_key] = winningMove
             return winningMove
+
         potential_moves = []
         opponent = self.otherPlayer(player)
-
         moves_made = self.numPieces(Piece.RED) + self.numPieces(Piece.BLUE)
 
         all_moves = self.getPossibleMoves(power_dict[player.value])
 
-        # For 4x4x4, limit search to avoid exponential blowup
-        # Sample moves if there are too many
-        if self.size == 4 and len(all_moves) > 30:
-            all_moves = random.sample(all_moves, 30)
+        # Move ordering: score moves and sort best-first for faster pruning
+        scored_moves = [(m, self._score_move_for_ordering(m[0], m[1], m[2], m[3], player)) for m in all_moves]
+        scored_moves.sort(key=lambda x: x[1], reverse=True)
+        all_moves = [m for m, _ in scored_moves]
+
+        # For 4x4x4, limit search but take best moves, not random
+        max_moves = 40 if self.size == 4 else len(all_moves)
+        all_moves = all_moves[:max_moves]
 
         for (x, y, z, dir) in all_moves:
             first_move_cost = self.count_pieces_pushed(x, y, z, dir)
             remaining_power = power_dict[player.value] - first_move_cost + GamePlayer.get_power_gain(moves_made)
             self.moveAI(x, y, z, dir, player)
-            if self.getWinInOne(opponent, power_dict) == None:
+
+            if self.getWinInOne(opponent, power_dict) is None:
                 winner = True
                 opponent_moves = self.getPossibleMoves(power_dict[opponent.value])
 
-                # For 4x4x4, also limit opponent move checking
-                if self.size == 4 and len(opponent_moves) > 25:
-                    opponent_moves = random.sample(opponent_moves, 25)
+                # Order opponent moves too - check their best moves first
+                opp_scored = [(m, self._score_move_for_ordering(m[0], m[1], m[2], m[3], opponent)) for m in opponent_moves]
+                opp_scored.sort(key=lambda x: x[1], reverse=True)
+                opponent_moves = [m for m, _ in opp_scored]
+
+                # For 4x4x4, limit opponent moves but take best, not random
+                max_opp_moves = 30 if self.size == 4 else len(opponent_moves)
+                opponent_moves = opponent_moves[:max_opp_moves]
 
                 for (x2, y2, z2, dir2) in opponent_moves:
                     self.moveAI(x2, y2, z2, dir2, opponent)
-                    if self.getWinInOne(player, {player.value: remaining_power, opponent.value: power_dict[opponent.value]}) == None:
+                    if self.getWinInOne(player, {player.value: remaining_power, opponent.value: power_dict[opponent.value]}) is None:
                         winner = False
                         self.undo()
-                        break  # Early termination - no need to check more opponent moves
+                        break  # Early termination
                     self.undo()
+
                 if winner:
                     potential_moves.append((x, y, z, dir))
+                    # Early exit: found a winning move
+                    self.undo()
+                    result = (x, y, z, dir)
+                    self._win_in_two_cache[cache_key] = result
+                    return result
+
             self.undo()
-        if potential_moves:
-            return random.choice(potential_moves)
+
+        self._win_in_two_cache[cache_key] = None
         return None
     
     # Returns a random move which is either a middle or edge
@@ -826,11 +1025,63 @@ class Board:
                 if 0 <= x <= max_c and 0 <= y <= max_c and 0 <= z <= max_c
                 and not self.isCenter(x, y, z)]
     
+    def _score_position_for_player(self, x, y, z, player: Piece):
+        """Score how valuable a position is for the player's own piece (not blocker).
+        Higher score = better position for player's piece = should NOT put blocker here."""
+        score = 0
+        pieces = self.pieces
+
+        # Count how many of player's runs this position contributes to
+        for run in self._runsByPosition.get((x, y, z), []):
+            player_count = 0
+            blocked = False
+            for pos in run:
+                piece = pieces[pos[0]][pos[1]][pos[2]]
+                if piece == player:
+                    player_count += 1
+                elif piece != Piece.EMPTY and piece != Piece.BLACK:
+                    blocked = True
+                    break
+            if not blocked:
+                # More valuable if player already has pieces in this run
+                score += (player_count + 1) * 10
+
+        # Bonus for strategic positions
+        corners = self.getCorners()
+        if (x, y, z) in corners:
+            # Corners are the most valuable positions
+            score += 20
+
+        if self.size == 3:
+            # Face centers get a slight bonus (positions in the middle of each face)
+            face_centers = [(1, 0, 1), (1, 2, 1), (0, 1, 1), (2, 1, 1), (1, 1, 0), (1, 1, 2)]
+            if (x, y, z) in face_centers:
+                score += 8
+        else:  # 4x4x4
+            # Middle 2x2 on each face gets a slight bonus
+            face_middles = set()
+            m = self.max_coord
+            for i in [1, 2]:
+                for j in [1, 2]:
+                    face_middles.add((0, i, j))   # left face
+                    face_middles.add((m, i, j))   # right face
+                    face_middles.add((i, 0, j))   # front face
+                    face_middles.add((i, m, j))   # back face
+                    face_middles.add((i, j, 0))   # bottom face
+                    face_middles.add((i, j, m))   # top face
+            if (x, y, z) in face_middles:
+                score += 8
+
+        return score
+
     def getGoodBlockerMove(self, player: Piece, power_dict):
       defending_move = self.getDefendingMove(player, power_dict)
       winning_move = self.getWinInOne(player, power_dict)
       if defending_move or winning_move:
           return None
+
+      # Find all blocker positions that would create a defending opportunity
+      effective_blockers = []
       for blocker_move in self.getPossibleBlockerMoves():
           (x,y,z,dir) = blocker_move
           self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
@@ -839,11 +1090,20 @@ class Board:
           winning_move = self.getWinInOne(player, power_dict)
 
           if defending_move or winning_move:
-              self.undo()
-              return (blocker_move, False)
+              # Score this blocker position - LOWER score means better for blocker
+              # (we want to save high-value positions for our actual pieces)
+              pos_score = self._score_position_for_player(x, y, z, player)
+              effective_blockers.append((blocker_move, pos_score, defending_move))
           self.undo()
+
+      if effective_blockers:
+          # Sort by position score (ascending) - put blocker in LEAST valuable position
+          effective_blockers.sort(key=lambda item: item[1])
+          best_blocker, _, _ = effective_blockers[0]
+          return (best_blocker, False)
+
       if random.random() < 0.5:
-        return (self.getRandomBlockerMove(player), True)
+        return (self.getRandomBlockerMove(), True)
       else:
         return (self.getGoodIntermediateBlockerMove(player), True)
     
@@ -878,6 +1138,8 @@ class Board:
       potential_blocks = list(set(potential_blocks))
       valid_blocker_moves = [self.spotToValidDir(x,y,z) for (x,y,z) in potential_blocks if self.spotToValidDir(x,y,z)]
 
+      # Find all effective blocker positions and score them
+      effective_blockers = []
       for blocker_move in valid_blocker_moves:
           (x,y,z,dir) = blocker_move
           self.moveAI(x, y, z, dir, Piece.BLUE_BLOCKER)
@@ -886,9 +1148,18 @@ class Board:
           winning_move = self.getWinInOne(player, power_dict) or self.getWinInTwo(player, power_dict)
 
           if (defending_move and not initial_defending_move) or winning_move:
-              self.undo()
-              return (blocker_move, True)
+              # Score this position - LOWER is better for placing a blocker
+              # (we want to save high-value positions for our actual pieces)
+              pos_score = self._score_position_for_player(x, y, z, player)
+              effective_blockers.append((blocker_move, pos_score))
           self.undo()
+
+      if effective_blockers:
+          # Sort by position score (ascending) - put blocker in LEAST valuable position
+          effective_blockers.sort(key=lambda item: item[1])
+          best_blocker, _ = effective_blockers[0]
+          return (best_blocker, True)
+
       if initial_defending_move:
           return None
       return (self.getGoodIntermediateBlockerMove(player), True)
@@ -899,11 +1170,8 @@ class EasyAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
-        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
-        if board.size == 4:
-            return board.getRandomMove(self.player, power_dict)
-
-        threat = board.getWinInOne(Board.otherPlayer(self, self.player), power_dict)
+        # Easy agent: basic threat detection and simple defense
+        threat = board.getWinInOne(board.otherPlayer(self.player), power_dict)
         if threat:
             x,y,z,_ = threat
             if board.pieces[x][y][z] == Piece.EMPTY:
@@ -927,10 +1195,7 @@ class MediumAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
-        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
-        if board.size == 4:
-            return board.getRandomMove(self.player, power_dict)
-
+        # Medium agent: win detection + good defending moves
         if move_num == 0:
            return board.getGoodStartMove(self.player, power_dict)
         winningMove = board.getWinInOne(self.player, power_dict)
@@ -947,9 +1212,6 @@ class MediumAgent:
             return board.getRandomMove(self.player, power_dict)
 
     def getBlockerMove(self, board: Board, power_dict):
-       # For 4x4x4 boards, skip blocker moves for now
-       if board.size == 4:
-           return None
        return (board.getRandomBlockerMove(), False)
           
 class HardAgent:
@@ -957,10 +1219,7 @@ class HardAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
-        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
-        if board.size == 4:
-            return board.getRandomMove(self.player, power_dict)
-
+        # Hard agent: full win-in-two lookahead + best defending moves
         if move_num == 0:
            return board.getBestDefendingMove(self.player, power_dict)
         elif move_num == 1:
@@ -989,9 +1248,6 @@ class HardAgent:
                 return board.getRandomMove(self.player, power_dict)
 
     def getBlockerMove(self, board: Board, power_dict):
-       # For 4x4x4 boards, skip blocker moves for now
-       if board.size == 4:
-           return None
        return board.getGoodBlockerMove(self.player, power_dict)
 
 class ExpertAgent:
@@ -999,10 +1255,7 @@ class ExpertAgent:
         self.player = player
 
     def getMove(self, board: Board, move_num, power_dict):
-        # For 4x4x4 boards, just use random moves for now (AI optimization TODO)
-        if board.size == 4:
-            return board.getRandomMove(self.player, power_dict)
-
+        # Expert agent: full win-in-two lookahead + best defending moves everywhere
         if move_num == 0:
            return board.getBestDefendingMove(self.player, power_dict)
         elif move_num == 1:
@@ -1031,9 +1284,6 @@ class ExpertAgent:
                 return board.getRandomMove(self.player, power_dict)
 
     def getBlockerMove(self, board: Board, power_dict):
-       # For 4x4x4 boards, skip blocker moves for now
-       if board.size == 4:
-           return None
        return board.getBetterBlockerMove(self.player, power_dict)
     
 class GamePlayer:
@@ -1047,9 +1297,9 @@ class GamePlayer:
         self.blue_blocker_count = 0
         self.moves_made = 0
         self.difficulty = difficulty
-        # Set blocker limits based on board size
-        self.max_red_blockers = 3 if board_size == 3 else 4
-        self.max_blue_blockers = 4 if board_size == 3 else 5
+        # Set blocker limits (same for all board sizes and colors)
+        self.max_red_blockers = 3
+        self.max_blue_blockers = 3
         match(difficulty):
             case 'easy':
                 self.computer = EasyAgent(self.computer_color)
@@ -1216,11 +1466,8 @@ class Game(models.Model):
     completed_at = models.DateTimeField(auto_now=True)
 
     def get_max_blockers(self, color):
-        """Get max blocker count based on board size and color."""
-        if self.board_size == 3:
-            return 3 if color == 'RED' else 4
-        else:  # 4x4x4
-            return 4 if color == 'RED' else 5
+        """Get max blocker count (same for all board sizes and colors)."""
+        return 3
 
     @classmethod
     def create(cls, **kwargs):
