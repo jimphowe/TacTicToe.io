@@ -442,7 +442,7 @@ def handle_multiplayer_move(request):
             game.completed = True
             game.completed_at = datetime.now()
             game.winner = winner
-            game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
+            game.elo_change = update_elo_ratings(game.game_type, game.board_size, game.player_one, game.player_two, winner)
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
@@ -516,7 +516,7 @@ def handle_resignation(request):
     game.completed = True
     game.completed_at = datetime.now()
     game.winner = winner
-    game.elo_change = update_elo_ratings(game.game_type, game.player_one, game.player_two, winner)
+    game.elo_change = update_elo_ratings(game.game_type, game.board_size, game.player_one, game.player_two, winner)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -879,9 +879,12 @@ from django.db.models import OuterRef, Subquery
 from .models import UserProfile, EloRating, User
 
 def leaderboard_view(request):
+    board_size = int(request.GET.get('board_size', 3))
+
     rapid_elo_subquery = EloRating.objects.filter(
         user_profile=OuterRef('pk'),
-        game_type='rapid'
+        game_type='rapid',
+        board_size=board_size
     ).values('rating')[:1]
 
     top_users = UserProfile.objects.annotate(
@@ -890,7 +893,7 @@ def leaderboard_view(request):
         rapid_elo__isnull=False
     ).order_by('-rapid_elo', 'user__username')[:50]
 
-    return render(request, 'leaderboard.html', {'top_users': top_users})
+    return render(request, 'leaderboard.html', {'top_users': top_users, 'board_size': board_size})
 
 from django.utils import timezone
 
