@@ -1241,48 +1241,65 @@ class HardAgent:
     def getBlockerMove(self, board: Board, power_dict):
        return board.getGoodBlockerMove(self.player, power_dict)
 
-# Old ExpertAgent (heuristic-based, replaced by minimax version)
-# Kept for reference - uses 2-ply lookahead with getWinInTwo
-# class ExpertAgent:
-#     def __init__(self,player):
-#         self.player = player
-#
-#     def getMove(self, board: Board, move_num, power_dict):
-#         # Expert agent: full win-in-two lookahead + best defending moves everywhere
-#         if move_num == 0:
-#            return board.getBestDefendingMove(self.player, power_dict)
-#         elif move_num == 1:
-#           winInTwo = board.getWinInTwo(self.player, power_dict)
-#           if winInTwo:
-#             return winInTwo
-#           else:
-#             defendingMove = board.getBestDefendingMove(self.player, power_dict)
-#             if defendingMove:
-#               return defendingMove
-#             else:
-#               return board.getRandomMove(self.player, power_dict)
-#         else:
-#           winningMove = board.getWinInOne(self.player, power_dict)
-#           if winningMove:
-#             return winningMove
-#           else:
-#             winInTwo = board.getWinInTwo(self.player, power_dict)
-#             if winInTwo:
-#               return winInTwo
-#             else:
-#               defendingMove = board.getBestDefendingMove(self.player, power_dict)
-#               if defendingMove:
-#                 return defendingMove
-#               else:
-#                 return board.getRandomMove(self.player, power_dict)
-#
-#     def getBlockerMove(self, board: Board, power_dict):
-#        return board.getBetterBlockerMove(self.player, power_dict)
+# Old ExpertAgent (heuristic-based, not minimax)
+# Uses 2-ply lookahead with getWinInTwo but no full minimax search
+class OldHeuristicExpertAgent:
+    def __init__(self,player):
+        self.player = player
 
-class ExpertAgent:
+    def getMove(self, board: Board, move_num, power_dict):
+        # Expert agent: full win-in-two lookahead + best defending moves everywhere
+        if move_num == 0:
+           return board.getBestDefendingMove(self.player, power_dict)
+        elif move_num == 1:
+          winInTwo = board.getWinInTwo(self.player, power_dict)
+          if winInTwo:
+            return winInTwo
+          else:
+            defendingMove = board.getBestDefendingMove(self.player, power_dict)
+            if defendingMove:
+              return defendingMove
+            else:
+              return board.getRandomMove(self.player, power_dict)
+        else:
+          winningMove = board.getWinInOne(self.player, power_dict)
+          if winningMove:
+            return winningMove
+          else:
+            winInTwo = board.getWinInTwo(self.player, power_dict)
+            if winInTwo:
+              return winInTwo
+            else:
+              defendingMove = board.getBestDefendingMove(self.player, power_dict)
+              if defendingMove:
+                return defendingMove
+              else:
+                return board.getRandomMove(self.player, power_dict)
+
+    def getBlockerMove(self, board: Board, power_dict):
+       return board.getBetterBlockerMove(self.player, power_dict)
+
+# NOTE: MinmaxAgent is left here for future work as the future direction of AI agents.
+# Currently, the heuristic-based OldHeuristicExpertAgent (aliased as ExpertAgent)
+# outperforms this minimax implementation, particularly in defensive play when going
+# second. The minimax approach struggles with:
+# - Properly valuing blocker placement (blockers aren't part of the search tree)
+# - Balancing offensive and defensive evaluation
+# - Early game positioning
+# Future improvements could include: integrating blocker decisions into the search,
+# better evaluation of fork positions, and deeper search with better pruning.
+class MinmaxAgent:
     """
-    Advanced AI agent using minimax with alpha-beta pruning.
-    Searches deeper than HardAgent for stronger play.
+    Experimental AI agent using minimax with alpha-beta pruning.
+
+    NOT CURRENTLY USED - see OldHeuristicExpertAgent (ExpertAgent) for the
+    production AI. This is preserved for future development.
+
+    Features:
+    - Minimax search with alpha-beta pruning
+    - Transposition table for caching
+    - Fork detection in evaluation
+    - Defensive heuristic fallback for win-in-two threats
     """
     def __init__(self, player):
         self.player = player
@@ -1310,6 +1327,15 @@ class ExpertAgent:
             if defending:
                 return defending
 
+        # Check for opponent's win-in-two threat - critical for defense!
+        opp_win_in_two = board.getWinInTwo(opponent, power_dict)
+        if opp_win_in_two:
+            # Opponent has a forcing sequence - use defensive heuristic
+            # to find a move that blocks it
+            defending = board.getBestDefendingMove(self.player, power_dict)
+            if defending:
+                return defending
+
         # Use minimax for deeper search
         max_depth = self.max_depth_3x3 if board.size == 3 else self.max_depth_4x4
         self._transposition_table.clear()  # Clear for this search
@@ -1320,8 +1346,8 @@ class ExpertAgent:
         beta = float('inf')
 
         moves = board.getPossibleMoves(power_dict[self.player.value])
-        # Order moves for better pruning
-        scored_moves = [(m, self._quick_score(board, m, self.player)) for m in moves]
+        # Order moves for better pruning - include defensive considerations
+        scored_moves = [(m, self._quick_score(board, m, self.player, opponent)) for m in moves]
         scored_moves.sort(key=lambda x: x[1], reverse=True)
         moves = [m for m, _ in scored_moves]
 
@@ -1354,11 +1380,14 @@ class ExpertAgent:
 
         return best_move if best_move else board.getRandomMove(self.player, power_dict)
 
-    def _quick_score(self, board: Board, move, player: Piece):
-        """Quick heuristic for move ordering."""
+    def _quick_score(self, board: Board, move, player: Piece, opponent: Piece = None):
+        """Quick heuristic for move ordering with defensive considerations."""
         x, y, z, _ = move
         score = 0
         pieces = board.pieces
+
+        if opponent is None:
+            opponent = board.otherPlayer(player)
 
         # Prefer strategic positions
         if board.size == 3:
@@ -1368,14 +1397,26 @@ class ExpertAgent:
             if x in [1, 2] and y in [1, 2] and z in [1, 2]:
                 score += 15
 
-        # Prefer moves near our pieces
+        # Evaluate runs through this position
         for run in board._runsByPosition.get((x, y, z), []):
             player_count = sum(1 for pos in run if pieces[pos[0]][pos[1]][pos[2]] == player)
+            opp_count = sum(1 for pos in run if pieces[pos[0]][pos[1]][pos[2]] == opponent)
+
+            # Prefer moves that extend our runs
             score += player_count * 10
+
+            # DEFENSIVE: Also prioritize moves that block opponent runs
+            if opp_count > 0 and player_count == 0:
+                # This move would block an opponent run
+                score += opp_count * 8  # High priority for blocking
 
         # Prefer empty positions (cheaper)
         if pieces[x][y][z] == Piece.EMPTY:
             score += 5
+
+        # Bonus for displacing opponent pieces
+        if pieces[x][y][z] == opponent:
+            score += 12
 
         return score
 
@@ -1456,12 +1497,22 @@ class ExpertAgent:
             return min_eval
 
     def _evaluate(self, board: Board, power_dict: dict) -> float:
-        """Evaluate board position from perspective of self.player."""
+        """Evaluate board position from perspective of self.player.
+
+        Improved defensive evaluation that:
+        1. Heavily penalizes opponent threats (N-1 in a row)
+        2. Detects and massively penalizes opponent forks (multiple threats)
+        3. Values blocking opponent runs
+        """
         score = 0.0
         opponent = board.otherPlayer(self.player)
         pieces = board.pieces
         size = board.size
         target = size - 1  # N-1 in a row is threatening
+
+        # Track threat counts for fork detection
+        my_threats = 0      # Runs where we have N-1 and can win
+        opp_threats = 0     # Runs where opponent has N-1 and can win
 
         # Evaluate all winning runs
         for run in board.winningRuns:
@@ -1492,6 +1543,7 @@ class ExpertAgent:
                     score += 10000  # Won
                 elif my_count == target:
                     score += 100  # One away from winning
+                    my_threats += 1
                 elif my_count == target - 1:
                     score += 20  # Two away
                 else:
@@ -1502,11 +1554,26 @@ class ExpertAgent:
                 if opp_count == size:
                     score -= 10000  # Lost
                 elif opp_count == target:
-                    score -= 150  # Threat! Higher penalty
+                    score -= 150  # Threat - same as V1
+                    opp_threats += 1
                 elif opp_count == target - 1:
-                    score -= 25
+                    score -= 25  # Two away - same as V1
                 else:
                     score -= opp_count * 3
+
+            elif my_count > 0 and opp_count > 0:
+                # Contested run - we're blocking them
+                score += my_count * 2  # Small blocking bonus
+
+        # KEY IMPROVEMENT: Penalize opponent forks (multiple simultaneous threats)
+        # A fork means opponent has 2+ ways to win - we can only block one
+        # This is the main defensive improvement over V1
+        if opp_threats >= 2:
+            score -= 1000 * (opp_threats - 1)  # Heavy penalty for forks
+
+        # Bonus for our forks (creating multiple winning threats)
+        if my_threats >= 2:
+            score += 500 * (my_threats - 1)
 
         # Position bonuses
         corners = board.getCorners()
@@ -1545,7 +1612,14 @@ class ExpertAgent:
         return score
 
     def getBlockerMove(self, board: Board, power_dict):
+        """
+        Use the heuristic-based blocker logic which is better at finding
+        blockers that unlock defensive options.
+        """
         return board.getBetterBlockerMove(self.player, power_dict)
+
+# Alias for the current best version
+ExpertAgent = OldHeuristicExpertAgent
 
 class GamePlayer:
     def __init__(self, difficulty, computerColor, board_size=DEFAULT_BOARD_SIZE):
