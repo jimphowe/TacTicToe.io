@@ -1819,6 +1819,7 @@ class Game(models.Model):
     @classmethod
     def start_new_game(cls, player_one, player_two, game_type, board_size=DEFAULT_BOARD_SIZE):
         board = Board(board_size)
+        time_limit = timedelta(seconds=300) if board_size == 4 else timedelta(seconds=180)
         game = cls.create(
             player_one=player_one,
             player_two=player_two,
@@ -1826,7 +1827,9 @@ class Game(models.Model):
             board_size=board_size,
             game_state=json.dumps(board.getState()),
             turn=player_one,
-            completed=False
+            completed=False,
+            player_one_time_left=time_limit,
+            player_two_time_left=time_limit
         )
         game.save()
         return game
