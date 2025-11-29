@@ -12,39 +12,36 @@ class Piece(Enum):
 # Board size configuration: 3 for 3x3x3, 4 for 4x4x4
 DEFAULT_BOARD_SIZE = 3
 
-# Zobrist hashing tables for efficient board state hashing
-# Initialized lazily per board size
+# Zobrist hashing for transposition tables
+# See: https://www.chessprogramming.org/Zobrist_Hashing
 _zobrist_tables = {}
 
 def _init_zobrist_table(size):
-    """Initialize Zobrist hash table for a given board size."""
     if size in _zobrist_tables:
         return _zobrist_tables[size]
 
-    random.seed(42)  # Fixed seed for reproducibility
+    random.seed(42)
     table = {}
-    pieces = list(Piece)
     for x in range(size):
         for y in range(size):
             for z in range(size):
-                for piece in pieces:
+                for piece in Piece:
                     table[(x, y, z, piece)] = random.getrandbits(64)
-    random.seed()  # Reset to random seed
+    random.seed()
     _zobrist_tables[size] = table
     return table
 
 class Board:
     def __init__(self, board_size=DEFAULT_BOARD_SIZE):
         self.size = board_size
-        self.max_coord = board_size - 1  # 2 for 3x3x3, 3 for 4x4x4
-        # Number of starting neutral pieces scales with board size
+        self.max_coord = board_size - 1
         starting_pieces = 8 if board_size == 3 else 16
         self.setupBoard(starting_pieces)
         while self.hasSuperCorners() or self.hasSuperFaces():
            self.setupBoard(starting_pieces)
         self.winningRuns = self.getWinningRuns()
         self.moveHistory = []
-        # Build index: for each position, which runs contain it
+
         self._runsByPosition = {}
         for run in self.winningRuns:
             for pos in run:
@@ -52,16 +49,10 @@ class Board:
                     self._runsByPosition[pos] = []
                 self._runsByPosition[pos].append(run)
 
-        # Initialize Zobrist hashing for efficient state caching
         self._zobrist_table = _init_zobrist_table(board_size)
         self._zobrist_hash = self._compute_full_hash()
-
-        # Transposition table for caching evaluated positions
-        # Key: (zobrist_hash, player, depth) -> result
         self._win_in_one_cache = {}
         self._win_in_two_cache = {}
-
-        # Cache for run statistics (invalidated on moves)
         self._run_stats_cache = {}
 
     def setupBoard(self,pieces):
@@ -1250,42 +1241,312 @@ class HardAgent:
     def getBlockerMove(self, board: Board, power_dict):
        return board.getGoodBlockerMove(self.player, power_dict)
 
+# Old ExpertAgent (heuristic-based, replaced by minimax version)
+# Kept for reference - uses 2-ply lookahead with getWinInTwo
+# class ExpertAgent:
+#     def __init__(self,player):
+#         self.player = player
+#
+#     def getMove(self, board: Board, move_num, power_dict):
+#         # Expert agent: full win-in-two lookahead + best defending moves everywhere
+#         if move_num == 0:
+#            return board.getBestDefendingMove(self.player, power_dict)
+#         elif move_num == 1:
+#           winInTwo = board.getWinInTwo(self.player, power_dict)
+#           if winInTwo:
+#             return winInTwo
+#           else:
+#             defendingMove = board.getBestDefendingMove(self.player, power_dict)
+#             if defendingMove:
+#               return defendingMove
+#             else:
+#               return board.getRandomMove(self.player, power_dict)
+#         else:
+#           winningMove = board.getWinInOne(self.player, power_dict)
+#           if winningMove:
+#             return winningMove
+#           else:
+#             winInTwo = board.getWinInTwo(self.player, power_dict)
+#             if winInTwo:
+#               return winInTwo
+#             else:
+#               defendingMove = board.getBestDefendingMove(self.player, power_dict)
+#               if defendingMove:
+#                 return defendingMove
+#               else:
+#                 return board.getRandomMove(self.player, power_dict)
+#
+#     def getBlockerMove(self, board: Board, power_dict):
+#        return board.getBetterBlockerMove(self.player, power_dict)
+
 class ExpertAgent:
-    def __init__(self,player):
+    """
+    Advanced AI agent using minimax with alpha-beta pruning.
+    Searches deeper than HardAgent for stronger play.
+    """
+    def __init__(self, player):
         self.player = player
+        self._transposition_table = {}
+        # Depth limits - tuned to stay under 1000ms per move
+        self.max_depth_3x3 = 4  # Deeper for smaller board
+        self.max_depth_4x4 = 3  # Slightly shallower for larger board
 
     def getMove(self, board: Board, move_num, power_dict):
-        # Expert agent: full win-in-two lookahead + best defending moves everywhere
-        if move_num == 0:
-           return board.getBestDefendingMove(self.player, power_dict)
-        elif move_num == 1:
-          winInTwo = board.getWinInTwo(self.player, power_dict)
-          if winInTwo:
-            return winInTwo
-          else:
-            defendingMove = board.getBestDefendingMove(self.player, power_dict)
-            if defendingMove:
-              return defendingMove
-            else:
-              return board.getRandomMove(self.player, power_dict)
-        else:
-          winningMove = board.getWinInOne(self.player, power_dict)
-          if winningMove:
+        # Quick checks first
+        winningMove = board.getWinInOne(self.player, power_dict)
+        if winningMove:
             return winningMove
-          else:
-            winInTwo = board.getWinInTwo(self.player, power_dict)
-            if winInTwo:
-              return winInTwo
-            else:
-              defendingMove = board.getBestDefendingMove(self.player, power_dict)
-              if defendingMove:
-                return defendingMove
-              else:
-                return board.getRandomMove(self.player, power_dict)
+
+        opponent = board.otherPlayer(self.player)
+        threat = board.getWinInOne(opponent, power_dict)
+        if threat:
+            # Must block - check if we can block at that position
+            x, y, z, _ = threat
+            for (mx, my, mz, mdir) in board.getPossibleMoves(power_dict[self.player.value]):
+                if mx == x and my == y and mz == z:
+                    return (mx, my, mz, mdir)
+            # Fallback to any defending move
+            defending = board.getDefendingMove(self.player, power_dict)
+            if defending:
+                return defending
+
+        # Use minimax for deeper search
+        max_depth = self.max_depth_3x3 if board.size == 3 else self.max_depth_4x4
+        self._transposition_table.clear()  # Clear for this search
+
+        best_move = None
+        best_score = float('-inf')
+        alpha = float('-inf')
+        beta = float('inf')
+
+        moves = board.getPossibleMoves(power_dict[self.player.value])
+        # Order moves for better pruning
+        scored_moves = [(m, self._quick_score(board, m, self.player)) for m in moves]
+        scored_moves.sort(key=lambda x: x[1], reverse=True)
+        moves = [m for m, _ in scored_moves]
+
+        # Limit moves to evaluate for 4x4x4
+        if board.size == 4:
+            moves = moves[:30]
+
+        for move in moves:
+            x, y, z, direction = move
+            pieces_pushed = board.count_pieces_pushed(x, y, z, direction)
+            board.moveAI(x, y, z, direction, self.player)
+
+            # Update power for next ply
+            moves_made = board.numPieces(Piece.RED) + board.numPieces(Piece.BLUE)
+            new_power = {
+                self.player.value: min(5, power_dict[self.player.value] - pieces_pushed + GamePlayer.get_power_gain(moves_made)),
+                opponent.value: power_dict[opponent.value]
+            }
+
+            score = self._minimax(board, max_depth - 1, alpha, beta, False, opponent, new_power)
+            board.undo()
+
+            if score > best_score:
+                best_score = score
+                best_move = move
+
+            alpha = max(alpha, score)
+            if beta <= alpha:
+                break
+
+        return best_move if best_move else board.getRandomMove(self.player, power_dict)
+
+    def _quick_score(self, board: Board, move, player: Piece):
+        """Quick heuristic for move ordering."""
+        x, y, z, _ = move
+        score = 0
+        pieces = board.pieces
+
+        # Prefer strategic positions
+        if board.size == 3:
+            if (x, y, z) == (1, 1, 1):
+                score += 20  # Center is very valuable
+        else:
+            if x in [1, 2] and y in [1, 2] and z in [1, 2]:
+                score += 15
+
+        # Prefer moves near our pieces
+        for run in board._runsByPosition.get((x, y, z), []):
+            player_count = sum(1 for pos in run if pieces[pos[0]][pos[1]][pos[2]] == player)
+            score += player_count * 10
+
+        # Prefer empty positions (cheaper)
+        if pieces[x][y][z] == Piece.EMPTY:
+            score += 5
+
+        return score
+
+    def _minimax(self, board: Board, depth: int, alpha: float, beta: float,
+                 is_maximizing: bool, current_player: Piece, power_dict: dict) -> float:
+        """Minimax with alpha-beta pruning and transposition table."""
+
+        # Check transposition table
+        tt_key = (board._zobrist_hash, depth, is_maximizing, current_player)
+        if tt_key in self._transposition_table:
+            return self._transposition_table[tt_key]
+
+        # Terminal conditions
+        if board.hasWon(self.player):
+            return 10000 + depth  # Prefer faster wins
+        if board.hasWon(board.otherPlayer(self.player)):
+            return -10000 - depth  # Avoid faster losses
+
+        if depth == 0 or board.isTie():
+            score = self._evaluate(board, power_dict)
+            self._transposition_table[tt_key] = score
+            return score
+
+        opponent = board.otherPlayer(current_player)
+        moves = board.getPossibleMoves(power_dict[current_player.value])
+
+        # Limit moves for deeper searches
+        if len(moves) > 20 and depth < 3:
+            scored_moves = [(m, self._quick_score(board, m, current_player)) for m in moves]
+            scored_moves.sort(key=lambda x: x[1], reverse=True)
+            moves = [m for m, _ in scored_moves[:20]]
+
+        if is_maximizing:
+            max_eval = float('-inf')
+            for move in moves:
+                x, y, z, direction = move
+                pieces_pushed = board.count_pieces_pushed(x, y, z, direction)
+                board.moveAI(x, y, z, direction, current_player)
+
+                moves_made = board.numPieces(Piece.RED) + board.numPieces(Piece.BLUE)
+                new_power = {
+                    current_player.value: min(5, power_dict[current_player.value] - pieces_pushed + GamePlayer.get_power_gain(moves_made)),
+                    opponent.value: power_dict[opponent.value]
+                }
+
+                eval_score = self._minimax(board, depth - 1, alpha, beta, False, opponent, new_power)
+                board.undo()
+
+                max_eval = max(max_eval, eval_score)
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break
+
+            self._transposition_table[tt_key] = max_eval
+            return max_eval
+        else:
+            min_eval = float('inf')
+            for move in moves:
+                x, y, z, direction = move
+                pieces_pushed = board.count_pieces_pushed(x, y, z, direction)
+                board.moveAI(x, y, z, direction, current_player)
+
+                moves_made = board.numPieces(Piece.RED) + board.numPieces(Piece.BLUE)
+                new_power = {
+                    current_player.value: min(5, power_dict[current_player.value] - pieces_pushed + GamePlayer.get_power_gain(moves_made)),
+                    opponent.value: power_dict[opponent.value]
+                }
+
+                eval_score = self._minimax(board, depth - 1, alpha, beta, True, opponent, new_power)
+                board.undo()
+
+                min_eval = min(min_eval, eval_score)
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    break
+
+            self._transposition_table[tt_key] = min_eval
+            return min_eval
+
+    def _evaluate(self, board: Board, power_dict: dict) -> float:
+        """Evaluate board position from perspective of self.player."""
+        score = 0.0
+        opponent = board.otherPlayer(self.player)
+        pieces = board.pieces
+        size = board.size
+        target = size - 1  # N-1 in a row is threatening
+
+        # Evaluate all winning runs
+        for run in board.winningRuns:
+            my_count = 0
+            opp_count = 0
+            empty_count = 0
+            blocked = False
+
+            for pos in run:
+                piece = pieces[pos[0]][pos[1]][pos[2]]
+                if piece == self.player:
+                    my_count += 1
+                elif piece == opponent:
+                    opp_count += 1
+                elif piece == Piece.EMPTY:
+                    empty_count += 1
+                else:
+                    blocked = True  # Blocker or BLACK
+                    break
+
+            if blocked:
+                continue
+
+            # Score based on piece counts
+            if my_count > 0 and opp_count == 0:
+                # We own this run
+                if my_count == size:
+                    score += 10000  # Won
+                elif my_count == target:
+                    score += 100  # One away from winning
+                elif my_count == target - 1:
+                    score += 20  # Two away
+                else:
+                    score += my_count * 3
+
+            elif opp_count > 0 and my_count == 0:
+                # Opponent owns this run
+                if opp_count == size:
+                    score -= 10000  # Lost
+                elif opp_count == target:
+                    score -= 150  # Threat! Higher penalty
+                elif opp_count == target - 1:
+                    score -= 25
+                else:
+                    score -= opp_count * 3
+
+        # Position bonuses
+        corners = board.getCorners()
+        middles = board.getMiddles()
+
+        for x in range(size):
+            for y in range(size):
+                for z in range(size):
+                    piece = pieces[x][y][z]
+                    pos = (x, y, z)
+                    if piece == self.player:
+                        if pos in corners:
+                            score += 5
+                        if pos in middles:
+                            score += 3
+                        # Center bonus
+                        if size == 3 and pos == (1, 1, 1):
+                            score += 10
+                        elif size == 4 and x in [1, 2] and y in [1, 2] and z in [1, 2]:
+                            score += 5
+                    elif piece == opponent:
+                        if pos in corners:
+                            score -= 5
+                        if pos in middles:
+                            score -= 3
+                        if size == 3 and pos == (1, 1, 1):
+                            score -= 10
+                        elif size == 4 and x in [1, 2] and y in [1, 2] and z in [1, 2]:
+                            score -= 5
+
+        # Power advantage
+        my_power = power_dict.get(self.player.value, 0)
+        opp_power = power_dict.get(opponent.value, 0)
+        score += (my_power - opp_power) * 2
+
+        return score
 
     def getBlockerMove(self, board: Board, power_dict):
-       return board.getBetterBlockerMove(self.player, power_dict)
-    
+        return board.getBetterBlockerMove(self.player, power_dict)
+
 class GamePlayer:
     def __init__(self, difficulty, computerColor, board_size=DEFAULT_BOARD_SIZE):
         self.board_size = board_size
