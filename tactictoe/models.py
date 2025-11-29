@@ -1752,13 +1752,14 @@ GAME_TYPES = [
 class EloRating(models.Model):
     user_profile = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='elo_ratings')
     game_type = models.CharField(max_length=20, choices=GAME_TYPES)
+    board_size = models.IntegerField(default=3)
     rating = models.IntegerField(default=1500)
 
     class Meta:
-        unique_together = ('user_profile', 'game_type')
+        unique_together = ('user_profile', 'game_type', 'board_size')
 
     def __str__(self):
-        return f"{self.user_profile.user.username} elo: {self.rating}"
+        return f"{self.user_profile.user.username} {self.board_size}x{self.board_size}x{self.board_size} elo: {self.rating}"
 
 import json
 import string

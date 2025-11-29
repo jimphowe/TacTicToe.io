@@ -48,6 +48,34 @@
             left: 20px;
             z-index: 1000;
         }
+        .board-size-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .board-size-toggle a {
+            padding: 10px 24px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background: #2c2c2c;
+            color: #888;
+            border: 1px solid #444;
+        }
+        .board-size-toggle a:hover {
+            background: #3a3a3a;
+            color: #fff;
+            border-color: #555;
+        }
+        .board-size-toggle a.active {
+            background: #007BFF;
+            color: #fff;
+            border-color: #007BFF;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -57,6 +85,10 @@
 
     <div class="container p-4">
         <h1 class="text-center mb-4">Top Players</h1>
+        <div class="board-size-toggle">
+            <a href="?board_size=3" class="{% if board_size == 3 %}active{% endif %}">3x3x3</a>
+            <a href="?board_size=4" class="{% if board_size == 4 %}active{% endif %}">4x4x4</a>
+        </div>
         <ol class="list-group">
             {% for user_profile in top_users %}
             <li class="list-group-item d-flex justify-content-between align-items-center">

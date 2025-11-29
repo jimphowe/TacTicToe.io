@@ -1,12 +1,12 @@
 from django.db import transaction
 from .models import EloRating
 
-def update_elo_ratings(game_type, player_one, player_two, winner):
+def update_elo_ratings(game_type, board_size, player_one, player_two, winner):
     p1_profile = player_one.profile
     p2_profile = player_two.profile
-    
-    p1_elo, _ = EloRating.objects.get_or_create(user_profile=p1_profile, game_type=game_type)
-    p2_elo, _ = EloRating.objects.get_or_create(user_profile=p2_profile, game_type=game_type)
+
+    p1_elo, _ = EloRating.objects.get_or_create(user_profile=p1_profile, game_type=game_type, board_size=board_size)
+    p2_elo, _ = EloRating.objects.get_or_create(user_profile=p2_profile, game_type=game_type, board_size=board_size)
     
     expected_p1 = 1 / (1 + 10 ** ((p2_elo.rating - p1_elo.rating) / 400))
     expected_p2 = 1 - expected_p1
