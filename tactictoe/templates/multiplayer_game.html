@@ -11,15 +11,31 @@
         right: 0;
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        background-color: rgba(0, 0, 0, 0.7);
+        align-items: stretch;
         color: white;
-        padding: 10px 20px;
         z-index: 1000;
+        height: 60px;
     }
     .player-info {
         display: flex;
         align-items: center;
+        flex: 1;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+    }
+    .player-info.red-side {
+        background-color: rgba(60, 50, 50, 0.8);
+    }
+    .player-info.red-side.active {
+        background-color: rgba(140, 65, 55, 0.9);
+        box-shadow: inset 0 0 25px rgba(200, 90, 70, 0.4), 0 0 20px rgba(223, 112, 83, 0.5);
+    }
+    .player-info.blue-side {
+        background-color: rgba(50, 55, 65, 0.8);
+    }
+    .player-info.blue-side.active {
+        background-color: rgba(55, 90, 140, 0.9);
+        box-shadow: inset 0 0 25px rgba(80, 130, 200, 0.4), 0 0 20px rgba(91, 149, 225, 0.5);
     }
     .player-name-elo {
         display: flex;
@@ -72,14 +88,14 @@
 </style>
 {% load static %}
 <div class="top-bar">
-    <div class="player-info">
+    <div id="myPlayerInfo" class="player-info {% if player_color == 'RED' %}red-side{% else %}blue-side{% endif %}">
         <div class="player-name-elo">
             <span class="player-name">{{ player_name }}</span>
             <span class="player-elo"><i class="fas fa-trophy"></i> {{ player_elo }}</span>
         </div>
         <span id="myTimer" class="player-time">03:00</span>
     </div>
-    <div class="player-info">
+    <div id="opponentPlayerInfo" class="player-info {% if player_color == 'RED' %}blue-side{% else %}red-side{% endif %}" style="justify-content: flex-end;">
         <span id="opponentTimer" class="player-time">03:00</span>
         <div class="player-name-elo" style="text-align: right;">
             <span class="player-name">{{ opponent_name }}</span>
@@ -197,6 +213,18 @@
     function manageTimers(currentTurnId) {
         clearInterval(myInterval);
         clearInterval(opponentInterval);
+
+        // Update active player highlight
+        const myPlayerInfo = document.getElementById('myPlayerInfo');
+        const opponentPlayerInfo = document.getElementById('opponentPlayerInfo');
+
+        if (currentTurnId == myId) {
+            myPlayerInfo.classList.add('active');
+            opponentPlayerInfo.classList.remove('active');
+        } else {
+            myPlayerInfo.classList.remove('active');
+            opponentPlayerInfo.classList.add('active');
+        }
 
         const startTime = Date.now();
 
