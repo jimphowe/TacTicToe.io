@@ -5,27 +5,27 @@ window.PlayerGuide = function () {
   const guidePages = [
     {
       title: "Objective",
-      content: "Position 3 of your pieces in a row anywhere on the three-dimensional 3x3x3 game board. Players alternate turns placing their pieces until one achieves a run of 3 or the board fills up without a winner. If the board fills up, it's a tie!",
+      content: "Get 3 of your pieces in a line anywhere on the 3x3x3 cube. Winning lines can run along any axis, across any face diagonally, or through the cube's center from corner to corner. Players alternate turns until someone completes a line or the cube fills up (a tie).",
       images: ["/static/images/red_wins.png", "/static/images/tie_game.png"]
     },
     {
       title: "The Twist",
-      content: "You can either place a new piece in an empty square, or push existing pieces toward the back of the cube, as long as the row you push isn't full. Rotate the board using the buttons on screen or W, A, S, D to play on any side of the board.",
+      content: "On your turn, place a piece on any empty spot on the cube's outer surface. You can also push: if a spot is occupied, placing there pushes that piece (and any behind it) deeper into the cube, as long as there's an empty space for them to move into. Rotate the cube using the on-screen buttons or W, A, S, D keys to play on any face.",
       images: ["/static/images/before_push.png", "/static/images/after_push.png"]
     },
     {
       title: "Pushing Power",
-      content: "Pushing existing pieces in the cube costs \"Pushing Power\" for each piece you push. Throughout the game you will gain half a power per turn after you make your move. To start the game, Red has 0 power and Blue has 1. This serves to even out the first player advantage.",
+      content: "Pushing pieces costs \"Pushing Power\" — one power per piece pushed. You gain power as the game progresses: half a power after each of your turns. Red starts with 0 power and Blue starts with 1, which helps balance the first-move advantage.",
       images: ["/static/images/power_controls.png"]
     },
     {
       title: "Blocker Pieces",
-      content: "Blocker pieces are neutral pieces you can place in addition to your regular move. Use them strategically to prevent your opponent from winning or to secure your pieces in advantageous positions. Blockers must be placed on empty squares and cannot push other pieces.",
+      content: "Blockers are neutral pieces you can place in addition to your regular move. Use them strategically to block your opponent or protect key positions. When placing a blocker, you must choose an empty spot — you cannot push when placing a blocker.",
       images: ["/static/images/blocker_controls.png"]
     },
     {
       title: "Game Setup",
-      content: "Eight \"neutral\" black pieces start on the board as obstacles, placed in a random pattern generated each time you play. This makes every game unique, so your strategies need to be adaptable.",
+      content: "Eight neutral black pieces start on the cube as obstacles, randomly placed each game. This ensures every game is different, so you'll need to adapt your strategy to each new configuration.",
       images: ["/static/images/start_1.png", "/static/images/start_2.png"]
     }
   ];
