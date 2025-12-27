@@ -220,6 +220,12 @@
                         window.updateControlPanel(moveData.game_state, moveData.red_power, moveData.blue_power);
                         playSound("move");
 
+                        // Update undo state after complete turn
+                        if (moveData.can_undo !== undefined) {
+                            window.canUndo = moveData.can_undo;
+                            window.dispatchEvent(new Event('undoStateChanged'));
+                        }
+
                         if (moveData.winner || moveData.is_tie) {
                             handleGameOver(moveData.winner, moveData.winning_run);
                         }
@@ -235,5 +241,41 @@
             moving = false;
         }
     }
+
+    async function handleUndo() {
+        if (!window.undoEnabled || !window.canUndo || moving) {
+            return;
+        }
+        moving = true;
+        try {
+            const response = await fetch('/singleplayer/undo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                // Reset game over state if we're undoing after game ended
+                if (window.resetGameOver) {
+                    window.resetGameOver();
+                }
+                await updateGameState(data.game_state);
+                window.updateControlPanel(data.game_state, data.red_power, data.blue_power);
+                window.canUndo = data.can_undo;
+                window.dispatchEvent(new Event('undoStateChanged'));
+                playSound("move");
+            } else {
+                showToast(data.message || "Cannot undo");
+            }
+        } catch (error) {
+            console.log(error);
+            showToast("Unexpected Error");
+        } finally {
+            moving = false;
+        }
+    }
+    window.handleUndo = handleUndo;
 </script>
 {% endblock %}

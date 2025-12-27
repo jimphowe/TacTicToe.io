@@ -116,6 +116,8 @@
             window.bluePower = '{{ blue_power }}';
             window.myId = '{{ request.user.id }}';
             window.isBlockerSelected = false;
+            window.undoEnabled = {% if undo_enabled %}true{% else %}false{% endif %};
+            window.canUndo = {% if can_undo %}true{% else %}false{% endif %};
 
             const settingsRoot = document.getElementById('settings-panel-root');
             if (settingsRoot) {
@@ -865,6 +867,30 @@
 
         const highlightCubeGroup = new THREE.Group();
         cubeGroup.add(highlightCubeGroup);
+        window.highlightCubeGroup = highlightCubeGroup;
+
+        // Function to reset game over state (used by undo)
+        window.resetGameOver = function() {
+            // Reset gameOver flag
+            gameOver = false;
+
+            // Re-add click listener
+            window.addEventListener('click', onMouseClick, false);
+
+            // Clear winning run highlight
+            while (highlightCubeGroup.children.length > 0) {
+                highlightCubeGroup.remove(highlightCubeGroup.children[0]);
+            }
+
+            // Remove game over UI
+            const gameOverUI = document.getElementById('game-over-ui');
+            if (gameOverUI) {
+                gameOverUI.remove();
+            }
+
+            // Re-render
+            renderer.render(scene, camera);
+        };
 
         function highlightWinningRun(winner, winningRun) {
             if (!winningRun) return;

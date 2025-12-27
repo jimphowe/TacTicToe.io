@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tactictoe.views import home, signup, profile_view, save_colors, get_timers, player_guide, find_opponent, cancel_search, cancel_rematch, create_room, join_room, cancel_create_room, handle_rematch, leave_friend_room, game_state, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_multiplayer_move, handle_resignation, leaderboard_view
+from tactictoe.views import home, signup, profile_view, save_colors, get_timers, player_guide, find_opponent, cancel_search, cancel_rematch, create_room, join_room, cancel_create_room, handle_rematch, leave_friend_room, game_state, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_singleplayer_undo, handle_multiplayer_move, handle_resignation, leaderboard_view
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
@@ -31,10 +31,11 @@ urlpatterns = [
     path('game/<str:game_code>/', multiplayer_game_view, name='multiplayer_game_view'),
     path('multiplayer/move', handle_multiplayer_move, name='handle_multiplayer_move'),
     path('multiplayer/resign', handle_resignation, name='handle_resignation'),
-    path('singleplayer/play/', singleplayer_game_view, name='singleplayer_view'),    
+    path('singleplayer/play/', singleplayer_game_view, name='singleplayer_view'),
     path('singleplayer/player-move', handle_singleplayer_move, name='handle_singleplayer_move'),
     path('singleplayer/computer-blocker-move', handle_computer_blocker_move, name='handle_computer_blocker_move'),
     path('singleplayer/computer-move', handle_computer_move, name='get_computer_move'),
+    path('singleplayer/undo', handle_singleplayer_undo, name='handle_singleplayer_undo'),
     path('local/play/', local_game_view, name='local_game_view'),
     path('local/move', handle_local_move, name='handle_local_move'),
     path('leaderboard/', leaderboard_view, name='leaderboard'),

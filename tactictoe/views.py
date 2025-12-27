@@ -141,9 +141,10 @@ def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
     firstPlayer = request.GET.get('firstPlayer', 'human')
     board_size = int(request.GET.get('board_size', 3))
+    undo_enabled = request.GET.get('undo_enabled', 'false') == 'true'
     humanColor = 'RED' if firstPlayer == 'human' else 'BLUE'
     computerColor = 'RED' if firstPlayer == 'computer' else 'BLUE'
-    game = GamePlayer(difficulty, computerColor, board_size)
+    game = GamePlayer(difficulty, computerColor, board_size, undo_enabled)
     if firstPlayer == 'computer':
         game.makeComputerMove(isBlockerMove=False)
 
@@ -157,6 +158,8 @@ def singleplayer_game_view(request):
         'red_power': game.red_power,
         'blue_power': game.blue_power,
         'board_size': board_size,
+        'undo_enabled': undo_enabled,
+        'can_undo': game.can_undo(),
     }
 
     template = loader.get_template('singleplayer_game.html')
@@ -170,12 +173,16 @@ def handle_singleplayer_move(request):
     direction = data.get('direction')
     player = data.get('player')
     isBlockerMove = data.get('is_blocker_move')
-    
+
     game_player = request.session.get('game_player')
     if not game_player:
         return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
 
     game = GamePlayer.deserialize(game_player)
+
+    # Save state before player's regular move (not blocker move) for undo
+    if not isBlockerMove:
+        game.save_turn_state()
 
     try:
         pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
@@ -208,6 +215,7 @@ def handle_singleplayer_move(request):
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'can_undo': game.can_undo(),
         'push_info': {
             'origin': {'x': position.get('x'), 'y': position.get('y'), 'z': position.get('z')},
             'direction': direction,
@@ -264,7 +272,8 @@ def handle_computer_blocker_move(request):
             'is_tie': is_tie,
             'red_power': game.red_power,
             'blue_power': game.blue_power,
-            'block_again': block_again
+            'block_again': block_again,
+            'can_undo': game.can_undo()
         })
     except Exception as e:
         return JsonResponse({
@@ -309,11 +318,40 @@ def handle_computer_move(request):
         'winning_run': winning_run,
         'red_power': game.red_power,
         'blue_power': game.blue_power,
+        'can_undo': game.can_undo(),
         'push_info': {
             'origin': {'x': x, 'y': y, 'z': z},
             'direction': dir,
             'pieces_pushed': pieces_pushed
         }
+    })
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def handle_singleplayer_undo(request):
+    game_player = request.session.get('game_player')
+    if not game_player:
+        return JsonResponse({'status': 'error', 'message': 'Game not found'}, status=404)
+
+    game = GamePlayer.deserialize(game_player)
+
+    if not game.undo_enabled:
+        return JsonResponse({'status': 'error', 'message': 'Undo is not enabled'}, status=403)
+
+    if not game.undo_turn():
+        return JsonResponse({'status': 'error', 'message': 'No moves to undo'}, status=400)
+
+    request.session['game_player'] = game.serialize()
+    request.session.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'game_state': game.board.getState(),
+        'red_power': game.red_power,
+        'blue_power': game.blue_power,
+        'red_blocker_count': game.red_blocker_count,
+        'blue_blocker_count': game.blue_blocker_count,
+        'can_undo': game.can_undo()
     })
 
 from django.shortcuts import render, get_object_or_404

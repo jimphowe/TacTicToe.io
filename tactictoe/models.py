@@ -1622,7 +1622,7 @@ class MinmaxAgent:
 ExpertAgent = OldHeuristicExpertAgent
 
 class GamePlayer:
-    def __init__(self, difficulty, computerColor, board_size=DEFAULT_BOARD_SIZE):
+    def __init__(self, difficulty, computerColor, board_size=DEFAULT_BOARD_SIZE, undo_enabled=False):
         self.board_size = board_size
         self.board = Board(board_size)
         self.computer_color = Piece.RED if computerColor == 'RED' else Piece.BLUE
@@ -1632,6 +1632,8 @@ class GamePlayer:
         self.blue_blocker_count = 0
         self.moves_made = 0
         self.difficulty = difficulty
+        self.undo_enabled = undo_enabled
+        self.turn_history = []  # Stack of game state snapshots for undo
         # Set blocker limits (same for all board sizes and colors)
         self.max_red_blockers = 3
         self.max_blue_blockers = 3
@@ -1660,24 +1662,59 @@ class GamePlayer:
             'red_power': self.red_power,
             'blue_power': self.blue_power,
             'difficulty': self.difficulty,
-            'moves_made': self.moves_made
+            'moves_made': self.moves_made,
+            'undo_enabled': self.undo_enabled,
+            'turn_history': self.turn_history
         })
 
     @classmethod
     def deserialize(cls, serialized_data):
         data = json.loads(serialized_data)
         board_size = data.get('board_size', DEFAULT_BOARD_SIZE)
-        game_player = cls(data['difficulty'], data['computer_color'], board_size)
+        undo_enabled = data.get('undo_enabled', False)
+        game_player = cls(data['difficulty'], data['computer_color'], board_size, undo_enabled)
         game_player.board.setState(data['board_state'])
         game_player.red_blocker_count = data['red_blocker_count']
         game_player.blue_blocker_count = data['blue_blocker_count']
         game_player.red_power = data['red_power']
         game_player.blue_power = data['blue_power']
         game_player.moves_made = data['moves_made']
+        game_player.turn_history = data.get('turn_history', [])
         return game_player
 
     def isOver(self):
         return self.board.hasWon(Piece.RED) or self.board.hasWon(Piece.BLUE)
+
+    def save_turn_state(self):
+        """Save current game state before player's turn for undo functionality."""
+        if not self.undo_enabled:
+            return
+        snapshot = {
+            'board_state': self.board.getState(),
+            'red_power': self.red_power,
+            'blue_power': self.blue_power,
+            'red_blocker_count': self.red_blocker_count,
+            'blue_blocker_count': self.blue_blocker_count,
+            'moves_made': self.moves_made
+        }
+        self.turn_history.append(snapshot)
+
+    def undo_turn(self):
+        """Undo the last complete turn (player move + AI response)."""
+        if not self.undo_enabled or not self.turn_history:
+            return False
+        snapshot = self.turn_history.pop()
+        self.board.setState(snapshot['board_state'])
+        self.red_power = snapshot['red_power']
+        self.blue_power = snapshot['blue_power']
+        self.red_blocker_count = snapshot['red_blocker_count']
+        self.blue_blocker_count = snapshot['blue_blocker_count']
+        self.moves_made = snapshot['moves_made']
+        return True
+
+    def can_undo(self):
+        """Check if undo is available."""
+        return self.undo_enabled and len(self.turn_history) > 0
 
     def makeComputerMove(self,isBlockerMove):
         power_dict = {

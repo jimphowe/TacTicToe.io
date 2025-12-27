@@ -5,6 +5,7 @@ window.GameControls = function() {
   const [blueBlockerCount, setBlueBlockerCount] = React.useState(0);
   const [isBlockerSelected, setIsBlockerSelected] = React.useState(false);
   const [isDesktop, setIsDesktop] = React.useState(window.innerWidth > 768);
+  const [canUndo, setCanUndo] = React.useState(window.canUndo || false);
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -20,6 +21,14 @@ window.GameControls = function() {
     };
     window.addEventListener('blockerStateChanged', handleBlockerChange);
     return () => window.removeEventListener('blockerStateChanged', handleBlockerChange);
+  }, []);
+
+  React.useEffect(() => {
+    const handleUndoChange = () => {
+      setCanUndo(window.canUndo);
+    };
+    window.addEventListener('undoStateChanged', handleUndoChange);
+    return () => window.removeEventListener('undoStateChanged', handleUndoChange);
   }, []);
 
   React.useEffect(() => {
@@ -290,14 +299,64 @@ window.GameControls = function() {
     );
   };
 
+  const handleUndoClick = (e) => {
+    e.stopPropagation();
+    if (window.handleUndo && canUndo) {
+      window.handleUndo();
+    }
+  };
+
+  const UndoSection = () => {
+    const undoButton = React.createElement('button', {
+      onClick: handleUndoClick,
+      disabled: !canUndo,
+      className: `undo-button ${canUndo ? 'active' : 'inactive'}`,
+      style: {
+        padding: isDesktop ? '12px 24px' : '8px 16px',
+        fontSize: isDesktop ? '14px' : '12px',
+        fontWeight: '500',
+        color: canUndo ? '#ffffff' : '#6b7280',
+        backgroundColor: canUndo ? '#4b5563' : '#1f2937',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: canUndo ? 'pointer' : 'not-allowed',
+        transition: 'all 0.2s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }
+    }, [
+      React.createElement('i', {
+        key: 'icon',
+        className: 'fas fa-rotate-left',
+        style: { fontSize: isDesktop ? '16px' : '12px' }
+      }),
+      React.createElement('span', { key: 'text' }, 'Undo')
+    ]);
+
+    return React.createElement('div', {
+      style: {
+        marginTop: isDesktop ? '24px' : '12px',
+        display: 'flex',
+        justifyContent: 'center'
+      }
+    }, undoButton);
+  };
+
+  const sections = [
+    React.createElement(PowerSection, { key: 'power' }),
+    React.createElement(BlockerSection, { key: 'blockers' })
+  ];
+
+  if (window.undoEnabled) {
+    sections.push(React.createElement(UndoSection, { key: 'undo' }));
+  }
+
   return React.createElement(
     'div',
     {
       className: `game-controls-container ${isDesktop ? 'game-controls-desktop' : 'game-controls-mobile'}`
     },
-    [
-      React.createElement(PowerSection, { key: 'power' }),
-      React.createElement(BlockerSection, { key: 'blockers' })
-    ]
+    sections
   );
 };

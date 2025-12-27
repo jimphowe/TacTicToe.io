@@ -12,6 +12,7 @@ function createGameOverUI(winner, eloChange, friendRoomCode, buttonAction, isSin
     }
 
     const gameOverDiv = document.createElement('div');
+    gameOverDiv.id = 'game-over-ui';
     gameOverDiv.style.position = 'fixed';
     gameOverDiv.style.top = '160px';
     gameOverDiv.style.left = '50%';

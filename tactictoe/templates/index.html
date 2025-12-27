@@ -422,6 +422,15 @@
                             </div>
                             <input type="hidden" name="board_size" id="board-size-value" value="3">
                         </div>
+                        <div class="mb-4">
+                            <div class="form-check d-flex justify-content-center align-items-center gap-2">
+                                <input class="form-check-input" type="checkbox" id="undo-enabled-checkbox" checked onchange="updateUndoValue(this)" style="width: 1.25em; height: 1.25em; cursor: pointer;">
+                                <label class="form-check-label text-light" for="undo-enabled-checkbox" style="cursor: pointer;">
+                                    Allow undo
+                                </label>
+                            </div>
+                            <input type="hidden" name="undo_enabled" id="undo-enabled-value" value="true">
+                        </div>
                         <div class="text-center">
                             <button type="submit" class="btn btn-custom">Start Game</button>
                         </div>
@@ -830,6 +839,10 @@
                 document.getElementById('secondPlayer').classList.add('active');
                 document.getElementById('firstPlayer').classList.remove('active');
             }
+        }
+
+        function updateUndoValue(checkbox) {
+            document.getElementById('undo-enabled-value').value = checkbox.checked ? 'true' : 'false';
         }
 
         function selectBoardSize(size, context) {
