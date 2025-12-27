@@ -1634,6 +1634,8 @@ class GamePlayer:
         self.difficulty = difficulty
         self.undo_enabled = undo_enabled
         self.turn_history = []  # Stack of game state snapshots for undo
+        self.move_history = []  # List of moves for replay feature
+        self.initial_board_state = self.board.getState()  # Save initial state for replay
         # Set blocker limits (same for all board sizes and colors)
         self.max_red_blockers = 3
         self.max_blue_blockers = 3
@@ -1664,7 +1666,9 @@ class GamePlayer:
             'difficulty': self.difficulty,
             'moves_made': self.moves_made,
             'undo_enabled': self.undo_enabled,
-            'turn_history': self.turn_history
+            'turn_history': self.turn_history,
+            'move_history': self.move_history,
+            'initial_board_state': self.initial_board_state
         })
 
     @classmethod
@@ -1680,6 +1684,8 @@ class GamePlayer:
         game_player.blue_power = data['blue_power']
         game_player.moves_made = data['moves_made']
         game_player.turn_history = data.get('turn_history', [])
+        game_player.move_history = data.get('move_history', [])
+        game_player.initial_board_state = data.get('initial_board_state', game_player.board.getState())
         return game_player
 
     def isOver(self):
@@ -1695,7 +1701,8 @@ class GamePlayer:
             'blue_power': self.blue_power,
             'red_blocker_count': self.red_blocker_count,
             'blue_blocker_count': self.blue_blocker_count,
-            'moves_made': self.moves_made
+            'moves_made': self.moves_made,
+            'move_history_length': len(self.move_history)
         }
         self.turn_history.append(snapshot)
 
@@ -1710,6 +1717,8 @@ class GamePlayer:
         self.red_blocker_count = snapshot['red_blocker_count']
         self.blue_blocker_count = snapshot['blue_blocker_count']
         self.moves_made = snapshot['moves_made']
+        saved_length = snapshot.get('move_history_length', len(self.move_history))
+        self.move_history = self.move_history[:saved_length]
         return True
 
     def can_undo(self):
@@ -1834,6 +1843,10 @@ class Game(models.Model):
     red_blocker_count = models.IntegerField(default=0)
     blue_blocker_count = models.IntegerField(default=0)
 
+    # Move history for replay feature
+    moves = models.JSONField(default=list)
+    initial_board_state = models.JSONField(default=list)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
@@ -1857,12 +1870,14 @@ class Game(models.Model):
     def start_new_game(cls, player_one, player_two, game_type, board_size=DEFAULT_BOARD_SIZE):
         board = Board(board_size)
         time_limit = timedelta(seconds=300) if board_size == 4 else timedelta(seconds=180)
+        initial_state = board.getState()
         game = cls.create(
             player_one=player_one,
             player_two=player_two,
             game_type=game_type,
             board_size=board_size,
-            game_state=json.dumps(board.getState()),
+            game_state=json.dumps(initial_state),
+            initial_board_state=initial_state,
             turn=player_one,
             completed=False,
             player_one_time_left=time_limit,

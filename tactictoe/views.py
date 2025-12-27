@@ -103,11 +103,19 @@ def handle_local_move(request):
     try:
         pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
         game.move(position.get('x'),position.get('y'),position.get('z'),direction,parsePiece(player),isBlockerMove)
+        game.move_history.append({
+            'x': position.get('x'),
+            'y': position.get('y'),
+            'z': position.get('z'),
+            'direction': direction,
+            'is_blocker': isBlockerMove,
+            'player': player
+        })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
-    
+
     game_state = game.board.getState()
-    
+
     request.session['game_player'] = game.serialize()
     request.session.save()
     winner = None
@@ -121,7 +129,8 @@ def handle_local_move(request):
         winning_run = game.board.winningRun(Piece.BLUE)
     elif game.board.isTie():
         is_tie = True
-    return JsonResponse({
+
+    response_data = {
         'status': 'success',
         'position': position,
         'game_state': game_state,
@@ -135,7 +144,15 @@ def handle_local_move(request):
             'direction': direction,
             'pieces_pushed': pieces_pushed
         }
-    })
+    }
+
+    if winner or is_tie:
+        response_data['replay_data'] = {
+            'initial_state': game.initial_board_state,
+            'moves': game.move_history
+        }
+
+    return JsonResponse(response_data)
 
 def singleplayer_game_view(request):
     difficulty = request.GET.get('difficulty', 'easy')
@@ -187,10 +204,18 @@ def handle_singleplayer_move(request):
     try:
         pieces_pushed = game.board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
         game.move(position.get('x'),position.get('y'),position.get('z'),direction,parsePiece(player),isBlockerMove)
+        game.move_history.append({
+            'x': position.get('x'),
+            'y': position.get('y'),
+            'z': position.get('z'),
+            'direction': direction,
+            'is_blocker': isBlockerMove,
+            'player': player
+        })
     except Exception as e:
         print(e)
         return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
-    
+
     game_state = game.board.getState()
 
     request.session['game_player'] = game.serialize()
@@ -207,7 +232,8 @@ def handle_singleplayer_move(request):
         winning_run = game.board.winningRun(Piece.BLUE)
     elif game.board.isTie():
         is_tie = True
-    return JsonResponse({
+
+    response_data = {
         'status': 'success',
         'game_state': game_state,
         'winner': winner,
@@ -221,7 +247,15 @@ def handle_singleplayer_move(request):
             'direction': direction,
             'pieces_pushed': pieces_pushed
         }
-    })
+    }
+
+    if winner or is_tie:
+        response_data['replay_data'] = {
+            'initial_state': game.initial_board_state,
+            'moves': game.move_history
+        }
+
+    return JsonResponse(response_data)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -248,7 +282,16 @@ def handle_computer_blocker_move(request):
             return JsonResponse({
                 'status': 'empty',
             })
-        (_, block_again) = response
+        (move_info, block_again) = response
+        ((x, y, z, direction), _) = move_info
+        game.move_history.append({
+            'x': x,
+            'y': y,
+            'z': z,
+            'direction': direction,
+            'is_blocker': True,
+            'player': game.computer_color.value
+        })
         game_state = game.board.getState()
         request.session['game_player'] = game.serialize()
         request.session.save()
@@ -263,8 +306,8 @@ def handle_computer_blocker_move(request):
             winning_run = game.board.winningRun(Piece.BLUE)
         elif game.board.isTie():
             is_tie = True
-        
-        return JsonResponse({
+
+        response_data = {
             'status': 'success',
             'game_state': game_state,
             'winner': winner,
@@ -274,13 +317,21 @@ def handle_computer_blocker_move(request):
             'blue_power': game.blue_power,
             'block_again': block_again,
             'can_undo': game.can_undo()
-        })
+        }
+
+        if winner or is_tie:
+            response_data['replay_data'] = {
+                'initial_state': game.initial_board_state,
+                'moves': game.move_history
+            }
+
+        return JsonResponse(response_data)
     except Exception as e:
         return JsonResponse({
             'status': 'error',
             'message': str(e)
         }, status=403)
-    
+
 import copy
 
 @csrf_exempt
@@ -295,6 +346,14 @@ def handle_computer_move(request):
 
     move = game.makeComputerMove(isBlockerMove=False)
     x,y,z,dir = move
+    game.move_history.append({
+        'x': x,
+        'y': y,
+        'z': z,
+        'direction': dir,
+        'is_blocker': False,
+        'player': game.computer_color.value
+    })
     pieces_pushed = original_board.count_pieces_pushed(x, y, z, dir)
     game_state = game.board.getState()
     request.session['game_player'] = game.serialize()
@@ -310,7 +369,8 @@ def handle_computer_move(request):
         winning_run = game.board.winningRun(Piece.BLUE)
     elif game.board.isTie():
         is_tie = True
-    return JsonResponse({
+
+    response_data = {
         'status': 'success',
         'game_state': game_state,
         'winner': winner,
@@ -324,7 +384,15 @@ def handle_computer_move(request):
             'direction': dir,
             'pieces_pushed': pieces_pushed
         }
-    })
+    }
+
+    if winner or is_tie:
+        response_data['replay_data'] = {
+            'initial_state': game.initial_board_state,
+            'moves': game.move_history
+        }
+
+    return JsonResponse(response_data)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -435,6 +503,14 @@ def handle_multiplayer_move(request):
         try:
             pieces_pushed = board.count_pieces_pushed(position.get('x'), position.get('y'), position.get('z'), direction)
             game.move(position.get('x'), position.get('y'), position.get('z'), direction, player, isBlockerMove)
+            game.moves.append({
+                'x': position.get('x'),
+                'y': position.get('y'),
+                'z': position.get('z'),
+                'direction': direction,
+                'is_blocker': isBlockerMove,
+                'player': player.value
+            })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=403)
 

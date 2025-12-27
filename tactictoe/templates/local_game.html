@@ -159,7 +159,9 @@
         startTimer();
     });
 
-    function handleGameOver(winner, winningRun) {
+    let currentReplayData = null;
+
+    function handleGameOver(winner, winningRun, replayData = null) {
         gameEnded = true;
         if (activeTimerInterval) {
             clearInterval(activeTimerInterval);
@@ -175,9 +177,11 @@
         if (!isTie) {
             highlightWinningRun(winner, winningRun);
         }
+        savedWinningRun = winningRun;
+        currentReplayData = replayData;
         createGameOverUI(winner, null, null, function() {
             location.reload();
-        });
+        }, false, replayData);
     }
 
     async function handlePieceClick(piece) {
@@ -237,7 +241,7 @@
                 playSound("move");
 
                 if (data.winner || data.is_tie) {
-                    handleGameOver(data.winner, data.winning_run);
+                    handleGameOver(data.winner, data.winning_run, data.replay_data);
                 }
             }
         } catch (error) {

@@ -12,11 +12,31 @@
             left: 20px;
             z-index: 1000;
         }
+    .mobile-undo-button {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: none;
+        }
+    @media (max-width: 768px) {
+        .mobile-undo-button.undo-enabled {
+            display: block;
+        }
+    }
+    .mobile-undo-button.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
 </style>
 {% load static %}
 <a href="/" class="btn btn-outline-light home-button">
     <i class="fas fa-home"></i> Home
 </a>
+<button id="mobile-undo-btn" class="btn btn-outline-light mobile-undo-button {% if undo_enabled %}undo-enabled{% endif %} {% if not can_undo %}disabled{% endif %}" onclick="handleUndo()">
+    <i class="fas fa-rotate-left"></i> Undo
+</button>
 <div id="player-guide-root"></div>
 <script>
     const ComputerMoveIndicator = () => {
@@ -78,17 +98,30 @@
         const root = document.createElement('div');
         root.id = 'computer-move-indicator-root';
         document.body.appendChild(root);
-        
+
         const defaultDirectionMapping = { 'FRONT': 'FRONT', 'BACK': 'BACK', 'LEFT': 'LEFT', 'RIGHT': 'RIGHT', 'TOP': 'TOP', 'BOTTOM': 'BOTTOM'};
         localStorage.setItem('directionMapping', JSON.stringify(defaultDirectionMapping));
-        
+
         const guideRoot = document.getElementById('player-guide-root');
         if (guideRoot) {
             ReactDOM.render(React.createElement(window.PlayerGuide), guideRoot);
         }
+
+        const mobileUndoBtn = document.getElementById('mobile-undo-btn');
+        if (mobileUndoBtn) {
+            window.addEventListener('undoStateChanged', () => {
+                if (window.canUndo) {
+                    mobileUndoBtn.classList.remove('disabled');
+                } else {
+                    mobileUndoBtn.classList.add('disabled');
+                }
+            });
+        }
     });
 
-    function handleGameOver(winner, winningRun) {
+    let currentReplayData = null;
+
+    function handleGameOver(winner, winningRun, replayData = null) {
         let isTie = !winner
         if (isTie) {
             playSound("move");
@@ -102,9 +135,11 @@
         if (!isTie) {
             highlightWinningRun(winner, winningRun);
         }
+        savedWinningRun = winningRun;
+        currentReplayData = replayData;
         createGameOverUI(winner, null, null, function() {
             location.reload();
-        }, true);
+        }, true, replayData);
     }
 
     let moving = false;
@@ -164,7 +199,7 @@
                 playSound("move");
                 
                 if (data.winner || data.is_tie) {
-                    handleGameOver(data.winner, data.winning_run);
+                    handleGameOver(data.winner, data.winning_run, data.replay_data);
                 } else if (isBlockerMove) {
                     window.isBlockerSelected = false;
                     window.dispatchEvent(new Event('blockerStateChanged'));
@@ -200,7 +235,7 @@
                     const finalBlockerData = await makeBlockerMove();
 
                     if (finalBlockerData.winner || finalBlockerData.is_tie) {
-                        handleGameOver(finalBlockerData.winner, finalBlockerData.winning_run);
+                        handleGameOver(finalBlockerData.winner, finalBlockerData.winning_run, finalBlockerData.replay_data);
                     }
                     else {
                         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -227,7 +262,7 @@
                         }
 
                         if (moveData.winner || moveData.is_tie) {
-                            handleGameOver(moveData.winner, moveData.winning_run);
+                            handleGameOver(moveData.winner, moveData.winning_run, moveData.replay_data);
                         }
                     }
                 }

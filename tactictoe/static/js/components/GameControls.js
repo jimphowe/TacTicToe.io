@@ -348,7 +348,7 @@ window.GameControls = function() {
     React.createElement(BlockerSection, { key: 'blockers' })
   ];
 
-  if (window.undoEnabled) {
+  if (window.undoEnabled && isDesktop) {
     sections.push(React.createElement(UndoSection, { key: 'undo' }));
   }
 
