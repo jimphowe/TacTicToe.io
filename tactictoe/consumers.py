@@ -90,7 +90,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             'is_tie': is_tie,
             'red_power': red_power,
             'blue_power': blue_power,
-            'push_info': event['push_info']
+            'push_info': event['push_info'],
+            'replay_data': event.get('replay_data')
         }))
 
 

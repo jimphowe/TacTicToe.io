@@ -552,11 +552,16 @@ def handle_multiplayer_move(request):
         winner_id = None if winner == None else winner.id
         winner_name = None if winner == None else winner.username
         
+        replay_data = None
         if winner or is_tie:
             game.completed = True
             game.completed_at = datetime.now()
             game.winner = winner
             game.elo_change = update_elo_ratings(game.game_type, game.board_size, game.player_one, game.player_two, winner)
+            replay_data = {
+                'initial_state': game.initial_board_state,
+                'moves': game.moves
+            }
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
@@ -579,7 +584,8 @@ def handle_multiplayer_move(request):
                     'origin': {'x': position.get('x'), 'y': position.get('y'), 'z': position.get('z')},
                     'direction': direction,
                     'pieces_pushed': pieces_pushed
-                }
+                },
+                'replay_data': replay_data
             }
         )
         

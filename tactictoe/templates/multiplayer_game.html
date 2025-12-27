@@ -283,13 +283,13 @@
         playSound("move");
         
         if (data.winner_id || data.is_tie) {
-            handleGameOver(data.winner_name, data.winner_color, data.winning_run, data.elo_change);
+            handleGameOver(data.winner_name, data.winner_color, data.winning_run, data.elo_change, data.replay_data);
         } else {
             syncGameTimers();
         }
     };
 
-    function handleGameOver(winnerName, winnerColor, winningRun, eloChange) {
+    function handleGameOver(winnerName, winnerColor, winningRun, eloChange, replayData) {
         stopTimers();
         syncGameTimers();
         const isTie = !winnerName
@@ -360,7 +360,7 @@
             }).fail(function() {
                 alert('Error finding an opponent. Please try again.');
             });
-        });
+        }, false, replayData);
 
         $('#cancelSearchBtn').click(function() {
             cancelSearch(BOARD_SIZE).done(function(response) {
