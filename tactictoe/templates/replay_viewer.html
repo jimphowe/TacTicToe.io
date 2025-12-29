@@ -1,0 +1,67 @@
+{% extends 'base_game.html' %}
+{% block scripts %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+    .replay-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(44, 62, 80, 0.9);
+        color: white;
+        z-index: 1000;
+        height: 60px;
+        padding: 0 20px;
+    }
+    .replay-title {
+        font-size: 18px;
+        font-weight: bold;
+    }
+    .replay-subtitle {
+        font-size: 14px;
+        color: #aaa;
+        margin-left: 15px;
+    }
+    .home-button {
+        position: fixed;
+        top: 70px;
+        left: 20px;
+        z-index: 1001;
+    }
+</style>
+
+<div class="replay-header">
+    <span class="replay-title">{{ player_one }} vs {{ player_two }}</span>
+    <span class="replay-subtitle">Winner: {{ winner }}</span>
+</div>
+
+<a href="{% url 'profile' %}" class="btn btn-outline-light home-button">
+    <i class="fas fa-arrow-left"></i> Back to Profile
+</a>
+
+<script>
+    window.isStandaloneReplay = true;
+
+    function handlePieceClick(piece) {}
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const replayData = JSON.parse('{{ replay_data|escapejs }}');
+        setTimeout(function() {
+            enterReplayMode(replayData);
+        }, 500);
+    });
+
+    const originalExitReplayMode = exitReplayMode;
+    exitReplayMode = function() {
+        if (window.isStandaloneReplay) {
+            window.location.href = '{% url "profile" %}';
+        } else {
+            originalExitReplayMode();
+        }
+    };
+</script>
+{% endblock %}

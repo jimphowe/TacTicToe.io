@@ -56,6 +56,23 @@
         .lost {
             color: #dc3545;
         }
+
+        .replay-btn {
+            background-color: #9B59B6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-decoration: none;
+        }
+
+        .replay-btn:hover {
+            background-color: #8E44AD;
+            color: white;
+        }
     
         .home-button {
             position: fixed;
@@ -228,7 +245,11 @@
                         <div id="overview" class="tab-content active">
                             <div class="profile-header">
                                 <h1 class="display-4">{{ user_profile.user.username }}</h1>
-                                <p class="lead">Elo Rating: {% if user_profile.rapid_elo %}{{ user_profile.rapid_elo }}{% else %}N/A{% endif %}</p>
+                                <p class="lead">
+                                    3x3x3: {% if user_profile.elo_3x3 %}{{ user_profile.elo_3x3 }}{% else %}N/A{% endif %}
+                                    &nbsp;&bull;&nbsp;
+                                    4x4x4: {% if user_profile.elo_4x4 %}{{ user_profile.elo_4x4 }}{% else %}N/A{% endif %}
+                                </p>
                             </div>
                             <div class="p-4">
                                 <h2 class="mb-4">Recent Games</h2>
@@ -238,11 +259,18 @@
                                             <li class="game-item">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <span>{{ game.player_one.username }} vs {{ game.player_two.username }}</span>
-                                                    {% if game.winner == request.user %}
-                                                        <span class="won">Won <strong>+{{ game.elo_change }}</strong></span>
-                                                    {% else %}
-                                                        <span class="lost">Lost <strong>-{{ game.elo_change }}</strong></span>
-                                                    {% endif %}
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        {% if game.winner == request.user %}
+                                                            <span class="won">Won <strong>+{{ game.elo_change }}</strong></span>
+                                                        {% else %}
+                                                            <span class="lost">Lost <strong>-{{ game.elo_change }}</strong></span>
+                                                        {% endif %}
+                                                        {% if game.moves and game.initial_board_state %}
+                                                        <a href="{% url 'replay_viewer' game.id %}" class="replay-btn">
+                                                            <i class="fas fa-play"></i> Replay
+                                                        </a>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             </li>
                                         {% endfor %}

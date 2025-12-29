@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-from tactictoe.views import home, signup, profile_view, save_colors, get_timers, player_guide, find_opponent, cancel_search, cancel_rematch, create_room, join_room, cancel_create_room, handle_rematch, leave_friend_room, game_state, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_singleplayer_undo, handle_multiplayer_move, handle_resignation, leaderboard_view
+from tactictoe.views import home, signup, profile_view, save_colors, get_timers, player_guide, find_opponent, cancel_search, cancel_rematch, create_room, join_room, cancel_create_room, handle_rematch, leave_friend_room, game_state, multiplayer_game_view, local_game_view, handle_local_move, singleplayer_game_view, handle_singleplayer_move, handle_computer_move, handle_computer_blocker_move, handle_singleplayer_undo, handle_multiplayer_move, handle_resignation, leaderboard_view, replay_viewer
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
@@ -41,4 +41,5 @@ urlpatterns = [
     path('leaderboard/', leaderboard_view, name='leaderboard'),
     path('timer/<str:game_code>', get_timers, name='get_timers'),
     path('player_guide/', player_guide, name='player_guide'),
+    path('replay/<int:game_id>/', replay_viewer, name='replay_viewer'),
 ]

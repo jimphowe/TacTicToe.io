@@ -15,14 +15,22 @@ def home(request):
 def profile_view(request):
     if not request.user.is_authenticated:
         return redirect('login')
-    
-    rapid_elo_subquery = EloRating.objects.filter(
+
+    elo_3x3_subquery = EloRating.objects.filter(
         user_profile=OuterRef('pk'),
-        game_type='rapid'
+        game_type='rapid',
+        board_size=3
+    ).values('rating')[:1]
+
+    elo_4x4_subquery = EloRating.objects.filter(
+        user_profile=OuterRef('pk'),
+        game_type='rapid',
+        board_size=4
     ).values('rating')[:1]
 
     user_profile = UserProfile.objects.filter(user=request.user).annotate(
-        rapid_elo=Subquery(rapid_elo_subquery)
+        elo_3x3=Subquery(elo_3x3_subquery),
+        elo_4x4=Subquery(elo_4x4_subquery)
     ).first()
 
     latest_games = Game.objects.filter(player_one=request.user, winner__isnull=False).order_by('-created_at')[:5] | \
@@ -1016,6 +1024,38 @@ def leaderboard_view(request):
     return render(request, 'leaderboard.html', {'top_users': top_users, 'board_size': board_size})
 
 from django.utils import timezone
+
+def replay_viewer(request, game_id):
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    game = get_object_or_404(Game, id=game_id)
+
+    if request.user not in [game.player_one, game.player_two]:
+        return redirect('profile')
+
+    if not game.completed or not game.moves or not game.initial_board_state:
+        return redirect('profile')
+
+    context = {
+        'game_id': game.id,
+        'player_one': game.player_one.username,
+        'player_two': game.player_two.username,
+        'winner': game.winner.username if game.winner else 'Tie',
+        'board_size': game.board_size,
+        'game_state': json.dumps(game.initial_board_state),
+        'replay_data': json.dumps({
+            'initial_state': game.initial_board_state,
+            'moves': game.moves
+        }),
+        'player_color': 'RED',
+        'red_power': 0,
+        'blue_power': 0,
+        'undo_enabled': False,
+        'can_undo': False,
+    }
+
+    return render(request, 'replay_viewer.html', context)
 
 def get_timers(request, game_code):
     game = get_object_or_404(Game, game_code=game_code)
